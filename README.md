@@ -1,36 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# King of Thieves (Plinko)
 
-## Getting Started
+A Next.js take on *King of Thieves* as a vertical Plinko / Fakir board: you build a trap-filled course, then other players risk gold to send a ball through it.
 
-First, run the development server:
+## The core idea
+
+Each player owns a **vertical board**. You place nails, trampolines, fans, and fake teleport portals so other players' balls miss the chest at the bottom.
+
+**The golden rule:** you can only publish a level after beating it yourself. That keeps every board mathematically possible, even when it feels unfair.
+
+**The economy:** attackers pay an entry fee in gold coins. If they fall into the void or get destroyed by a trap, the level creator keeps the stake. If they reach the chest, they loot your reserve.
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
