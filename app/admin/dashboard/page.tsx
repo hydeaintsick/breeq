@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
+import { ADMIN_EDITOR_PATH } from "@/lib/auth/paths";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -19,27 +21,29 @@ export default async function AdminDashboardPage() {
         Dashboard
       </h1>
       <p className="mt-5 max-w-xl text-lg leading-8 text-ink-muted">
-        Signed in as {label}. Open the menu to jump into the game, or stay here
-        as the admin tools land.
+        Signed in as {label}. Open the menu for the editor, or jump into the
+        game.
       </p>
 
       <ul className="mt-10 grid gap-4 sm:grid-cols-2">
+        <li>
+          <Link href={ADMIN_EDITOR_PATH} className="glass block p-6">
+            <p className="font-mono text-xs tracking-[0.16em] text-accent">01</p>
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
+              Editor
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">
+              Build episodes, then chapters. One chapter is one wall.
+            </p>
+          </Link>
+        </li>
         <li className="glass p-6">
-          <p className="font-mono text-xs tracking-[0.16em] text-accent">01</p>
+          <p className="font-mono text-xs tracking-[0.16em] text-accent">02</p>
           <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
             Players
           </h2>
           <p className="mt-2 text-sm leading-6 text-ink-muted">
             Accounts, roles, and wallets will show up here.
-          </p>
-        </li>
-        <li className="glass p-6">
-          <p className="font-mono text-xs tracking-[0.16em] text-accent">02</p>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
-            Walls
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-ink-muted">
-            Published levels and the publish queue will live on this board.
           </p>
         </li>
       </ul>

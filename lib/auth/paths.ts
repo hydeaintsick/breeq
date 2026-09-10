@@ -6,7 +6,12 @@ export const STORY_PATH = "/game/story";
 export const EARN_PATH = "/game/earn";
 export const ACCOUNT_PATH = "/game/account";
 export const ADMIN_DASHBOARD_PATH = "/admin/dashboard";
+export const ADMIN_EDITOR_PATH = "/admin/editor";
 export const LOGIN_PATH = "/login";
+
+export function storyEpisodePath(slug: string) {
+  return `${STORY_PATH}/${slug}`;
+}
 
 export function homePath(role: Role | string | undefined) {
   return role === "ADMIN" ? ADMIN_DASHBOARD_PATH : GAME_MENU_PATH;

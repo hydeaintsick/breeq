@@ -60,6 +60,13 @@ export const BRICK_COLORS: readonly BrickColor[] = ["blue", "violet", "pink", "c
 /** How far the wall moves per drop under the descend rule. */
 export const ROW_STEP = LEVEL_DEFAULTS.brick.h + LEVEL_DEFAULTS.brick.gap;
 
+/** Empty air above the paddle that pieces may not occupy. */
+export const PADDLE_CLEARANCE = 90;
+
+export function paddleZoneTop(level: Pick<Level, "paddle">) {
+  return level.paddle.y - PADDLE_CLEARANCE;
+}
+
 export interface LevelOptions {
   id: string;
   name: string;
@@ -236,6 +243,11 @@ export class LevelBuilder {
     return validateLevel(this.snapshot());
   }
 
+  /** Snapshot without validation — for the editor while a wall is still a draft. */
+  draft(): Level {
+    return this.snapshot();
+  }
+
   build(): Level {
     const level = this.snapshot();
     const errors = validateLevel(level).filter((i) => i.level === "error");
@@ -303,7 +315,7 @@ export function validateLevel(level: Level): ValidationIssue[] {
   const warn = (message: string) => issues.push({ level: "warning", message });
   const f = level.field;
   const r = level.ball.r;
-  const paddleZoneTop = level.paddle.y - 90;
+  const keepOut = paddleZoneTop(level);
 
   if (f.right - f.left < level.paddle.width * 2) err("Field is too narrow for the paddle to move.");
   if (level.paddle.y + level.paddle.height > f.bottom || level.paddle.y < f.top + 100) {
@@ -324,7 +336,7 @@ export function validateLevel(level: Level): ValidationIssue[] {
     x >= f.left && x + w <= f.right && y >= f.top && y + h <= f.bottom;
   for (const b of level.bricks) {
     if (!inField(b.x, b.y, b.w, b.h)) err(`Brick #${b.id} is outside the field.`);
-    if (b.y + b.h > paddleZoneTop) err(`Brick #${b.id} sits in the paddle zone.`);
+    if (b.y + b.h > keepOut) err(`Brick #${b.id} sits in the paddle zone.`);
   }
   for (let i = 0; i < level.bricks.length; i++) {
     for (let j = i + 1; j < level.bricks.length; j++) {
@@ -362,12 +374,12 @@ export function validateLevel(level: Level): ValidationIssue[] {
   }
   if (level.rules.descend > 0) {
     const lowest = Math.max(...level.bricks.map((b) => b.y + b.h));
-    if (paddleZoneTop - lowest < ROW_STEP * 2) warn("Descend rule with a low wall: the wall crushes the paddle after two drops.");
+    if (keepOut - lowest < ROW_STEP * 2) warn("Descend rule with a low wall: the wall crushes the paddle after two drops.");
   }
 
   // Zones.
   for (const z of level.zones) {
-    if (z.x - z.r < f.left || z.x + z.r > f.right || z.y - z.r < f.top || z.y + z.r > paddleZoneTop) {
+    if (z.x - z.r < f.left || z.x + z.r > f.right || z.y - z.r < f.top || z.y + z.r > keepOut) {
       err(`Zone #${z.id} (${z.kind}) is outside the playable area.`);
     }
     for (const b of level.bricks) {
@@ -399,7 +411,7 @@ export function validateLevel(level: Level): ValidationIssue[] {
   for (const o of level.obstacles) {
     const box = o.kind === "guard" ? guardSweep(o) : obstacleBox(o);
     if (!inField(box.x, box.y, box.w, box.h)) err(`Obstacle #${o.id} (${o.kind}) is outside the field.`);
-    if (box.y + box.h > paddleZoneTop && o.kind !== "fan") err(`Obstacle #${o.id} (${o.kind}) sits in the paddle zone.`);
+    if (box.y + box.h > keepOut && o.kind !== "fan") err(`Obstacle #${o.id} (${o.kind}) sits in the paddle zone.`);
     if (o.kind === "fan") continue; // wind may blow over anything
     for (const b of level.bricks) {
       if (box.x < b.x + b.w && box.x + box.w > b.x && box.y < b.y + b.h && box.y + box.h > b.y) {

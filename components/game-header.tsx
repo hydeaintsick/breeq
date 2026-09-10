@@ -6,11 +6,19 @@ import { useEffect, useId, useState } from "react";
 import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
 import { MenuIcon } from "@/components/menu-icon";
+import { RankMeter } from "@/components/rank-meter";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ACCOUNT_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
+import { ACCOUNT_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
+import type { Progress } from "@/lib/progress";
 
-export function GameHeader() {
+export function GameHeader({
+  progress,
+  isAdmin = false,
+}: {
+  progress: Progress;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -40,13 +48,19 @@ export function GameHeader() {
         <Link
           href={GAME_MENU_PATH}
           aria-label="Breeq"
-          className="relative z-10 flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink"
+          className="relative z-10 flex shrink-0 items-center gap-2.5 text-sm font-semibold tracking-tight text-ink"
         >
           <LogoMark />
-          <span aria-hidden="true">Breeq</span>
+          <span aria-hidden="true" className="hidden sm:inline">
+            Breeq
+          </span>
         </Link>
 
-        <div className="relative z-10 flex items-center gap-2">
+        <div className="relative z-10 mx-2 flex min-w-0 flex-1 justify-start sm:mx-3">
+          <RankMeter progress={progress} />
+        </div>
+
+        <div className="relative z-10 flex shrink-0 items-center gap-2">
           <ThemeToggle />
           <button
             type="button"
@@ -77,6 +91,15 @@ export function GameHeader() {
             >
               Account settings
             </Link>
+            {isAdmin ? (
+              <Link
+                href={ADMIN_EDITOR_PATH}
+                className="nav-link flex min-h-11 items-center rounded-xl px-3"
+                data-active={pathname.startsWith(ADMIN_EDITOR_PATH)}
+              >
+                Editor
+              </Link>
+            ) : null}
             <SignOutButton className="nav-link flex min-h-11 items-center rounded-xl px-3 text-left" />
           </div>
         </div>

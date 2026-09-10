@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AccountForm } from "@/components/account-form";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 
@@ -26,7 +27,7 @@ export default async function AccountPage() {
     user?.email ? "Email" : null,
     user?.walletAddress || providers.has("metamask") ? "MetaMask" : null,
     providers.has("google") ? "Google" : null,
-  ].filter(Boolean);
+  ].filter((value): value is string => Boolean(value));
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-xl flex-col justify-center px-6 pb-20 pt-28">
@@ -40,35 +41,12 @@ export default async function AccountPage() {
         How you show up on the shelf. Sign out lives in the menu.
       </p>
 
-      <dl className="glass mt-10 grid gap-5 p-6 sm:p-8">
-        <div className="grid gap-2">
-          <dt className="text-sm text-ink-muted">Username</dt>
-          <dd className="field flex items-center">{username}</dd>
-        </div>
-        <div className="grid gap-2">
-          <dt className="text-sm text-ink-muted">Email</dt>
-          <dd className="field flex items-center">{user?.email ?? "Not set"}</dd>
-        </div>
-        <div className="grid gap-2">
-          <dt className="text-sm text-ink-muted">Wallet</dt>
-          <dd className="field flex items-center font-mono text-sm">
-            {user?.walletAddress ? truncateWallet(user.walletAddress) : "Not linked"}
-          </dd>
-        </div>
-        <div className="grid gap-2">
-          <dt className="text-sm text-ink-muted">Sign-in methods</dt>
-          <dd className="field flex items-center">
-            {methods.length > 0 ? methods.join(" · ") : "—"}
-          </dd>
-        </div>
-      </dl>
+      <AccountForm
+        username={username}
+        email={user?.email ?? ""}
+        wallet={user?.walletAddress ?? null}
+        methods={methods}
+      />
     </section>
   );
-}
-
-function truncateWallet(address: string) {
-  if (address.length < 12) {
-    return address;
-  }
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }

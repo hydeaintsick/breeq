@@ -8,6 +8,7 @@
  */
 import { alpha, tint } from "../../shared/color";
 import type { Game } from "../engine/game";
+import { LEVEL_DEFAULTS, paddleZoneTop } from "../engine/level";
 import type { Ball, Brick, Level, Obstacle, Zone } from "../engine/types";
 import { MOD_TINT, ZONE_LABEL, ZONE_TINT, tintOf, type NeonPalette, type Tint } from "./palette";
 import type { BreakoutScene, FxColor, Particle } from "./scene";
@@ -33,6 +34,7 @@ export class BreakoutRenderer {
     private readonly level: Level,
     private palette: NeonPalette,
     private readonly onPhoto?: () => void,
+    private readonly guides = false,
   ) {
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) {
@@ -167,6 +169,10 @@ export class BreakoutRenderer {
     this.wallFlash(ctx, scene.wallFlash.left, f.left, f.top, 0, f.bottom - f.top, "v");
     this.wallFlash(ctx, scene.wallFlash.right, f.right, f.top, 0, f.bottom - f.top, "v");
     this.wallFlash(ctx, scene.wallFlash.top, f.left, f.top, f.right - f.left, 0, "h");
+
+    if (this.guides) {
+      this.paintEditorGuides(ctx);
+    }
 
     for (const zone of game.zones) {
       this.zone(ctx, zone, scene.zonePulse.get(zone.id) ?? 0, t, state);
@@ -1037,6 +1043,64 @@ export class BreakoutRenderer {
         ctx.fill();
         ctx.restore();
       }
+    }
+    ctx.restore();
+  }
+
+  private paintEditorGuides(ctx: Ctx): void {
+    const { level, palette: p } = this;
+    const f = level.field;
+    const keepOut = paddleZoneTop(level);
+    const { w, h, gap } = LEVEL_DEFAULTS.brick;
+    const stepX = w + gap;
+    const stepY = h + gap;
+    const cols = Math.floor((f.right - f.left + gap) / stepX);
+    const rows = Math.floor((keepOut - f.top + gap) / stepY);
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.lineWidth = 0.6;
+    const gridBottom = f.top + rows * stepY;
+    const gridRight = f.left + cols * stepX;
+    ctx.beginPath();
+    for (let col = 0; col <= cols; col += 1) {
+      const x = f.left + col * stepX;
+      ctx.moveTo(x, f.top);
+      ctx.lineTo(x, gridBottom);
+    }
+    for (let row = 0; row <= rows; row += 1) {
+      const y = f.top + row * stepY;
+      ctx.moveTo(f.left, y);
+      ctx.lineTo(gridRight, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = 0.5;
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        this.roundRect(ctx, f.left + col * stepX, f.top + row * stepY, w, h, 2);
+        ctx.stroke();
+      }
+    }
+
+    const zoneH = f.bottom - keepOut;
+    if (zoneH > 0) {
+      const wash = ctx.createLinearGradient(0, keepOut, 0, f.bottom);
+      wash.addColorStop(0, alpha(p.danger, 0.22));
+      wash.addColorStop(1, alpha(p.danger, 0.08));
+      ctx.fillStyle = wash;
+      ctx.fillRect(f.left, keepOut, f.right - f.left, zoneH);
+      ctx.strokeStyle = alpha(p.danger, 0.7);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(f.left, keepOut);
+      ctx.lineTo(f.right, keepOut);
+      ctx.stroke();
+      ctx.fillStyle = alpha(p.danger, 0.85);
+      ctx.font = `600 9px ${MONO}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Paddle zone", (f.left + f.right) / 2, keepOut + Math.min(18, zoneH / 2));
     }
     ctx.restore();
   }

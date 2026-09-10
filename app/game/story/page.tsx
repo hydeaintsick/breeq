@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BreakoutPreview } from "@/components/breakout-preview";
-import { FIRST_LIGHT } from "@/game/breakout/levels";
+import { EpisodePicker } from "@/components/episode-picker";
 import { GAME_MENU_PATH } from "@/lib/auth/paths";
 import { requireUser } from "@/lib/auth/session";
-
-const STORY_LEVELS = [FIRST_LIGHT];
+import { listStoryEpisodes } from "@/lib/story";
 
 export const metadata: Metadata = {
   title: "Story",
@@ -13,31 +11,31 @@ export const metadata: Metadata = {
 };
 
 export default async function StoryPage() {
-  await requireUser();
+  const [, episodes] = await Promise.all([requireUser(), listStoryEpisodes()]);
 
   return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-12 px-6 pb-20 pt-28 lg:flex-row">
-      <div className="max-w-xl">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-          Story · Episode 1
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-          First Light
-        </h1>
-        <p className="mt-5 text-lg leading-8 text-ink-muted">
-          The campaign opens here. Clear this wall, then the next. Move over
-          the board to take the paddle.
-        </p>
-        <Link href={GAME_MENU_PATH} className="nav-link mt-8 inline-flex min-h-11 items-center">
-          Back to modes
-        </Link>
+    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
+        Story
+      </p>
+      <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+        Choose an <span className="text-neon">episode</span>.
+      </h1>
+      <p className="mt-4 max-w-xl text-lg leading-8 text-ink-muted">
+        Each episode is a run of walls. Open one to take the paddle.
+      </p>
+      <div className="mt-10">
+        {episodes.length === 0 ? (
+          <p className="text-sm leading-6 text-ink-muted">
+            No episodes yet. Check back once the campaign is published.
+          </p>
+        ) : (
+          <EpisodePicker episodes={episodes} />
+        )}
       </div>
-      <BreakoutPreview
-        levels={STORY_LEVELS}
-        seed={11}
-        followQuery={false}
-        controls="hybrid"
-      />
+      <Link href={GAME_MENU_PATH} className="nav-link mt-10 inline-flex min-h-11 items-center">
+        Back to modes
+      </Link>
     </section>
   );
 }

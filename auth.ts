@@ -201,10 +201,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user?.id) {
+    async jwt({ token, user, trigger }) {
+      const userId = user?.id ?? (trigger === "update" ? token.sub : undefined);
+
+      if (userId) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
+          where: { id: userId },
           select: { role: true, username: true, email: true, name: true },
         });
 
@@ -215,7 +217,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (isAdminEmail(dbUser?.email) && dbUser?.role !== "ADMIN") {
           await prisma.user.update({
-            where: { id: user.id },
+            where: { id: userId },
             data: { role: "ADMIN" },
           });
           token.role = "ADMIN";

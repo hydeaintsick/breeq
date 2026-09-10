@@ -3,17 +3,17 @@ import Link from "next/link";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { LOCKDOWN, UNDERTOW } from "@/game/breakout/levels";
 import { GAME_MENU_PATH } from "@/lib/auth/paths";
-import { requireUser } from "@/lib/auth/session";
+import { requireEarn } from "@/lib/auth/session";
 
 const EARN_LEVELS = [LOCKDOWN, UNDERTOW];
 
 export const metadata: Metadata = {
   title: "Earn",
-  description: "Play walls built by other players.",
+  description: "Publish or play levels to earn real money.",
 };
 
 export default async function EarnPage() {
-  await requireUser();
+  await requireEarn();
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-12 px-6 pb-20 pt-28 lg:flex-row">
@@ -25,8 +25,8 @@ export default async function EarnPage() {
           Other players&apos; walls
         </h1>
         <p className="mt-5 text-lg leading-8 text-ink-muted">
-          These boards were built by players. Clear them. The first shelves
-          are still filling — move over a board to take the paddle.
+          Publish or play levels to earn real money. Move over a board to take
+          the paddle.
         </p>
         <Link href={GAME_MENU_PATH} className="nav-link mt-8 inline-flex min-h-11 items-center">
           Back to modes

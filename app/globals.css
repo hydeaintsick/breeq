@@ -255,6 +255,59 @@ html[data-theme="dark"] {
     pointer-events: none;
   }
 
+  .editor-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 0.95rem;
+    border-radius: 999px;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 0 1px var(--hairline);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .editor-chip[data-active="true"] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(91, 91, 255, 0.14);
+  }
+
+  .editor-swatch {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: var(--kit-color);
+    border: 1px solid color-mix(in srgb, var(--kit-color) 40%, white);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--kit-color) 35%, transparent);
+  }
+
+  .editor-swatch[data-active="true"] {
+    box-shadow:
+      0 0 0 4px rgba(91, 91, 255, 0.14),
+      0 0 16px color-mix(in srgb, var(--kit-color) 35%, transparent);
+  }
+
+  .editor-piece {
+    display: flex;
+    width: 100%;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 1rem;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 0 1px var(--hairline);
+    text-align: left;
+  }
+
+  .editor-piece[data-active="true"] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(91, 91, 255, 0.14);
+  }
+
   .mode-switch {
     position: relative;
     display: grid;
@@ -297,10 +350,43 @@ html[data-theme="dark"] {
   }
 
   .mode-card {
-    min-height: 100%;
+    position: relative;
+    display: flex;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: 1.6rem;
+    background: #0b0d1a;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.75),
+      0 0 0 2px rgba(15, 17, 23, 0.06),
+      0 32px 80px rgba(15, 17, 23, 0.22);
     transition:
       transform var(--duration) var(--ease),
       box-shadow var(--duration) var(--ease);
+  }
+
+  .mode-card-copy {
+    position: relative;
+    z-index: 20;
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding: 4.25rem 1.35rem 1.5rem;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(11, 13, 26, 0.55) 28%,
+      rgba(11, 13, 26, 0.94) 100%
+    );
+  }
+
+  .mode-card-copy h2,
+  .mode-card-copy p {
+    text-shadow: 0 1px 16px rgba(11, 13, 26, 0.85);
   }
 
   .mode-card:hover {
@@ -328,6 +414,49 @@ html[data-theme="dark"] {
   .header-chip:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
+  }
+
+  .rank-chip {
+    display: inline-flex;
+    min-height: 2.75rem;
+    max-width: 100%;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0 0.8rem 0 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: var(--field);
+    color: var(--ink);
+  }
+
+  .rank-bar {
+    width: 4.25rem;
+    height: 0.28rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--hairline);
+  }
+
+  @media (min-width: 640px) {
+    .rank-bar {
+      width: 5.75rem;
+    }
+  }
+
+  .rank-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-violet));
+    transition: width var(--duration) var(--ease);
+  }
+
+  .mode-card[aria-disabled="true"] {
+    cursor: default;
+  }
+
+  .mode-card[aria-disabled="true"]:hover {
+    transform: none;
   }
 
   .skip-link {
@@ -415,6 +544,15 @@ html[data-theme="dark"] {
     0 0 0 1px rgba(255, 255, 255, 0.75),
     0 0 0 2px rgba(15, 17, 23, 0.06),
     0 32px 80px rgba(15, 17, 23, 0.22);
+}
+
+.board-stage-fill {
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 0;
 }
 
 .board-aura {
@@ -660,7 +798,11 @@ html[data-theme="dark"] {
   .btn-play,
   .btn-glass,
   .mode-switch button,
-  .mode-card {
+  .mode-card,
+  .rank-bar-fill,
+  .editor-chip,
+  .editor-swatch,
+  .editor-piece {
     transition: none !important;
   }
 

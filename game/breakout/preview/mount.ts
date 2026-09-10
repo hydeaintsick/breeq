@@ -36,6 +36,8 @@ export interface HudState {
 
 export interface MountOptions {
   onHud?: (hud: HudState) => void;
+  /** Fired once when a wall is cleared. `human` is true if the visitor held the paddle this run. */
+  onCleared?: (info: { human: boolean; score: number }) => void;
   seed?: number;
   /** "auto": demo only. "pointer": human only. "hybrid": demo until the visitor moves. */
   controls?: "auto" | "pointer" | "hybrid";
@@ -44,12 +46,16 @@ export interface MountOptions {
   maxDpr?: number;
   /** Index of the level to start with (wraps). */
   start?: number;
+  /** "edit": paint the serve frame only. No simulation, no paddle input. */
+  mode?: "play" | "edit";
 }
 
 export interface BreakoutHandle {
   destroy(): void;
   /** Swap the background photo of the current level (editor use). */
   setBackground(src: string): void;
+  /** Replace the current level and redraw (editor use). */
+  setLevel(next: Level): void;
   /** Restart the current level. */
   restart(): void;
   /** Jump to the next level in the rotation. */
@@ -77,7 +83,8 @@ export function mountBreakout(
   const rotation = Array.isArray(levels) ? levels : [levels];
   if (rotation.length === 0) throw new Error("mountBreakout needs at least one level");
   const maxDpr = options.maxDpr ?? 2;
-  const controls = options.controls ?? "hybrid";
+  const controls = options.mode === "edit" ? "auto" : (options.controls ?? "hybrid");
+  const editMode = options.mode === "edit";
   const handoverDelay = options.handoverDelay ?? 3.5;
   let seed = options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
@@ -98,6 +105,7 @@ export function mountBreakout(
   let pointerX: number | null = null;
   let pointerLaunch = false;
   let lastPointerT = -Infinity;
+  let humanTouched = false;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let frozen = reducedMotion.matches;
@@ -108,7 +116,7 @@ export function mountBreakout(
   let level = rotation[levelIndex];
   let game = new Game(level, { seed, autoLaunch: controls !== "pointer" });
   let pilot = new Autopilot(level, { seed: seed * 7 });
-  let renderer = new BreakoutRenderer(canvas, level, palette, () => draw());
+  let renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
 
   let hud: HudState = {
     levelName: level.name,
@@ -141,7 +149,12 @@ export function mountBreakout(
   };
 
   const applyEvents = (events: GameEvent[]) => {
-    for (const e of events) fx.apply(e);
+    for (const e of events) {
+      fx.apply(e);
+      if (e.type === "cleared") {
+        options.onCleared?.({ human: humanTouched, score: e.score });
+      }
+    }
   };
 
   const syncHud = () => {
@@ -190,20 +203,26 @@ export function mountBreakout(
     }
   };
 
-  const loadLevel = (index: number) => {
-    levelIndex = ((index % rotation.length) + rotation.length) % rotation.length;
-    level = rotation[levelIndex];
-    seed += 1;
-    game = new Game(level, { seed, autoLaunch: controls !== "pointer" });
+  const applyLevel = (next: Level, { bumpSeed = true } = {}) => {
+    level = next;
+    if (bumpSeed) seed += 1;
+    game = new Game(level, { seed, autoLaunch: !editMode && controls !== "pointer" });
     pilot = new Autopilot(level, { seed: seed * 7 });
-    renderer = new BreakoutRenderer(canvas, level, palette, () => draw());
+    renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
     if (cssWidth > 0) renderer.resize(cssWidth, dpr);
     scene.trail.length = 0;
     scene.particles.length = 0;
     scene.rings.length = 0;
     endHold = 0;
     accumulator = 0;
+    humanTouched = false;
     syncHud();
+    if (!destroyed) draw();
+  };
+
+  const loadLevel = (index: number) => {
+    levelIndex = ((index % rotation.length) + rotation.length) % rotation.length;
+    applyLevel(rotation[levelIndex]);
   };
 
   const restart = () => {
@@ -212,6 +231,7 @@ export function mountBreakout(
     pilot = new Autopilot(level, { seed: seed * 7 });
     scene.trail.length = 0;
     endHold = 0;
+    humanTouched = false;
   };
 
   const tick = (dt: number) => {
@@ -285,11 +305,13 @@ export function mountBreakout(
   };
   const onPointerMove = (e: PointerEvent) => {
     if (controls === "auto") return;
+    humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
   };
   const onPointerDown = (e: PointerEvent) => {
     if (controls === "auto") return;
+    humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
     pointerLaunch = true;
@@ -297,10 +319,12 @@ export function mountBreakout(
   const onPointerLeave = () => {
     if (controls === "hybrid") lastPointerT = -Infinity;
   };
-  canvas.addEventListener("pointermove", onPointerMove);
-  canvas.addEventListener("pointerdown", onPointerDown);
-  canvas.addEventListener("pointerleave", onPointerLeave);
-  canvas.style.touchAction = "pan-y";
+  if (!editMode) {
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointerleave", onPointerLeave);
+  }
+  canvas.style.touchAction = editMode ? "none" : "pan-y";
 
   // --- browser plumbing -------------------------------------------------------
   const resize = () => {
@@ -333,8 +357,13 @@ export function mountBreakout(
   document.addEventListener("visibilitychange", onVisibility);
   reducedMotion.addEventListener("change", onReducedMotion);
 
-  if (frozen) freeze();
-  else schedule();
+  if (editMode) {
+    draw();
+  } else if (frozen) {
+    freeze();
+  } else {
+    schedule();
+  }
 
   return {
     destroy() {
@@ -350,6 +379,10 @@ export function mountBreakout(
     },
     setBackground(src) {
       renderer.setBackground(src);
+    },
+    setLevel(next) {
+      rotation[levelIndex] = next;
+      applyLevel(next, { bumpSeed: false });
     },
     restart,
     next() {

@@ -34,7 +34,10 @@ export function BreakoutPreview({
   controls = "hybrid",
   followQuery = true,
   compact = false,
+  fill = false,
   showCaption = true,
+  showHud = true,
+  onCleared,
 }: {
   levels?: readonly Level[];
   start?: number;
@@ -42,7 +45,10 @@ export function BreakoutPreview({
   controls?: MountOptions["controls"];
   followQuery?: boolean;
   compact?: boolean;
+  fill?: boolean;
   showCaption?: boolean;
+  showHud?: boolean;
+  onCleared?: MountOptions["onCleared"];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hud, setHud] = useState<HudState | null>(null);
@@ -58,12 +64,13 @@ export function BreakoutPreview({
       : start;
     const handle = mountBreakout(canvas, [...levels], {
       onHud: setHud,
+      onCleared,
       start: queryStart,
       seed,
       controls,
     });
     return () => handle.destroy();
-  }, [levels, start, seed, controls, followQuery]);
+  }, [levels, start, seed, controls, followQuery, onCleared]);
 
   const name = hud?.levelName ?? first.name;
   const author = hud?.author ?? first.author;
@@ -73,11 +80,20 @@ export function BreakoutPreview({
   const speed = hud?.bonus ? SPEED_LABEL[hud.bonus] : `×${(hud?.speed ?? 1).toFixed(1)}`;
   const caption = hud?.caption ?? "Autoplay. Move over the board to take the paddle.";
 
+  const hudVisible = showHud && !fill;
+  const captionVisible = showCaption && !fill;
+
   return (
-    <figure className={`relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`}>
-      <div className="board-aura" aria-hidden="true" />
+    <figure
+      className={
+        fill
+          ? "absolute inset-0 z-0 h-full w-full max-w-none overflow-hidden"
+          : `relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`
+      }
+    >
+      {fill ? null : <div className="board-aura" aria-hidden="true" />}
       <div
-        className="board-stage relative z-10 mx-auto"
+        className={`board-stage relative mx-auto ${fill ? "board-stage-fill" : "z-10"}`}
         role="img"
         aria-label={`A live brick-breaker level called ${name}, built by ${author}: neon glass bricks over a photo, zones and obstacles that bend the ball, a glass paddle, ${maxLives} lives.`}
       >
@@ -87,37 +103,39 @@ export function BreakoutPreview({
           style={{ aspectRatio: `${first.width} / ${first.height}` }}
         />
 
-        <div className="board-hud" aria-hidden="true">
-          <div className="board-hud-name">
-            <strong>{name}</strong>
-            <span>by {author}</span>
+        {hudVisible ? (
+          <div className="board-hud" aria-hidden="true">
+            <div className="board-hud-name">
+              <strong>{name}</strong>
+              <span>by {author}</span>
+            </div>
+            <div className="board-hud-lives">
+              {Array.from({ length: maxLives }, (_, i) => (
+                <span key={i} className="board-hud-life" data-lost={i >= lives} />
+              ))}
+            </div>
+            <div className="board-hud-stats">
+              {hud?.timeLeft !== null && hud?.timeLeft !== undefined ? (
+                <span className="board-hud-clock" data-low={hud.timeLeft <= 15}>
+                  {clock(hud.timeLeft)}
+                </span>
+              ) : null}
+              <span className="board-hud-score">{score}</span>
+              {hud?.mod ? (
+                <span className="board-hud-speed" data-mod={hud.mod}>
+                  {MOD_LABEL[hud.mod]}
+                </span>
+              ) : (
+                <span className="board-hud-speed" data-bonus={hud?.bonus ?? undefined}>
+                  {speed}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="board-hud-lives">
-            {Array.from({ length: maxLives }, (_, i) => (
-              <span key={i} className="board-hud-life" data-lost={i >= lives} />
-            ))}
-          </div>
-          <div className="board-hud-stats">
-            {hud?.timeLeft !== null && hud?.timeLeft !== undefined ? (
-              <span className="board-hud-clock" data-low={hud.timeLeft <= 15}>
-                {clock(hud.timeLeft)}
-              </span>
-            ) : null}
-            <span className="board-hud-score">{score}</span>
-            {hud?.mod ? (
-              <span className="board-hud-speed" data-mod={hud.mod}>
-                {MOD_LABEL[hud.mod]}
-              </span>
-            ) : (
-              <span className="board-hud-speed" data-bonus={hud?.bonus ?? undefined}>
-                {speed}
-              </span>
-            )}
-          </div>
-        </div>
+        ) : null}
       </div>
 
-      {showCaption ? (
+      {captionVisible ? (
         <figcaption className="relative mt-4 h-5 text-center text-xs tracking-wide text-ink-muted">
           <span key={caption} className="board-caption" data-phase={hud?.phase ?? undefined}>
             {caption}

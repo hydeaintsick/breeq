@@ -8,11 +8,12 @@ import { LogoMark } from "@/components/logo-mark";
 import { MenuIcon } from "@/components/menu-icon";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ADMIN_DASHBOARD_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
+import { ADMIN_DASHBOARD_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 
 const links = [
-  { href: ADMIN_DASHBOARD_PATH, label: "Dashboard" },
-  { href: GAME_MENU_PATH, label: "Play" },
+  { href: ADMIN_DASHBOARD_PATH, label: "Dashboard", match: "exact" },
+  { href: ADMIN_EDITOR_PATH, label: "Editor", match: "prefix" },
+  { href: GAME_MENU_PATH, label: "Play", match: "prefix" },
 ] as const;
 
 export function AdminHeader() {
@@ -66,9 +67,9 @@ export function AdminHeader() {
                 href={link.href}
                 className="nav-link flex min-h-11 items-center rounded-xl px-3"
                 data-active={
-                  link.href === ADMIN_DASHBOARD_PATH
-                    ? pathname.startsWith("/admin")
-                    : pathname.startsWith("/game")
+                  link.match === "exact"
+                    ? pathname === link.href
+                    : pathname.startsWith(link.href)
                 }
                 onClick={close}
               >
