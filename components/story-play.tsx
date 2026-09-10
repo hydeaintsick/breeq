@@ -1,40 +1,51 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { awardStoryClear } from "@/app/actions/progress";
+import { useCallback, useMemo, useRef } from "react";
+import { awardChapterClear } from "@/app/actions/progress";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { parseStoredLevel } from "@/game/breakout/engine";
 
 export function StoryPlay({
-  storedLevels,
+  chapterId,
+  title,
+  storedLevel,
   seed,
+  paused,
+  onCleared,
 }: {
-  storedLevels: readonly unknown[];
+  chapterId: string;
+  title: string;
+  storedLevel: unknown;
   seed: number;
+  paused: boolean;
+  onCleared?: (percent: number) => void;
 }) {
-  const router = useRouter();
   const levels = useMemo(
-    () =>
-      storedLevels.map((raw, index) =>
-        parseStoredLevel(raw, {
-          id: `story-${index}`,
-          name: "Chapter",
-          author: "Breeq",
-        }),
-      ),
-    [storedLevels],
+    () => [
+      parseStoredLevel(storedLevel, {
+        id: chapterId,
+        name: title,
+        author: "Breeq",
+      }),
+    ],
+    [chapterId, storedLevel, title],
   );
-  const onCleared = useCallback(
+
+  const onClearedRef = useRef(onCleared);
+  onClearedRef.current = onCleared;
+
+  const handleCleared = useCallback(
     ({ human }: { human: boolean }) => {
       if (!human) {
         return;
       }
-      void awardStoryClear().then(() => {
-        router.refresh();
+      void awardChapterClear(chapterId).then((result) => {
+        if ("storyPercent" in result && typeof result.storyPercent === "number") {
+          onClearedRef.current?.(result.storyPercent);
+        }
       });
     },
-    [router],
+    [chapterId],
   );
 
   return (
@@ -42,8 +53,12 @@ export function StoryPlay({
       levels={levels}
       seed={seed}
       followQuery={false}
-      controls="hybrid"
-      onCleared={onCleared}
+      controls="pointer"
+      loop={false}
+      contain
+      showCaption={false}
+      paused={paused}
+      onCleared={handleCleared}
     />
   );
 }

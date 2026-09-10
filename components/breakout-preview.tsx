@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
 import type { Level } from "@/game/breakout/engine/types";
-import { mountBreakout, type HudState, type MountOptions } from "@/game/breakout/preview";
+import { mountBreakout, type BreakoutHandle, type HudState, type MountOptions } from "@/game/breakout/preview";
 
 const DEFAULT_LEVELS = SHOWCASE_LEVELS;
 
@@ -35,8 +35,11 @@ export function BreakoutPreview({
   followQuery = true,
   compact = false,
   fill = false,
+  contain = false,
   showCaption = true,
   showHud = true,
+  paused = false,
+  loop = true,
   onCleared,
 }: {
   levels?: readonly Level[];
@@ -46,11 +49,15 @@ export function BreakoutPreview({
   followQuery?: boolean;
   compact?: boolean;
   fill?: boolean;
+  contain?: boolean;
   showCaption?: boolean;
   showHud?: boolean;
+  paused?: boolean;
+  loop?: boolean;
   onCleared?: MountOptions["onCleared"];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const handleRef = useRef<BreakoutHandle | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
   const first = levels[0] ?? DEFAULT_LEVELS[0];
 
@@ -68,9 +75,22 @@ export function BreakoutPreview({
       start: queryStart,
       seed,
       controls,
+      loop,
     });
-    return () => handle.destroy();
-  }, [levels, start, seed, controls, followQuery, onCleared]);
+    handleRef.current = handle;
+    return () => {
+      handle.destroy();
+      handleRef.current = null;
+    };
+  }, [levels, start, seed, controls, followQuery, loop, onCleared]);
+
+  useEffect(() => {
+    if (paused) {
+      handleRef.current?.pause();
+    } else {
+      handleRef.current?.resume();
+    }
+  }, [paused]);
 
   const name = hud?.levelName ?? first.name;
   const author = hud?.author ?? first.author;
@@ -81,25 +101,31 @@ export function BreakoutPreview({
   const caption = hud?.caption ?? "Autoplay. Move over the board to take the paddle.";
 
   const hudVisible = showHud && !fill;
-  const captionVisible = showCaption && !fill;
+  const captionVisible = showCaption && !fill && !contain;
 
   return (
     <figure
       className={
-        fill
-          ? "absolute inset-0 z-0 h-full w-full max-w-none overflow-hidden"
-          : `relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`
+        contain
+          ? "story-play-stage"
+          : fill
+            ? "absolute inset-0 z-0 h-full w-full max-w-none overflow-hidden"
+            : `relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`
       }
     >
-      {fill ? null : <div className="board-aura" aria-hidden="true" />}
+      {fill || contain ? null : <div className="board-aura" aria-hidden="true" />}
       <div
-        className={`board-stage relative mx-auto ${fill ? "board-stage-fill" : "z-10"}`}
+        className={
+          contain
+            ? "story-play-board board-stage relative"
+            : `board-stage relative mx-auto ${fill ? "board-stage-fill" : "z-10"}`
+        }
         role="img"
         aria-label={`A live brick-breaker level called ${name}, built by ${author}: neon glass bricks over a photo, zones and obstacles that bend the ball, a glass paddle, ${maxLives} lives.`}
       >
         <canvas
           ref={canvasRef}
-          className="block w-full"
+          className="block h-full w-full"
           style={{ aspectRatio: `${first.width} / ${first.height}` }}
         />
 

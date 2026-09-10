@@ -366,6 +366,16 @@ html[data-theme="dark"] {
       box-shadow var(--duration) var(--ease);
   }
 
+  button.mode-card {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+  }
+
   .mode-card-copy {
     position: relative;
     z-index: 20;
@@ -453,10 +463,44 @@ html[data-theme="dark"] {
 
   .mode-card[aria-disabled="true"] {
     cursor: default;
+    background: #05060c;
   }
 
   .mode-card[aria-disabled="true"]:hover {
     transform: none;
+  }
+
+  .mode-card-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #05060c;
+  }
+
+  .mode-card-lock {
+    position: absolute;
+    top: 36%;
+    left: 50%;
+    width: 2.75rem;
+    height: 2.75rem;
+    color: rgba(255, 255, 255, 0.22);
+    transform: translate(-50%, -50%);
+  }
+
+  .mode-card[aria-disabled="true"] .mode-card-copy {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(5, 6, 12, 0.82) 18%,
+      #05060c 100%
+    );
+  }
+
+  .mode-card[aria-disabled="true"] .btn-play {
+    background: #f2f3f7;
+    color: #0f1117;
+    opacity: 0.72;
+    box-shadow: none;
   }
 
   .skip-link {
@@ -756,6 +800,152 @@ html[data-theme="dark"] {
   color: var(--danger);
 }
 
+.story-sheet {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0b0d1a;
+  border-radius: 1.6rem;
+  transition:
+    top var(--duration) var(--ease),
+    left var(--duration) var(--ease),
+    width var(--duration) var(--ease),
+    height var(--duration) var(--ease),
+    border-radius var(--duration) var(--ease);
+}
+
+.story-sheet[data-grown="true"] {
+  inset: 0;
+  width: 100vw;
+  height: 100svh;
+  max-width: none;
+  border-radius: 0;
+}
+
+.story-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 6, 12, 0.28) 0%,
+    rgba(5, 6, 12, 0.72) 38%,
+    #05060c 100%
+  );
+}
+
+.story-sheet-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: max(0.85rem, env(safe-area-inset-top)) max(0.85rem, env(safe-area-inset-right)) 0
+    max(1.25rem, env(safe-area-inset-left));
+}
+
+.story-sheet-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: auto;
+  padding: 1.5rem max(1.25rem, env(safe-area-inset-right)) max(1.75rem, env(safe-area-inset-bottom))
+    max(1.25rem, env(safe-area-inset-left));
+}
+
+.story-campaign-bar {
+  width: min(100%, 22rem);
+  height: 0.38rem;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.story-level {
+  display: flex;
+  min-height: 3.5rem;
+  width: 100%;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  text-align: left;
+}
+
+.story-level:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.story-close,
+.story-pause {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(11, 13, 26, 0.55);
+  color: #ffffff;
+  @apply backdrop-blur-[20px] backdrop-saturate-150;
+}
+
+.story-close:focus-visible,
+.story-pause:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.story-play {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: #05060c;
+}
+
+.story-play-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.story-play-board {
+  width: min(100%, calc((100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 360 / 640));
+  max-height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.story-play-board .board-hud {
+  padding-right: 4.5rem;
+}
+
+.story-pause {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  z-index: 3;
+}
+
+.story-pause-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(5, 6, 12, 0.55);
+  @apply backdrop-blur-[16px];
+}
+
 @keyframes shimmer {
   0%,
   72% {
@@ -799,6 +989,7 @@ html[data-theme="dark"] {
   .btn-glass,
   .mode-switch button,
   .mode-card,
+  .story-sheet,
   .rank-bar-fill,
   .editor-chip,
   .editor-swatch,

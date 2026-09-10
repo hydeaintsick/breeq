@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EpisodePicker } from "@/components/episode-picker";
+import { StoryShelf } from "@/components/story-shelf";
 import { GAME_MENU_PATH } from "@/lib/auth/paths";
-import { requireUser } from "@/lib/auth/session";
-import { listStoryEpisodes } from "@/lib/story";
+import { requireProgress } from "@/lib/auth/session";
+import { getStoryShelf } from "@/lib/story";
 
 export const metadata: Metadata = {
   title: "Story",
@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function StoryPage() {
-  const [, episodes] = await Promise.all([requireUser(), listStoryEpisodes()]);
+  const { user } = await requireProgress();
+  const { episodes, storyPercent } = await getStoryShelf(user.id);
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
@@ -30,7 +31,7 @@ export default async function StoryPage() {
             No episodes yet. Check back once the campaign is published.
           </p>
         ) : (
-          <EpisodePicker episodes={episodes} />
+          <StoryShelf episodes={episodes} storyPercent={storyPercent} />
         )}
       </div>
       <Link href={GAME_MENU_PATH} className="nav-link mt-10 inline-flex min-h-11 items-center">

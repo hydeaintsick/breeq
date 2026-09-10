@@ -48,6 +48,8 @@ export interface MountOptions {
   start?: number;
   /** "edit": paint the serve frame only. No simulation, no paddle input. */
   mode?: "play" | "edit";
+  /** When false, a finished wall stays on the end frame instead of rotating. */
+  loop?: boolean;
 }
 
 export interface BreakoutHandle {
@@ -60,6 +62,8 @@ export interface BreakoutHandle {
   restart(): void;
   /** Jump to the next level in the rotation. */
   next(): void;
+  pause(): void;
+  resume(): void;
 }
 
 const CAPTIONS = {
@@ -86,8 +90,10 @@ export function mountBreakout(
   const controls = options.mode === "edit" ? "auto" : (options.controls ?? "hybrid");
   const editMode = options.mode === "edit";
   const handoverDelay = options.handoverDelay ?? 3.5;
+  const loop = options.loop ?? true;
   let seed = options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
+  let paused = false;
 
   const palette = readNeonPalette();
   const scene = createScene();
@@ -249,7 +255,7 @@ export function mountBreakout(
 
     if (game.finished) {
       endHold += dt;
-      if (endHold > 0.6) loadLevel(levelIndex + 1);
+      if (loop && endHold > 0.6) loadLevel(levelIndex + 1);
     }
     syncHud();
   };
@@ -258,7 +264,7 @@ export function mountBreakout(
 
   const frame = (now: number) => {
     raf = 0;
-    if (destroyed || frozen || !visible || hidden) return;
+    if (destroyed || frozen || !visible || hidden || paused) return;
     const dt = last === 0 ? 0 : Math.min(0.05, (now - last) / 1000);
     last = now;
     tick(dt);
@@ -267,7 +273,7 @@ export function mountBreakout(
   };
 
   const schedule = () => {
-    if (!raf && !destroyed && !frozen && visible && !hidden) {
+    if (!raf && !destroyed && !frozen && visible && !hidden && !paused) {
       last = 0;
       raf = requestAnimationFrame(frame);
     }
@@ -304,13 +310,13 @@ export function mountBreakout(
     return ((clientX - rect.left) / rect.width) * level.width;
   };
   const onPointerMove = (e: PointerEvent) => {
-    if (controls === "auto") return;
+    if (controls === "auto" || paused) return;
     humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
   };
   const onPointerDown = (e: PointerEvent) => {
-    if (controls === "auto") return;
+    if (controls === "auto" || paused) return;
     humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
@@ -324,7 +330,7 @@ export function mountBreakout(
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointerleave", onPointerLeave);
   }
-  canvas.style.touchAction = editMode ? "none" : "pan-y";
+  canvas.style.touchAction = editMode || controls === "pointer" ? "none" : "pan-y";
 
   // --- browser plumbing -------------------------------------------------------
   const resize = () => {
@@ -387,6 +393,17 @@ export function mountBreakout(
     restart,
     next() {
       loadLevel(levelIndex + 1);
+    },
+    pause() {
+      paused = true;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      last = 0;
+    },
+    resume() {
+      if (!paused) return;
+      paused = false;
+      schedule();
     },
   };
 }

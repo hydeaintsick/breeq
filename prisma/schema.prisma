@@ -13,20 +13,21 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
   name          String?
-  username      String?   @unique
-  email         String?   @unique
+  username      String?        @unique
+  email         String?        @unique
   emailVerified DateTime?
   image         String?
   passwordHash  String?
   walletAddress String?
-  role          Role      @default(PLAYER)
-  xp            Int       @default(0)
+  role          Role           @default(PLAYER)
+  xp            Int            @default(0)
   accounts      Account[]
   sessions      Session[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  chapterClears ChapterClear[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Account {
@@ -82,15 +83,27 @@ model Episode {
 }
 
 model Chapter {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  episodeId String  @db.ObjectId
-  episode   Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  episodeId String         @db.ObjectId
+  episode   Episode        @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   title     String
   slug      String
-  order     Int     @default(0)
+  order     Int            @default(0)
   level     Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  clears    ChapterClear[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@unique([episodeId, slug])
+}
+
+model ChapterClear {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  chapterId String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, chapterId])
 }

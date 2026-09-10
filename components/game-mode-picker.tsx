@@ -10,7 +10,7 @@ const EARN_LEVELS = [LOCKDOWN];
 
 export function GameModePicker({ earnLocked }: { earnLocked: boolean }) {
   return (
-    <div className="grid w-full justify-items-start gap-6 md:grid-cols-2">
+    <div className="grid w-full justify-items-stretch gap-6 md:grid-cols-2 md:justify-items-start">
       <PlayCard
         href={STORY_PATH}
         kicker="01"

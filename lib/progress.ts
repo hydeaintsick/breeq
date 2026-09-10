@@ -67,3 +67,11 @@ export function progressFromXp(xp: number): Progress {
 export function canPlayEarn(role: Role | string | undefined, level: number) {
   return role === "ADMIN" || level >= EARN_UNLOCK_LEVEL;
 }
+
+/** Cleared Story walls over the campaign, as a 0–100 percent. */
+export function storyPercent(cleared: number, total: number) {
+  if (total <= 0) {
+    return 0;
+  }
+  return Math.min(100, Math.round((cleared / total) * 100));
+}

@@ -1,5 +1,13 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { storyPercent } from "@/lib/progress";
+
+export type StoryChapterCard = {
+  id: string;
+  title: string;
+  cleared: boolean;
+  level: unknown;
+};
 
 export type StoryEpisodeCard = {
   id: string;
@@ -7,40 +15,53 @@ export type StoryEpisodeCard = {
   title: string;
   chapterCount: number;
   previewLevel: unknown | null;
+  chapters: StoryChapterCard[];
+};
+
+export type StoryShelf = {
+  episodes: StoryEpisodeCard[];
+  storyPercent: number;
 };
 
 const ORDER = [{ order: "asc" as const }, { createdAt: "asc" as const }];
 
-export const listStoryEpisodes = cache(async function listStoryEpisodes(): Promise<StoryEpisodeCard[]> {
-  const episodes = await prisma.episode.findMany({
-    orderBy: ORDER,
-    include: {
-      _count: { select: { chapters: true } },
-      chapters: {
-        orderBy: ORDER,
-        take: 1,
-        select: { level: true },
+export const getStoryShelf = cache(async function getStoryShelf(userId: string): Promise<StoryShelf> {
+  const [episodes, clears] = await Promise.all([
+    prisma.episode.findMany({
+      orderBy: ORDER,
+      include: {
+        chapters: {
+          orderBy: ORDER,
+          select: { id: true, title: true, level: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.chapterClear.findMany({
+      where: { userId },
+      select: { chapterId: true },
+    }),
+  ]);
 
-  return episodes.map((episode) => ({
+  const cleared = new Set(clears.map((row) => row.chapterId));
+  const cards: StoryEpisodeCard[] = episodes.map((episode) => ({
     id: episode.id,
     slug: episode.slug,
     title: episode.title,
-    chapterCount: episode._count.chapters,
+    chapterCount: episode.chapters.length,
     previewLevel: episode.chapters[0]?.level ?? null,
+    chapters: episode.chapters.map((chapter) => ({
+      id: chapter.id,
+      title: chapter.title,
+      cleared: cleared.has(chapter.id),
+      level: chapter.level,
+    })),
   }));
-});
 
-export const getStoryEpisode = cache(async function getStoryEpisode(slug: string) {
-  return prisma.episode.findUnique({
-    where: { slug },
-    include: {
-      chapters: {
-        orderBy: ORDER,
-        select: { id: true, title: true, level: true },
-      },
-    },
-  });
+  const total = cards.reduce((sum, episode) => sum + episode.chapters.length, 0);
+  const clearedCount = cards.reduce(
+    (sum, episode) => sum + episode.chapters.filter((chapter) => chapter.cleared).length,
+    0,
+  );
+
+  return { episodes: cards, storyPercent: storyPercent(clearedCount, total) };
 });

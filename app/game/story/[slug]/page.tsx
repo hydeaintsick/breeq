@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StoryPlay } from "@/components/story-play";
-import { STORY_PATH } from "@/lib/auth/paths";
-import { requireUser } from "@/lib/auth/session";
-import { getStoryEpisode } from "@/lib/story";
+import { StoryShelf } from "@/components/story-shelf";
+import { GAME_MENU_PATH } from "@/lib/auth/paths";
+import { requireProgress } from "@/lib/auth/session";
+import { getStoryShelf } from "@/lib/story";
 
 export async function generateMetadata({
   params,
@@ -12,7 +12,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const episode = await getStoryEpisode(slug);
+  const { user } = await requireProgress();
+  const { episodes } = await getStoryShelf(user.id);
+  const episode = episodes.find((item) => item.slug === slug);
   return {
     title: episode?.title ?? "Episode",
     description: "Play this Breeq story episode.",
@@ -25,37 +27,28 @@ export default async function StoryEpisodePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [, episode] = await Promise.all([requireUser(), getStoryEpisode(slug)]);
+  const { user } = await requireProgress();
+  const { episodes, storyPercent } = await getStoryShelf(user.id);
+  const episode = episodes.find((item) => item.slug === slug);
 
   if (!episode) {
     notFound();
   }
 
-  const chapters = episode.chapters;
-  const chapterLabel =
-    chapters.length === 1 ? "1 chapter" : `${chapters.length} chapters`;
-
   return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-12 px-6 pb-20 pt-28 lg:flex-row">
-      <div className="max-w-xl">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-          Story · {chapterLabel}
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-          {episode.title}
-        </h1>
-        <p className="mt-5 text-lg leading-8 text-ink-muted">
-          {chapters.length === 0
-            ? "This episode has no walls yet."
-            : "Clear this wall, then the next. Move over the board to take the paddle."}
-        </p>
-        <Link href={STORY_PATH} className="nav-link mt-8 inline-flex min-h-11 items-center">
-          Back to episodes
-        </Link>
+    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
+        Story
+      </p>
+      <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+        {episode.title}
+      </h1>
+      <div className="mt-10">
+        <StoryShelf episodes={episodes} storyPercent={storyPercent} initialSlug={slug} />
       </div>
-      {chapters.length > 0 ? (
-        <StoryPlay storedLevels={chapters.map((chapter) => chapter.level)} seed={11} />
-      ) : null}
+      <Link href={GAME_MENU_PATH} className="nav-link mt-10 inline-flex min-h-11 items-center">
+        Back to modes
+      </Link>
     </section>
   );
 }
