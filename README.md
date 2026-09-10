@@ -1,22 +1,38 @@
-# King of Thieves (Plinko)
+# King of Thieves (Brick Breaker)
 
-A Next.js take on *King of Thieves* as a vertical Plinko / Fakir board: you build a trap-filled course, then other players risk gold to send a ball through it.
+A Next.js take on *King of Thieves* as a brick breaker **built by players, for players**: you design a wall over your own photo, place bonus zones that bend the ball's speed, then dare everyone else to clear it.
 
 ## The core idea
 
-Each player owns a **vertical board**. You place nails, trampolines, fans, and fake teleport portals so other players' balls miss the chest at the bottom.
+Each player authors **levels**: glass bricks, hard bricks, steel posts, and bonus zones laid over a photo they chose. Other players clear them with a paddle and a fixed number of lives.
 
-**The golden rule:** you can only publish a level after beating it yourself. That keeps every board mathematically possible, even when it feels unfair.
+**Bonus zones** stay on the field and trigger when the ball passes through: *slow* halves its speed, *×2* doubles it, *×3* triples it, each for a few seconds. Where the author puts them is the whole design.
 
-**The economy:** attackers pay an entry fee in gold coins. If they fall into the void or get destroyed by a trap, the level creator keeps the stake. If they reach the chest, they loot your reserve.
+**Speed** follows the classic rule: every few paddle hits the ball gains a notch, and rapid rebounds build heat that adds more. Losing a life resets it.
+
+**The publish rule:** you can only publish a level after clearing it yourself. That keeps every wall beatable, even when it feels unfair.
 
 ## Showcase site
 
-This repo starts as a **marketing site** for the game, not the game itself. It should feel like the product: a dark vault you can almost touch, then a clear path to play (or join the waitlist) when the game exists.
+This repo starts as a **marketing site** for the game, not the game itself. It should feel like the product: a light glass page with one dark, glowing board on it, then a clear path to play.
 
-**Heist Glass** is the design system — Apple frost + Airbnb editorial space + Revolut dark luxury, filtered through gold, traps, and a vertical Plinko board. Same tokens will drive the future game UI so we do not redesign later.
+**Light Glass, Neon Bricks** is the design system — Apple frost and soft color blooms, Airbnb editorial space, Revolut confidence — with the neon reserved for the bricks and the board aura. The same tokens drive the game UI so we do not redesign later.
 
-Cheap on purpose: CSS/SVG only, Geist, one gold accent, no paid assets. See `AGENTS.md` for the full policy.
+Cheap on purpose: CSS/SVG, one Canvas 2D element for the board, Geist, one accent, six neons, no paid assets. See `AGENTS.md` for the full policy.
+
+## Game engine
+
+The board on the home page is not a video. It is the real engine playing the real level in `game/breakout/`, with an autopilot on the paddle until you move over the board and take it:
+
+- `game/breakout/engine` — deterministic, fixed-step (240 Hz) game with a seeded PRNG: `Game` owns lives, score, collisions, and the speed model (`bonus × ramp × heat`). `Autopilot` is a seeded paddle AI used for demos and for proving a level can be cleared.
+- `game/breakout/engine/level.ts` — the level API the editor will call: `createLevel({...}).background("/photo.jpg").brickRows({...}).bonus("fast3", x, y).build()`. Validation runs on `build()`.
+- `game/breakout/levels/first-light.ts` — the showcase level: a hollow wall with hard bricks and steel posts, three bonus zones, a bokeh photo behind.
+- `game/breakout/render` — Canvas 2D: photo + frame painted once per resize, neon glass bricks as cached glow sprites, ball with trail and speed aura, glass paddle, bonus rings, particles.
+- `game/breakout/preview` — browser mount: DPR cap, resize, off-screen and hidden-tab pause, reduced motion, and pointer/touch paddle control.
+- `game/plinko` — the earlier vertical trap-board engine, kept intact and unmounted.
+- `game/shared` — PRNG and color helpers shared by every engine.
+
+Zero runtime dependencies beyond React.
 
 ## Getting started
 
