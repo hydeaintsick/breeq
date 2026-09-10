@@ -73,13 +73,14 @@ model VerificationToken {
 }
 
 model Episode {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  title     String
-  slug      String    @unique
-  order     Int       @default(0)
-  chapters  Chapter[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  slug          String    @unique
+  order         Int       @default(0)
+  backgroundUrl String?
+  chapters      Chapter[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Chapter {
@@ -89,6 +90,7 @@ model Chapter {
   title     String
   slug      String
   order     Int            @default(0)
+  xpReward  Int            @default(100)
   level     Json
   clears    ChapterClear[]
   createdAt DateTime       @default(now())

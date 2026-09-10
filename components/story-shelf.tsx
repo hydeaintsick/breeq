@@ -158,6 +158,7 @@ export function StoryShelf({
               action="Play"
               levels={previewLevels(episode)}
               seed={11 + index}
+              cover={episode.backgroundUrl}
               locked={locked}
               lockedHint="No chapters yet."
               onSelect={locked ? undefined : (card) => openEpisode(episode, card)}
@@ -178,7 +179,14 @@ export function StoryShelf({
                 aria-labelledby={titleId}
               >
                 <div className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none" inert>
-                  <BreakoutFill episode={open} />
+                  {open.backgroundUrl ? (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url("${open.backgroundUrl.replace(/"/g, "")}")` }}
+                    />
+                  ) : (
+                    <BreakoutFill episode={open} />
+                  )}
                 </div>
                 <div className="story-sheet-scrim" aria-hidden="true" />
                 <div className="story-sheet-bar">
@@ -216,7 +224,7 @@ export function StoryShelf({
                             {chapter.title}
                           </span>
                           <span className="shrink-0 text-sm text-white/70">
-                            {chapter.cleared ? "Cleared" : "Play"}
+                            {chapter.cleared ? "Cleared" : `${chapter.xpReward} XP`}
                           </span>
                         </button>
                       </li>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { moveChapter } from "@/app/actions/editor";
 import { CreateChapterForm } from "@/components/create-chapter-form";
+import { EpisodeBackgroundForm } from "@/components/episode-background-form";
 import { ReorderControls } from "@/components/reorder-controls";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/session";
@@ -47,6 +48,8 @@ export default async function EpisodeEditorPage({
         A chapter is one level. Open it to place bricks, zones, and obstacles, then save.
       </p>
 
+      <EpisodeBackgroundForm episodeId={episode.id} backgroundUrl={episode.backgroundUrl} />
+
       <CreateChapterForm episodeId={episode.id} />
 
       {episode.chapters.length === 0 ? (
@@ -74,6 +77,9 @@ export default async function EpisodeEditorPage({
                   </span>
                   <span className="mt-1 block truncate font-semibold tracking-tight text-ink">
                     {chapter.title}
+                  </span>
+                  <span className="mt-1 block text-sm text-ink-muted">
+                    {chapter.xpReward ?? 100} XP
                   </span>
                 </span>
                 <span className="shrink-0 text-sm text-ink-muted">Edit</span>

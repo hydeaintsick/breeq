@@ -17,7 +17,7 @@ export async function awardChapterClear(chapterId: string) {
   const user = await requireUser();
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
-    select: { id: true },
+    select: { id: true, xpReward: true },
   });
 
   if (!chapter) {
@@ -48,7 +48,7 @@ export async function awardChapterClear(chapterId: string) {
       }),
       prisma.user.update({
         where: { id: user.id },
-        data: { xp: { increment: XP_PER_STORY_CLEAR } },
+        data: { xp: { increment: chapter.xpReward || XP_PER_STORY_CLEAR } },
         select: { xp: true },
       }),
     ]);

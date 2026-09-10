@@ -38,6 +38,7 @@ export default async function ChapterEditorPage({
       chapterId={chapter.id}
       episodeTitle={chapter.episode.title}
       initialTitle={chapter.title}
+      initialXpReward={chapter.xpReward ?? 100}
       initialLevel={level}
     />
   );

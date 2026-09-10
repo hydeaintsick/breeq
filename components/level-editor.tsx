@@ -61,18 +61,21 @@ export function LevelEditor({
   chapterId,
   episodeTitle,
   initialTitle,
+  initialXpReward,
   initialLevel,
 }: {
   episodeId: string;
   chapterId: string;
   episodeTitle: string;
   initialTitle: string;
+  initialXpReward: number;
   initialLevel: Level;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [title, setTitle] = useState(initialTitle);
+  const [xpReward, setXpReward] = useState(initialXpReward);
   const [level, setLevel] = useState(initialLevel);
   const [history, setHistory] = useState<Level[]>([]);
   const [tab, setTab] = useState<FamilyTab>("brick");
@@ -177,6 +180,7 @@ export function LevelEditor({
         episodeId,
         chapterId,
         title,
+        xpReward,
         level: serializeLevel({ ...level, name: title }),
       });
       if ("error" in result) {
@@ -268,6 +272,22 @@ export function LevelEditor({
               }}
               className="field"
               maxLength={60}
+            />
+          </label>
+          <label className="mt-4 grid gap-2 text-sm text-ink-muted">
+            XP for a clear
+            <input
+              type="number"
+              min={0}
+              max={10000}
+              step={10}
+              value={xpReward}
+              onChange={(event) => {
+                setXpReward(Number(event.target.value));
+                setDirty(true);
+                setSaved(false);
+              }}
+              className="field"
             />
           </label>
 

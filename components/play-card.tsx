@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import type { Level } from "@/game/breakout/engine/types";
 
@@ -27,6 +28,7 @@ export function PlayCard({
   action,
   levels,
   seed,
+  cover,
   locked = false,
   lockedHint,
 }: {
@@ -38,6 +40,7 @@ export function PlayCard({
   action: string;
   levels: readonly Level[];
   seed: number;
+  cover?: string | null;
   locked?: boolean;
   lockedHint?: string;
 }) {
@@ -45,6 +48,10 @@ export function PlayCard({
     <>
       {locked ? (
         LOCK_MARK
+      ) : cover ? (
+        <div className="absolute inset-0">
+          <Image src={cover} alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 22rem" />
+        </div>
       ) : (
         <div
           className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none"

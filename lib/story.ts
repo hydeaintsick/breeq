@@ -5,6 +5,7 @@ import { storyPercent } from "@/lib/progress";
 export type StoryChapterCard = {
   id: string;
   title: string;
+  xpReward: number;
   cleared: boolean;
   level: unknown;
 };
@@ -13,6 +14,7 @@ export type StoryEpisodeCard = {
   id: string;
   slug: string;
   title: string;
+  backgroundUrl: string | null;
   chapterCount: number;
   previewLevel: unknown | null;
   chapters: StoryChapterCard[];
@@ -32,7 +34,7 @@ export const getStoryShelf = cache(async function getStoryShelf(userId: string):
       include: {
         chapters: {
           orderBy: ORDER,
-          select: { id: true, title: true, level: true },
+          select: { id: true, title: true, xpReward: true, level: true },
         },
       },
     }),
@@ -47,11 +49,13 @@ export const getStoryShelf = cache(async function getStoryShelf(userId: string):
     id: episode.id,
     slug: episode.slug,
     title: episode.title,
+    backgroundUrl: episode.backgroundUrl,
     chapterCount: episode.chapters.length,
     previewLevel: episode.chapters[0]?.level ?? null,
     chapters: episode.chapters.map((chapter) => ({
       id: chapter.id,
       title: chapter.title,
+      xpReward: chapter.xpReward ?? 100,
       cleared: cleared.has(chapter.id),
       level: chapter.level,
     })),

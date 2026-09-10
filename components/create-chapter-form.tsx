@@ -20,6 +20,18 @@ export function CreateChapterForm({ episodeId }: { episodeId: string }) {
           className="field"
         />
       </label>
+      <label className="grid gap-2 text-sm text-ink-muted">
+        XP for a clear
+        <input
+          name="xpReward"
+          type="number"
+          min={0}
+          max={10000}
+          step={10}
+          defaultValue={100}
+          className="field"
+        />
+      </label>
       {state?.error ? <p className="text-sm text-danger">{state.error}</p> : null}
       <button type="submit" className="btn-play w-fit" disabled={pending}>
         {pending ? "Creating…" : "Create chapter"}

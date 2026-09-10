@@ -8,6 +8,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import { ADMIN_EDITOR_PATH, STORY_PATH, storyEpisodePath } from "@/lib/auth/paths";
 import { slugify } from "@/lib/slug";
 import { createDraftLevel, parseStoredLevel, serializeLevel } from "@/game/breakout/engine";
+import { uploadStoryBackground } from "@/lib/cloudinary";
+import { XP_PER_STORY_CLEAR } from "@/lib/progress";
 
 type ActionState = { error: string } | null;
 type MoveDirection = "up" | "down";
@@ -33,6 +35,22 @@ async function writeOrder(items: { id: string }[], update: (id: string, order: n
   }
 }
 
+function parseXp(value: FormDataEntryValue | string | number | null | undefined) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return XP_PER_STORY_CLEAR;
+  }
+  return Math.min(10_000, Math.max(0, Math.round(parsed)));
+}
+
+async function readStoryImage(formData: FormData) {
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    return null;
+  }
+  return uploadStoryBackground(file);
+}
+
 function revalidateStory(slug?: string) {
   revalidatePath(STORY_PATH);
   if (slug) {
@@ -52,11 +70,19 @@ export async function createEpisode(_prev: ActionState, formData: FormData): Pro
   const slug = await uniqueEpisodeSlug(base);
   const last = await prisma.episode.aggregate({ _max: { order: true } });
 
+  let backgroundUrl: string | undefined;
+  try {
+    backgroundUrl = (await readStoryImage(formData)) ?? undefined;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not upload the image." };
+  }
+
   const episode = await prisma.episode.create({
     data: {
       title,
       slug,
       order: (last._max.order ?? 0) + 1,
+      backgroundUrl,
     },
   });
 
@@ -76,6 +102,8 @@ export async function createChapter(
   if (title.length < 2 || title.length > 60) {
     return { error: "Chapter name must be 2–60 characters." };
   }
+
+  const xpReward = parseXp(formData.get("xpReward"));
 
   const episode = await prisma.episode.findUnique({
     where: { id: episodeId },
@@ -98,6 +126,7 @@ export async function createChapter(
       title,
       slug,
       order: (last._max.order ?? 0) + 1,
+      xpReward,
       level: {} as Prisma.InputJsonValue,
     },
   });
@@ -123,6 +152,7 @@ export async function saveChapter(input: {
   episodeId: string;
   chapterId: string;
   title: string;
+  xpReward: number;
   level: unknown;
 }): Promise<{ ok: true } | { error: string }> {
   const user = await requireAdmin();
@@ -131,6 +161,8 @@ export async function saveChapter(input: {
   if (title.length < 2 || title.length > 60) {
     return { error: "Chapter name must be 2–60 characters." };
   }
+
+  const xpReward = parseXp(input.xpReward);
 
   const chapter = await prisma.chapter.findFirst({
     where: { id: input.chapterId, episodeId: input.episodeId },
@@ -155,6 +187,7 @@ export async function saveChapter(input: {
     where: { id: chapter.id },
     data: {
       title,
+      xpReward,
       level: serializeLevel(level) as Prisma.InputJsonValue,
     },
   });
@@ -163,6 +196,39 @@ export async function saveChapter(input: {
   revalidatePath(`${ADMIN_EDITOR_PATH}/${input.episodeId}/${chapter.id}`);
   revalidateStory(chapter.episode.slug);
   return { ok: true };
+}
+
+export async function updateEpisodeBackground(
+  episodeId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+  const episode = await prisma.episode.findUnique({
+    where: { id: episodeId },
+    select: { id: true, slug: true },
+  });
+
+  if (!episode) {
+    return { error: "Episode not found." };
+  }
+
+  try {
+    const backgroundUrl = await readStoryImage(formData);
+    if (!backgroundUrl) {
+      return { error: "Choose an image." };
+    }
+    await prisma.episode.update({
+      where: { id: episode.id },
+      data: { backgroundUrl },
+    });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not upload the image." };
+  }
+
+  revalidatePath(`${ADMIN_EDITOR_PATH}/${episode.id}`);
+  revalidateStory(episode.slug);
+  return null;
 }
 
 export async function moveEpisode(id: string, direction: MoveDirection) {
