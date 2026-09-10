@@ -8,7 +8,9 @@ export default function GameLayout({
   return (
     <>
       <GameHeader />
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-clip">
+        {children}
+      </div>
     </>
   );
 }

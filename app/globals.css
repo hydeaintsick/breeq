@@ -115,10 +115,15 @@ html[data-theme="dark"] {
       var(--bg);
   }
 
+  /* Never clip `main`: GameHeader / AdminHeader render inside it, and
+     overflow other than visible on an ancestor disables backdrop-filter. */
   main,
   footer {
-    overflow-x: clip;
     max-width: 100%;
+  }
+
+  footer {
+    overflow-x: clip;
   }
 
   ::selection {
@@ -349,9 +354,8 @@ html[data-theme="dark"] {
 }
 
 .site-header {
-  /* Opacity only — a transform on this ancestor would flatten the stacking
-     context and kill backdrop-filter on the nav (the glass would go clear). */
-  animation: header-in 720ms var(--ease) both;
+  /* No transform / opacity / filter on this ancestor: any of those
+     flattens the stacking context and kills backdrop-filter on the nav. */
   padding-top: max(1rem, env(safe-area-inset-top));
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
@@ -614,15 +618,6 @@ html[data-theme="dark"] {
   color: var(--danger);
 }
 
-@keyframes header-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes shimmer {
   0%,
   72% {
@@ -655,7 +650,6 @@ html[data-theme="dark"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-header,
   .play-shimmer::after,
   .board-caption,
   .board-aura {

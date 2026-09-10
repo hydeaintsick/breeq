@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useId, useState } from "react";
+import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
 import { MenuIcon } from "@/components/menu-icon";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -35,28 +36,14 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
-
   return (
     <header
       className="site-header pointer-events-none fixed inset-x-0 top-0 z-50"
       data-scrolled={scrolled}
     >
+      <HeaderMenuBackdrop open={open} onClose={close} />
       <nav
-        className="site-nav pointer-events-auto relative mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full px-4 backdrop-blur-[28px] backdrop-saturate-150 sm:px-5"
+        className="site-nav pointer-events-auto relative z-10 mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full px-4 backdrop-blur-[28px] backdrop-saturate-150 sm:px-5"
         aria-label="Primary"
       >
         <Link
@@ -117,7 +104,7 @@ export function SiteHeader() {
       {open ? (
         <div
           id={menuId}
-          className="glass-sheet pointer-events-auto mx-auto mt-2 flex max-w-6xl flex-col gap-1 p-3 md:hidden"
+          className="glass-sheet pointer-events-auto relative z-10 mx-auto mt-2 flex max-w-6xl flex-col gap-1 p-3 md:hidden"
         >
           {links.map((link) => (
             <Link
