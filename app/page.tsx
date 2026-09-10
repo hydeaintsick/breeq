@@ -34,7 +34,7 @@ export default function Home() {
       <section className="relative mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center gap-16 overflow-x-clip px-6 pb-20 pt-28 lg:flex-row lg:items-center lg:gap-20">
         <div className="max-w-xl">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-            King of Thieves · Brick breaker
+            Breeq · Brick breaker
           </p>
           <h1 className="mt-5 text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
             Build the wall.

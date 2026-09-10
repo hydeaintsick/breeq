@@ -1,6 +1,6 @@
-# King of Thieves (Brick Breaker)
+# Breeq
 
-A Next.js take on *King of Thieves* as a brick breaker **built by players, for players**: you design a wall over your own photo from a kit of pieces, then dare everyone else to clear it.
+A brick breaker **built by players, for players**: you design a wall over your own photo from a kit of pieces, then dare everyone else to clear it.
 
 ## The core idea
 

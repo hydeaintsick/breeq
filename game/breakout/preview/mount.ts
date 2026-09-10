@@ -310,7 +310,7 @@ export function mountBreakout(
       renderer.resize(cssWidth, dpr);
       if (!destroyed) draw();
     } catch (error) {
-      console.error("[kot] breakout preview failed to size.", error);
+      console.error("[breeq] breakout preview failed to size.", error);
     }
   };
   const resizeObserver = new ResizeObserver(resize);

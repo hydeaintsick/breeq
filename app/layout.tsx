@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "King of Thieves",
-    template: "%s · King of Thieves",
+    default: "Breeq",
+    template: "%s · Breeq",
   },
   description:
     "A brick breaker built by players, for players. Design a wall over your own photo, place bonus zones, and dare everyone else to clear it.",

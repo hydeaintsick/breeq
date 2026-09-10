@@ -4,7 +4,7 @@ import { VaultShell } from "@/components/vault-shell";
 export const metadata: Metadata = {
   title: "Whitepaper",
   description:
-    "The rules of King of Thieves: player-built walls, the piece kit, lives, heat, and the publish rule.",
+    "The rules of Breeq: player-built walls, the piece kit, lives, heat, and the publish rule.",
 };
 
 export default function WhitepaperPage() {

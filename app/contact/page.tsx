@@ -4,7 +4,7 @@ import { VaultShell } from "@/components/vault-shell";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Reach the King of Thieves team.",
+  description: "Reach the Breeq team.",
 };
 
 export default function ContactPage() {

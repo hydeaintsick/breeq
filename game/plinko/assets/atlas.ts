@@ -32,7 +32,7 @@ export async function buildAtlas(palette: Palette, scale: number): Promise<Atlas
       try {
         return [name, await rasterize(source, palette, scale)] as const;
       } catch (error) {
-        console.warn(`[kot] sprite "${name}" failed to rasterize; drawing it transparent.`, error);
+        console.warn(`[breeq] sprite "${name}" failed to rasterize; drawing it transparent.`, error);
         return [name, blankSprite(source, scale)] as const;
       }
     }),

@@ -82,7 +82,7 @@ export function mountPreview(canvas: HTMLCanvasElement, board: Board, options: M
       },
       (error: unknown) => {
         // Never leave the board blank in silence: report, then try again.
-        console.error("[kot] board preview failed to build; retrying.", error);
+        console.error("[breeq] board preview failed to build; retrying.", error);
         if (destroyed || retries >= 5) return;
         retries += 1;
         window.clearTimeout(retryTimer);

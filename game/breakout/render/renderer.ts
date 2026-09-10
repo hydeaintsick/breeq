@@ -75,7 +75,7 @@ export class BreakoutRenderer {
       this.onPhoto?.();
     };
     image.onerror = () => {
-      console.warn(`[kot] background photo failed to load: ${src}`);
+      console.warn(`[breeq] background photo failed to load: ${src}`);
     };
     image.src = src;
   }

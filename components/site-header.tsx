@@ -53,17 +53,12 @@ export function SiteHeader() {
       >
         <Link
           href="/"
-          aria-label="King of Thieves"
+          aria-label="Breeq"
           className="relative z-10 flex items-center gap-2.5 text-sm font-semibold tracking-tight text-ink"
           onClick={close}
         >
           <LogoMark />
-          <span className="hidden sm:inline" aria-hidden="true">
-            King of Thieves
-          </span>
-          <span className="sm:hidden" aria-hidden="true">
-            KOT
-          </span>
+          <span aria-hidden="true">Breeq</span>
         </Link>
 
         <div className="relative z-10 hidden items-center gap-7 md:flex">

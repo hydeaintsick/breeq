@@ -3,7 +3,7 @@ import { VaultShell } from "@/components/vault-shell";
 
 export const metadata: Metadata = {
   title: "Terms",
-  description: "Terms of use for the King of Thieves showcase site.",
+  description: "Terms of use for the Breeq showcase site.",
 };
 
 export default function TermsPage() {

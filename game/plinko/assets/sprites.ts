@@ -1,5 +1,5 @@
 /**
- * Sprite library — the visual kit of King of Thieves.
+ * Sprite library — the visual kit of Breeq.
  *
  * Every sprite is authored as SVG so it stays vector, scales to any device
  * pixel ratio, and can carry gradients and soft shadows that Canvas 2D is bad
