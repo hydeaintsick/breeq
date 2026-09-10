@@ -7,8 +7,10 @@
  * game ends the next level in the rotation loads. Owns the browser side:
  * DPR, resize, off-screen / hidden-tab pause, reduced motion.
  */
+import { BreakoutSfx } from "../audio";
 import { Autopilot } from "../engine/autopilot";
 import { Game, RULES } from "../engine/game";
+import { BreakoutHaptics } from "../haptics";
 import type { GameEvent, GameInput, GamePhase, Level, PaddleModKind, SpeedZoneKind } from "../engine/types";
 import { readNeonPalette } from "../render/palette";
 import { BreakoutRenderer } from "../render/renderer";
@@ -38,6 +40,8 @@ export interface MountOptions {
   onHud?: (hud: HudState) => void;
   /** Fired once when a wall is cleared. `human` is true if the visitor held the paddle this run. */
   onCleared?: (info: { human: boolean; score: number }) => void;
+  /** Fired once when the run ends in a loss. `human` is true if the visitor held the paddle this run. */
+  onOver?: (info: { human: boolean; score: number; reason: "lives" | "timeout" | "crushed" }) => void;
   seed?: number;
   /** "auto": demo only. "pointer": human only. "hybrid": demo until the visitor moves. */
   controls?: "auto" | "pointer" | "hybrid";
@@ -50,6 +54,35 @@ export interface MountOptions {
   mode?: "play" | "edit";
   /** When false, a finished wall stays on the end frame instead of rotating. */
   loop?: boolean;
+  /**
+   * Play the sound design for this mount. Off by default: showcase and menu
+   * previews stay silent. Audio starts on the first pointer gesture and follows
+   * the page-wide preference (`setSoundEnabled`); it ducks while paused,
+   * off-screen, or in a hidden tab.
+   */
+  sound?: boolean;
+  /**
+   * Vibrate on contact and on the big moments (`navigator.vibrate`, where
+   * available). Off by default; follows the page-wide preference
+   * (`setHapticsEnabled`) and stops while paused, off-screen, or hidden.
+   */
+  haptics?: boolean;
+  /**
+   * Optional thumb rail: a touch strip outside the board that steers the paddle,
+   * so a finger never covers the play field. Pointer input on it maps its
+   * width onto the field (see `railGain`); a quick tap launches. The mount
+   * writes `--rail-paddle`, `--rail-paddle-w`, `--rail-ball` (0..1 of the rail
+   * width) and `data-ball` on the element every frame so CSS can mirror the
+   * paddle and the ball without touching React.
+   */
+  rail?: HTMLElement | null;
+  /**
+   * How much of the field the rail's full width covers. 1.25 means the whole
+   * field fits in the central 80% of the rail: less thumb travel, and the
+   * outer 10% on each side is slack so the paddle can be pinned to a wall
+   * without aiming for a pixel.
+   */
+  railGain?: number;
 }
 
 export interface BreakoutHandle {
@@ -69,8 +102,12 @@ export interface BreakoutHandle {
 const CAPTIONS = {
   serveAuto: "Autoplay. Move over the board to take the paddle.",
   serveYou: "Tap or click to launch.",
+  /** Pointer-only games before the first touch. */
+  serveTouch: "Slide to move. Tap to launch.",
   playAuto: "Autoplay. Move over the board to take the paddle.",
   playYou: "You have the paddle.",
+  /** Pointer-only games stay quiet during play. */
+  playTouch: "",
   lost: "Ball lost.",
   cleared: "Level cleared.",
   overLives: "Game over. Next level…",
@@ -91,6 +128,8 @@ export function mountBreakout(
   const editMode = options.mode === "edit";
   const handoverDelay = options.handoverDelay ?? 3.5;
   const loop = options.loop ?? true;
+  const rail = editMode ? null : (options.rail ?? null);
+  const railGain = Math.max(1, options.railGain ?? 1.25);
   let seed = options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
   let paused = false;
@@ -98,6 +137,8 @@ export function mountBreakout(
   const palette = readNeonPalette();
   const scene = createScene();
   const fx = new SceneFx(scene);
+  const sfx = options.sound && !editMode ? new BreakoutSfx(rotation[levelIndex]) : null;
+  const haptics = options.haptics && !editMode ? new BreakoutHaptics() : null;
 
   let destroyed = false;
   let raf = 0;
@@ -138,7 +179,7 @@ export function mountBreakout(
     timeLeft: level.rules.timer > 0 ? level.rules.timer : null,
     phase: "serve",
     pilot: "auto",
-    caption: frozen ? CAPTIONS.frozen : CAPTIONS.serveAuto,
+    caption: frozen ? CAPTIONS.frozen : controls === "pointer" ? CAPTIONS.serveTouch : CAPTIONS.serveAuto,
   };
   const emitHud = () => options.onHud?.(hud);
   emitHud();
@@ -151,14 +192,21 @@ export function mountBreakout(
       pointerLaunch = false;
       return { targetX: pointerX, launch };
     }
+    // Human-only games wait for the first touch instead of letting the demo pilot serve.
+    if (controls === "pointer") return { targetX: game.state.paddleX, launch: false };
     return pilot.input(game.state, game.bricks);
   };
 
   const applyEvents = (events: GameEvent[]) => {
     for (const e of events) {
       fx.apply(e);
+      sfx?.apply(e, game.state);
+      haptics?.apply(e);
       if (e.type === "cleared") {
         options.onCleared?.({ human: humanTouched, score: e.score });
+      }
+      if (e.type === "over") {
+        options.onOver?.({ human: humanTouched, score: e.score, reason: e.reason });
       }
     }
   };
@@ -169,10 +217,10 @@ export function mountBreakout(
     let caption: string;
     switch (s.phase) {
       case "serve":
-        caption = who === "you" ? CAPTIONS.serveYou : CAPTIONS.serveAuto;
+        caption = who === "you" ? CAPTIONS.serveYou : controls === "pointer" ? CAPTIONS.serveTouch : CAPTIONS.serveAuto;
         break;
       case "play":
-        caption = who === "you" ? CAPTIONS.playYou : CAPTIONS.playAuto;
+        caption = controls === "pointer" ? CAPTIONS.playTouch : who === "you" ? CAPTIONS.playYou : CAPTIONS.playAuto;
         break;
       case "lost":
         caption = CAPTIONS.lost;
@@ -222,6 +270,7 @@ export function mountBreakout(
     endHold = 0;
     accumulator = 0;
     humanTouched = false;
+    sfx?.setLevel(level);
     syncHud();
     if (!destroyed) draw();
   };
@@ -252,6 +301,7 @@ export function mountBreakout(
     if (steps === maxSteps) accumulator = 0;
 
     fx.update(dt, game.state.phase === "play" ? game.state.balls.filter((b) => b.stuck === null) : []);
+    sfx?.update(game.state);
 
     if (game.finished) {
       endHold += dt;
@@ -260,7 +310,44 @@ export function mountBreakout(
     syncHud();
   };
 
-  const draw = () => renderer.render(game, scene);
+  // --- thumb rail mirror ------------------------------------------------------
+  // Field x → 0..1 across the rail (the field sits in the central 1/railGain).
+  const toRailU = (x: number) => {
+    const { left, right } = level.field;
+    const u = (x - left) / (right - left);
+    return (u - 0.5) / railGain + 0.5;
+  };
+  const railVars = { paddle: "", paddleW: "", ball: "", hasBall: "" };
+  const setRailVar = (key: keyof typeof railVars, prop: string, value: string) => {
+    if (railVars[key] === value) return;
+    railVars[key] = value;
+    rail!.style.setProperty(prop, value);
+  };
+  const syncRail = () => {
+    if (!rail) return;
+    const s = game.state;
+    const fieldW = level.field.right - level.field.left;
+    setRailVar("paddle", "--rail-paddle", toRailU(s.paddleX).toFixed(4));
+    setRailVar("paddleW", "--rail-paddle-w", (s.paddleWidth / fieldW / railGain).toFixed(4));
+    // The ball shadow tracks the ball closest to the paddle.
+    let shadow: { x: number; y: number } | null = null;
+    if (s.phase === "play") {
+      for (const b of s.balls) {
+        if (b.stuck === null && (shadow === null || b.y > shadow.y)) shadow = b;
+      }
+    }
+    const hasBall = shadow ? "true" : "false";
+    if (railVars.hasBall !== hasBall) {
+      railVars.hasBall = hasBall;
+      rail.dataset.ball = hasBall;
+    }
+    if (shadow) setRailVar("ball", "--rail-ball", Math.max(0, Math.min(1, toRailU(shadow.x))).toFixed(4));
+  };
+
+  const draw = () => {
+    renderer.render(game, scene);
+    syncRail();
+  };
 
   const frame = (now: number) => {
     raf = 0;
@@ -272,8 +359,12 @@ export function mountBreakout(
     raf = requestAnimationFrame(frame);
   };
 
+  const live = () => !destroyed && !frozen && visible && !hidden && !paused;
+
   const schedule = () => {
-    if (!raf && !destroyed && !frozen && visible && !hidden && !paused) {
+    sfx?.setActive(live());
+    haptics?.setActive(live());
+    if (!raf && live()) {
       last = 0;
       raf = requestAnimationFrame(frame);
     }
@@ -284,6 +375,8 @@ export function mountBreakout(
     frozen = true;
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
+    sfx?.setActive(false);
+    haptics?.setActive(false);
     const demo = new Autopilot(level, { seed: 99, skill: 1 });
     game.reset(seed);
     for (let i = 0; i < RULES.stepsPerSecond * 9; i++) {
@@ -317,6 +410,7 @@ export function mountBreakout(
   };
   const onPointerDown = (e: PointerEvent) => {
     if (controls === "auto" || paused) return;
+    sfx?.unlock();
     humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
@@ -331,6 +425,71 @@ export function mountBreakout(
     canvas.addEventListener("pointerleave", onPointerLeave);
   }
   canvas.style.touchAction = editMode || controls === "pointer" ? "none" : "pan-y";
+
+  // --- thumb rail controls ----------------------------------------------------
+  // Absolute mapping: the thumb's place on the rail is where the paddle goes
+  // (the engine glides it there at paddle speed, so a far touch never snaps).
+  // A quick tap without travel launches; a drag never does.
+  const railToWorldX = (clientX: number) => {
+    const rect = rail!.getBoundingClientRect();
+    const railU = rect.width > 0 ? (clientX - rect.left) / rect.width : 0.5;
+    const fieldU = Math.max(0, Math.min(1, (railU - 0.5) * railGain + 0.5));
+    return level.field.left + fieldU * (level.field.right - level.field.left);
+  };
+  let railTap: { id: number; x: number; t: number } | null = null;
+  const RAIL_TAP_SLOP = 10;
+  const RAIL_TAP_MS = 350;
+  const onRailDown = (e: PointerEvent) => {
+    if (controls === "auto" || paused || !e.isPrimary) return;
+    e.preventDefault();
+    sfx?.unlock();
+    humanTouched = true;
+    pointerX = railToWorldX(e.clientX);
+    lastPointerT = scene.time;
+    railTap = { id: e.pointerId, x: e.clientX, t: e.timeStamp };
+    try {
+      rail!.setPointerCapture(e.pointerId);
+    } catch {
+      // Capture is best-effort (e.g. synthetic events).
+    }
+    rail!.dataset.touched = "true";
+    rail!.dataset.active = "true";
+  };
+  const onRailMove = (e: PointerEvent) => {
+    if (controls === "auto" || paused || !e.isPrimary) return;
+    // Only steer while a finger is down or a mouse hovers the rail; a finger
+    // resting on the rail while paused must not move the paddle on resume.
+    if (railTap === null && e.pointerType !== "mouse") return;
+    pointerX = railToWorldX(e.clientX);
+    lastPointerT = scene.time;
+    if (railTap && Math.abs(e.clientX - railTap.x) > RAIL_TAP_SLOP) railTap = { ...railTap, x: Number.NaN };
+  };
+  const onRailUp = (e: PointerEvent) => {
+    if (railTap === null || railTap.id !== e.pointerId) return;
+    const isTap = !Number.isNaN(railTap.x) && e.timeStamp - railTap.t < RAIL_TAP_MS;
+    railTap = null;
+    rail!.dataset.active = "false";
+    if (controls === "auto" || paused) return;
+    if (isTap) {
+      pointerLaunch = true;
+      lastPointerT = scene.time;
+    }
+  };
+  const onRailCancel = (e: PointerEvent) => {
+    if (railTap?.id === e.pointerId) railTap = null;
+    rail!.dataset.active = "false";
+  };
+  if (rail) {
+    rail.style.touchAction = "none";
+    rail.dataset.touched = "false";
+    rail.dataset.active = "false";
+    rail.dataset.ball = "false";
+    rail.addEventListener("pointerdown", onRailDown);
+    rail.addEventListener("pointermove", onRailMove);
+    rail.addEventListener("pointerup", onRailUp);
+    rail.addEventListener("pointercancel", onRailCancel);
+    rail.addEventListener("lostpointercapture", onRailCancel);
+  }
 
   // --- browser plumbing -------------------------------------------------------
   const resize = () => {
@@ -375,6 +534,8 @@ export function mountBreakout(
     destroy() {
       destroyed = true;
       if (raf) cancelAnimationFrame(raf);
+      sfx?.destroy();
+      haptics?.destroy();
       resizeObserver.disconnect();
       intersection.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -382,6 +543,13 @@ export function mountBreakout(
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointerleave", onPointerLeave);
+      if (rail) {
+        rail.removeEventListener("pointerdown", onRailDown);
+        rail.removeEventListener("pointermove", onRailMove);
+        rail.removeEventListener("pointerup", onRailUp);
+        rail.removeEventListener("pointercancel", onRailCancel);
+        rail.removeEventListener("lostpointercapture", onRailCancel);
+      }
     },
     setBackground(src) {
       renderer.setBackground(src);
@@ -399,6 +567,8 @@ export function mountBreakout(
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
       last = 0;
+      sfx?.setActive(false);
+      haptics?.setActive(false);
     },
     resume() {
       if (!paused) return;

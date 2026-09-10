@@ -40,7 +40,11 @@ export function BreakoutPreview({
   showHud = true,
   paused = false,
   loop = true,
+  thumbRail = false,
+  sound = false,
+  haptics = false,
   onCleared,
+  onOver,
 }: {
   levels?: readonly Level[];
   start?: number;
@@ -54,9 +58,17 @@ export function BreakoutPreview({
   showHud?: boolean;
   paused?: boolean;
   loop?: boolean;
+  /** Touch strip under the board that steers the paddle (phone play). */
+  thumbRail?: boolean;
+  /** Play the sound design (real games only; previews stay silent). */
+  sound?: boolean;
+  /** Vibrate on contact and big moments (real games only). */
+  haptics?: boolean;
   onCleared?: MountOptions["onCleared"];
+  onOver?: MountOptions["onOver"];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
   const first = levels[0] ?? DEFAULT_LEVELS[0];
@@ -72,17 +84,21 @@ export function BreakoutPreview({
     const handle = mountBreakout(canvas, [...levels], {
       onHud: setHud,
       onCleared,
+      onOver,
       start: queryStart,
       seed,
       controls,
       loop,
+      sound,
+      haptics,
+      rail: thumbRail ? railRef.current : null,
     });
     handleRef.current = handle;
     return () => {
       handle.destroy();
       handleRef.current = null;
     };
-  }, [levels, start, seed, controls, followQuery, loop, onCleared]);
+  }, [levels, start, seed, controls, followQuery, loop, thumbRail, sound, haptics, onCleared, onOver]);
 
   useEffect(() => {
     if (paused) {
@@ -167,6 +183,27 @@ export function BreakoutPreview({
             {caption}
           </span>
         </figcaption>
+      ) : null}
+
+      {thumbRail ? (
+        <div className="thumb-rail-wrap">
+          <div
+            ref={railRef}
+            className="thumb-rail"
+            data-phase={hud?.phase ?? "serve"}
+            aria-label="Paddle control. Slide to move, tap to launch."
+          >
+            <span className="thumb-rail-chevron" data-side="left" aria-hidden="true" />
+            <span className="thumb-rail-chevron" data-side="right" aria-hidden="true" />
+            <span className="thumb-rail-ball" aria-hidden="true" />
+            <span className="thumb-rail-puck" aria-hidden="true" />
+          </div>
+          <p className="thumb-rail-label" aria-live="polite">
+            <span key={caption} className="board-caption" data-phase={hud?.phase ?? undefined}>
+              {caption}
+            </span>
+          </p>
+        </div>
       ) : null}
     </figure>
   );

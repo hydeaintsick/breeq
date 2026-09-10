@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
+import { HapticsToggle } from "@/components/haptics-toggle";
 import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
 import { MenuIcon } from "@/components/menu-icon";
 import { RankMeter } from "@/components/rank-meter";
 import { SignOutButton } from "@/components/sign-out-button";
+import { SoundToggle } from "@/components/sound-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ACCOUNT_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 import type { Progress } from "@/lib/progress";
@@ -61,6 +63,7 @@ export function GameHeader({
         </div>
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
+          <SoundToggle />
           <ThemeToggle />
           <button
             type="button"
@@ -91,6 +94,7 @@ export function GameHeader({
             >
               Account settings
             </Link>
+            <HapticsToggle variant="menu" />
             {isAdmin ? (
               <Link
                 href={ADMIN_EDITOR_PATH}

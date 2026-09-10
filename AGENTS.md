@@ -10,6 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Project rules
 
+- **pnpm only.** Always use `pnpm` for installing, adding, removing, or updating dependencies (`pnpm install`, `pnpm add`, `pnpm remove`, `pnpm update`). Never use `npm`, `yarn`, `bun`, or any other package manager in this repo.
 - The final user-facing UI must always be in US English (`en-US`). Do not ship French or any other language in product copy, labels, buttons, empty states, or errors.
 - **Mobile compatibility is mandatory.** Every page, component, and the game surface must work on a 360px-wide phone in portrait, with touch as the only input. Verify at 360px and 390px widths before calling anything done. Concretely:
   - Layouts stack; nothing depends on hover. Tap targets are at least 44px.
@@ -70,6 +71,8 @@ The engine is the product. The showcase is its first consumer; the playable game
   - `engine/game.ts` — `Game`: fixed step (240 Hz), seeded, no DOM. Owns lives, score, the speed model (`bonus × ramp × heat`, see `RULES`), collisions, and events. Same level + seed + inputs = same game everywhere.
   - `engine/autopilot.ts` — a seeded paddle AI used for demos and for proving a level is clearable.
   - `render/` — Canvas 2D. `palette.ts` reads `--neon-*`, `--ink`, `--danger` tokens. `renderer.ts` paints the photo + frame once per resize and draws bricks (cached glow sprites), zones, paddle, ball, particles every frame. `scene.ts` holds visual-only state.
-  - `preview/mount.ts` — browser plumbing: DPR cap, ResizeObserver, IntersectionObserver, `visibilitychange`, `prefers-reduced-motion`, and pointer/touch control of the paddle (`controls: "auto" | "pointer" | "hybrid"`). The site uses `hybrid`: autopilot until the visitor moves over the board.
+  - `audio/` — the sound design, Web Audio only, no sample files. `bus.ts` owns the one AudioContext (created inside a gesture), a procedurally generated hall reverb, the compressor and the master gain the sound preference drives (`setSoundEnabled`). `synth.ts` has the voice primitives (`tone`, `bell`, `noise`) with seeded detune. `sfx.ts` maps `GameEvent`s to voices in the level's key (root from the level id, six-note scale, brick color → degree, row → octave) plus a quiet pad that follows heat and speed. No square waves, nothing above 14 kHz, repeats softened.
+ - `haptics/` — `navigator.vibrate` patterns per event (contact 8–15 ms, short patterns for moments, nothing for walls), rate-limited, behind `setHapticsEnabled`. Hidden in the UI where unsupported (iOS, desktop).
+ - `preview/mount.ts` — browser plumbing: DPR cap, ResizeObserver, IntersectionObserver, `visibilitychange`, `prefers-reduced-motion`, and pointer/touch control of the paddle (`controls: "auto" | "pointer" | "hybrid"`). The site uses `hybrid`: autopilot until the visitor moves over the board. `sound` and `haptics` options turn the feedback layers on for real games only; previews stay silent. Preferences are cookies (`breeq-sound`, `breeq-haptics`) read in `app/layout.tsx` and exposed by `SoundProvider` / `HapticsProvider`; the toggles live in the game header and the pause menu.
 - `game/plinko` — the earlier vertical trap-board engine (`engine`, `builder`, `assets`, `render`, `preview`, `maps`). Kept intact and unmounted; same rules apply if it is revived.
 - New brick or bonus kinds touch, in order: `engine/types.ts`, `engine/level.ts` (validation), `engine/game.ts`, `render/renderer.ts`, and a token in `app/globals.css` if they need a color.
