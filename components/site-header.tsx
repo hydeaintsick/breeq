@@ -44,12 +44,11 @@ export function SiteHeader() {
 
   return (
     <header
-      className={`site-header fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 ${
-        scrolled ? "[&_nav]:bg-white/80" : ""
-      }`}
+      className="site-header pointer-events-none fixed inset-x-0 top-0 z-50"
+      data-scrolled={scrolled}
     >
       <nav
-        className="glass relative mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-5"
+        className="site-nav pointer-events-auto relative mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full px-4 backdrop-blur-[28px] backdrop-saturate-150 sm:px-5"
         aria-label="Primary"
       >
         <Link
@@ -85,7 +84,7 @@ export function SiteHeader() {
 
         <button
           type="button"
-          className="relative z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-white/70 text-ink md:hidden"
+          className="relative z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline bg-white/70 text-ink md:hidden"
           aria-expanded={open}
           aria-controls={menuId}
           aria-label={open ? "Close menu" : "Open menu"}
@@ -99,7 +98,7 @@ export function SiteHeader() {
       {open ? (
         <div
           id={menuId}
-          className="glass-sheet mx-auto mt-2 flex max-w-6xl flex-col gap-1 p-3 md:hidden"
+          className="glass-sheet pointer-events-auto mx-auto mt-2 flex max-w-6xl flex-col gap-1 p-3 md:hidden"
         >
           {links.map((link) => (
             <Link

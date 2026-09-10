@@ -31,7 +31,7 @@ const PIECE_COUNT = CATALOG.filter((entry) => entry.family !== "rule").length;
 export default function Home() {
   return (
     <>
-      <section className="relative mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center gap-16 px-6 pb-20 pt-28 lg:flex-row lg:items-center lg:gap-20">
+      <section className="relative mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center gap-16 overflow-x-clip px-6 pb-20 pt-28 lg:flex-row lg:items-center lg:gap-20">
         <div className="max-w-xl">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
             King of Thieves · Brick breaker

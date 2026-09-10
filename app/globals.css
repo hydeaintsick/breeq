@@ -56,6 +56,8 @@
   html {
     background: var(--bg);
     color: var(--ink);
+    /* Do not clip html/body: overflow other than visible on these
+       ancestors disables backdrop-filter on the fixed header. */
   }
 
   body {
@@ -67,8 +69,13 @@
       var(--bg);
     color: var(--ink);
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-    /* The board aura bleeds past the figure on phones; never let it scroll. */
+    max-width: 100%;
+  }
+
+  main,
+  footer {
     overflow-x: clip;
+    max-width: 100%;
   }
 
   ::selection {
@@ -81,8 +88,8 @@
   .glass {
     background: var(--glass);
     background-image: linear-gradient(180deg, var(--glass-fill), transparent 48%);
-    backdrop-filter: blur(var(--blur)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.4);
+    /* Tailwind utilities — raw `backdrop-filter` in this file is stripped. */
+    @apply backdrop-blur-[20px] backdrop-saturate-150;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius);
     box-shadow:
@@ -169,7 +176,40 @@
 }
 
 .site-header {
+  /* Opacity only — a transform on this ancestor would flatten the stacking
+     context and kill backdrop-filter on the nav (the glass would go clear). */
   animation: header-in 720ms var(--ease) both;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+@media (min-width: 640px) {
+  .site-header {
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+}
+
+.site-nav {
+  background: rgba(255, 255, 255, 0.52);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.28) 55%, rgba(255, 255, 255, 0.4));
+  @apply backdrop-blur-[28px] backdrop-saturate-150;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 0 0 1px rgba(15, 17, 23, 0.05),
+    0 10px 32px rgba(15, 17, 23, 0.06);
+  transition:
+    background var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.site-header[data-scrolled="true"] .site-nav {
+  background: rgba(255, 255, 255, 0.72);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.58));
+  box-shadow:
+    0 0 0 1px rgba(15, 17, 23, 0.06),
+    0 14px 36px rgba(15, 17, 23, 0.08);
 }
 
 .play-shimmer {
@@ -202,7 +242,7 @@
 
 .board-aura {
   position: absolute;
-  inset: -6% -14%;
+  inset: -4% -8%;
   pointer-events: none;
   background:
     radial-gradient(38% 34% at 22% 24%, rgba(139, 92, 246, 0.55), transparent 70%),
@@ -404,11 +444,9 @@
 @keyframes header-in {
   from {
     opacity: 0;
-    transform: translateY(-14px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
