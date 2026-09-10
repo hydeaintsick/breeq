@@ -249,6 +249,15 @@ export function serializeLevel(level: Level) {
   ) as Record<string, unknown>;
 }
 
+/** Put a photo behind the wall. Missing src leaves the level unchanged. */
+export function applyBackgroundPhoto(level: Level, src: string | null | undefined): Level {
+  if (!src) return level;
+  return {
+    ...level,
+    background: { ...level.background, type: "photo", src },
+  };
+}
+
 export function parseStoredLevel(raw: unknown, fallback: LevelOptions): Level {
   if (!isStoredLevel(raw)) {
     return createDraftLevel(fallback);

@@ -25,6 +25,7 @@ export {
   cloneLevel,
   applyStroke,
   parseStoredLevel,
+  applyBackgroundPhoto,
   serializeLevel,
   brickColorFromTint,
   type EditorTool,

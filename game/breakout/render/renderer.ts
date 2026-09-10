@@ -1,10 +1,11 @@
 /**
  * Breakout renderer — Canvas 2D, neon glass on a photo.
  *
- * Static layer: the author's photo (cover-fit, dimmed, vignetted) and the
- * field frame, painted once per resize / photo load. Dynamic pass: zones,
- * obstacles, bricks (cached glow sprites), paddle, balls, trails, particles.
- * World units everywhere; the context transform does the scaling.
+ * Static layer: the author's photo (cover-fit, heavily blurred, dimmed,
+ * vignetted) and the field frame, painted once per resize / photo load.
+ * Dynamic pass: zones, obstacles, bricks (cached glow sprites), paddle, balls,
+ * trails, particles. World units everywhere; the context transform does the
+ * scaling.
  */
 import { alpha, tint } from "../../shared/color";
 import type { Game } from "../engine/game";
@@ -17,6 +18,11 @@ const TAU = Math.PI * 2;
 const BRICK_RADIUS = 4;
 /** Padding around cached brick sprites so the glow is not clipped. */
 const GLOW_PAD = 14;
+/** Heavy photo blur, as a fraction of the shorter canvas side. */
+const PHOTO_BLUR = 0.12;
+/** Extra ink wash so neon bricks stay readable on a bright photo. */
+const PHOTO_DIM_MIN = 0.22;
+const PHOTO_DIM_MAX = 0.36;
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
 type Ctx = CanvasRenderingContext2D;
@@ -93,23 +99,28 @@ export class BreakoutRenderer {
     layer.height = this.canvas.height;
     const ctx = layer.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D is not available");
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     const { width, height, field: f, background: bg } = level;
+    const cw = layer.width;
+    const ch = layer.height;
 
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#0b0d1a";
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, cw, ch);
 
     if (this.photo) {
       const img = this.photo;
-      const s = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+      const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
       const w = img.naturalWidth * s;
       const h = img.naturalHeight * s;
+      const blurPx = Math.max(24, Math.round(Math.min(cw, ch) * PHOTO_BLUR) + bg.blur * scale);
+      const pad = blurPx * 2;
       ctx.save();
-      if (bg.blur > 0 && "filter" in ctx) ctx.filter = `blur(${bg.blur}px)`;
-      ctx.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
+      if ("filter" in ctx) ctx.filter = `blur(${blurPx}px)`;
+      ctx.drawImage(img, (cw - w) / 2 - pad, (ch - h) / 2 - pad, w + pad * 2, h + pad * 2);
       ctx.restore();
     } else {
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
       const g = ctx.createRadialGradient(width * 0.5, height * 0.35, 20, width * 0.5, height * 0.35, height * 0.8);
       g.addColorStop(0, alpha(p.neon.violet, 0.35));
       g.addColorStop(0.5, alpha(p.neon.blue, 0.12));
@@ -118,11 +129,13 @@ export class BreakoutRenderer {
       ctx.fillRect(0, 0, width, height);
     }
 
-    ctx.fillStyle = `rgba(6, 8, 18, ${bg.dim})`;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    const dim = Number.isFinite(bg.dim) ? Math.min(PHOTO_DIM_MAX, Math.max(PHOTO_DIM_MIN, bg.dim * 0.5)) : PHOTO_DIM_MIN;
+    ctx.fillStyle = `rgba(6, 8, 18, ${dim})`;
     ctx.fillRect(0, 0, width, height);
-    const vignette = ctx.createRadialGradient(width / 2, height / 2, height * 0.3, width / 2, height / 2, height * 0.78);
+    const vignette = ctx.createRadialGradient(width / 2, height / 2, height * 0.34, width / 2, height / 2, height * 0.82);
     vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
-    vignette.addColorStop(1, "rgba(0, 0, 0, 0.45)");
+    vignette.addColorStop(1, "rgba(0, 0, 0, 0.28)");
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
