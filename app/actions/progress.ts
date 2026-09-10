@@ -3,7 +3,20 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
-import { progressFromXp, storyPercent, XP_PER_STORY_CLEAR } from "@/lib/progress";
+import { progressFromXp, storyPercent, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
+
+/** What the clear screen animates: XP before → after, and the campaign bar. */
+export type ChapterClearResult = {
+  /** True the first time this player clears the chapter (the only time XP is paid). */
+  firstClear: boolean;
+  /** XP paid out for this clear. 0 on a replay. */
+  xpGained: number;
+  /** Player progress before this clear. Equal to `progress` on a replay. */
+  before: Progress;
+  /** Player progress after this clear. */
+  progress: Progress;
+  storyPercent: number;
+};
 
 async function campaignPercent(userId: string) {
   const [cleared, total] = await Promise.all([
@@ -13,7 +26,24 @@ async function campaignPercent(userId: string) {
   return storyPercent(cleared, total);
 }
 
-export async function awardChapterClear(chapterId: string) {
+async function replayResult(userId: string): Promise<ChapterClearResult> {
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { xp: true },
+  });
+  const progress = progressFromXp(row?.xp ?? 0);
+  return {
+    firstClear: false,
+    xpGained: 0,
+    before: progress,
+    progress,
+    storyPercent: await campaignPercent(userId),
+  };
+}
+
+export async function awardChapterClear(
+  chapterId: string,
+): Promise<ChapterClearResult | { error: "Chapter not found." }> {
   const user = await requireUser();
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
@@ -30,16 +60,10 @@ export async function awardChapterClear(chapterId: string) {
   });
 
   if (existing) {
-    const row = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { xp: true },
-    });
-    return {
-      firstClear: false,
-      progress: progressFromXp(row?.xp ?? 0),
-      storyPercent: await campaignPercent(user.id),
-    };
+    return replayResult(user.id);
   }
+
+  const xpGained = chapter.xpReward || XP_PER_STORY_CLEAR;
 
   try {
     const [, updated] = await prisma.$transaction([
@@ -48,27 +72,21 @@ export async function awardChapterClear(chapterId: string) {
       }),
       prisma.user.update({
         where: { id: user.id },
-        data: { xp: { increment: chapter.xpReward || XP_PER_STORY_CLEAR } },
+        data: { xp: { increment: xpGained } },
         select: { xp: true },
       }),
     ]);
 
     return {
       firstClear: true,
+      xpGained,
+      before: progressFromXp(updated.xp - xpGained),
       progress: progressFromXp(updated.xp),
       storyPercent: await campaignPercent(user.id),
     };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      const row = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { xp: true },
-      });
-      return {
-        firstClear: false,
-        progress: progressFromXp(row?.xp ?? 0),
-        storyPercent: await campaignPercent(user.id),
-      };
+      return replayResult(user.id);
     }
     throw error;
   }

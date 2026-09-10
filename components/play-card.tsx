@@ -31,6 +31,8 @@ export function PlayCard({
   cover,
   locked = false,
   lockedHint,
+  fill = false,
+  aura = true,
 }: {
   href?: string;
   onSelect?: (card: HTMLElement) => void;
@@ -43,16 +45,16 @@ export function PlayCard({
   cover?: string | null;
   locked?: boolean;
   lockedHint?: string;
+  fill?: boolean;
+  aura?: boolean;
 }) {
   const copy = (
     <>
-      {locked ? (
-        LOCK_MARK
-      ) : cover ? (
+      {cover ? (
         <div className="absolute inset-0">
-          <Image src={cover} alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 22rem" />
+          <Image src={cover} alt="" fill className="object-cover" sizes="22rem" />
         </div>
-      ) : (
+      ) : locked ? null : (
         <div
           className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none"
           inert={true}
@@ -66,6 +68,7 @@ export function PlayCard({
           />
         </div>
       )}
+      {locked ? LOCK_MARK : null}
       <div className="mode-card-copy">
         <p className="font-mono text-xs tracking-[0.16em] text-accent">{kicker}</p>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">{title}</h2>
@@ -89,25 +92,32 @@ export function PlayCard({
   const label = locked
     ? `Locked. ${title}. ${lockedHint ?? body}`
     : `${action}. ${title}. ${body}`;
+  const cardClass = fill ? "mode-card mode-card-fill" : "mode-card";
 
   return (
-    <div className="relative w-full md:max-w-[22rem]">
-      {locked ? null : <div className="board-aura" aria-hidden="true" />}
+    <div className={fill ? "relative h-full w-full" : "relative w-full md:max-w-[22rem]"}>
+      {locked || !aura ? null : <div className="board-aura" aria-hidden="true" />}
       {locked ? (
-        <div className="mode-card" aria-disabled="true" role="group" aria-label={label}>
+        <div
+          className={cardClass}
+          aria-disabled="true"
+          data-cover={cover ? "true" : undefined}
+          role="group"
+          aria-label={label}
+        >
           {copy}
         </div>
       ) : onSelect ? (
         <button
           type="button"
-          className="mode-card"
+          className={cardClass}
           aria-label={label}
           onClick={(event) => onSelect(event.currentTarget)}
         >
           {copy}
         </button>
       ) : href ? (
-        <Link href={href} className="mode-card" aria-label={label}>
+        <Link href={href} className={cardClass} aria-label={label}>
           {copy}
         </Link>
       ) : null}

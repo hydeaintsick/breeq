@@ -25,6 +25,29 @@ export type StoryShelf = {
   storyPercent: number;
 };
 
+export function episodeIsComplete(episode: StoryEpisodeCard) {
+  return episode.chapterCount > 0 && episode.chapters.every((chapter) => chapter.cleared);
+}
+
+export function episodeIsLocked(episodes: readonly StoryEpisodeCard[], index: number) {
+  const episode = episodes[index];
+  if (!episode || episode.chapterCount === 0) {
+    return true;
+  }
+  return episodes.slice(0, index).some((previous) => !episodeIsComplete(previous));
+}
+
+export function episodeLockHint(episodes: readonly StoryEpisodeCard[], index: number) {
+  const episode = episodes[index];
+  if (!episode || episode.chapterCount === 0) {
+    return "No chapters yet.";
+  }
+  if (episodeIsLocked(episodes, index)) {
+    return "Clear the previous episode first.";
+  }
+  return null;
+}
+
 const ORDER = [{ order: "asc" as const }, { createdAt: "asc" as const }];
 
 export const getStoryShelf = cache(async function getStoryShelf(userId: string): Promise<StoryShelf> {
