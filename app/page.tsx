@@ -1,21 +1,23 @@
 import Link from "next/link";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { PieceKit } from "@/components/piece-kit";
+import { CATALOG, LEVEL_BUDGET } from "@/game/breakout/engine/catalog";
 
 const steps = [
   {
     index: "01",
     title: "Your wall",
-    body: "Every level is built by a player. Lay glass bricks, hard bricks, and steel posts over a photo of your choice. Your wall is the level everyone else has to clear.",
+    body: "Every level is built by a player. Lay glass, hard, and steel bricks over a photo of your choice — then explosives, ghosts, keys and locks if you want the wall to fight back.",
   },
   {
     index: "02",
-    title: "Bonus zones",
-    body: "Drop zones onto the field and the ball obeys them. Slow zones halve its speed. Fast zones push it to ×2 or ×3. Where you put them is the whole design.",
+    title: "Zones and obstacles",
+    body: "Drop zones onto the field and the ball obeys them: slow, ×2, ×3, gravity, portals, a mirror. Add bumpers, a fan, a sweeping guard. Where you put them is the whole design.",
   },
   {
     index: "03",
-    title: "Lives and heat",
-    body: "Three lives. The ball gets faster the more it rebounds in quick succession — the classic rule — so a tight wall punishes sloppy paddles.",
+    title: "Lives, heat, rules",
+    body: "One to five lives. The ball gets faster with rapid rebounds — the classic rule. Add a timer, make the wall descend, or force one color to fall first.",
   },
   {
     index: "04",
@@ -23,6 +25,8 @@ const steps = [
     body: "Clear your own level before you publish it. Then it goes on the shelf for everyone, with your name and your photo behind the glass.",
   },
 ] as const;
+
+const PIECE_COUNT = CATALOG.filter((entry) => entry.family !== "rule").length;
 
 export default function Home() {
   return (
@@ -39,8 +43,9 @@ export default function Home() {
           </h1>
           <p className="mt-6 text-lg leading-8 text-ink-muted">
             A brick breaker made by players, for players. Design a level over
-            your own photo, place zones that slow the ball or send it flying at
-            ×3, and dare everyone else to clear it with three lives.
+            your own photo from a kit of {PIECE_COUNT} pieces — bricks that
+            explode or come back, zones that bend the ball, portals, bumpers, a
+            black hole — and dare everyone else to clear it.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
             <Link href="/play" className="btn-play play-shimmer">
@@ -81,6 +86,22 @@ export default function Home() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section id="kit" className="mx-auto w-full max-w-6xl px-6 pb-28">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
+          The kit
+        </p>
+        <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          {PIECE_COUNT} pieces. You <span className="text-neon">choose</span>.
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted">
+          Every piece costs points and a level has {LEVEL_BUDGET} to spend. The
+          editor refuses a wall that cannot be cleared: portals must be paired,
+          keys cannot be sealed in, nothing sits in the paddle lane, and the
+          autopilot has to beat it once before you can publish.
+        </p>
+        <PieceKit />
       </section>
     </>
   );

@@ -314,6 +314,78 @@
   box-shadow: 0 0 12px rgba(255, 79, 163, 0.6);
 }
 
+.board-hud-speed[data-mod="shrink"] {
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 12px rgba(255, 90, 95, 0.55);
+}
+
+.board-hud-speed[data-mod="grow"] {
+  border-color: var(--neon-lime);
+  color: var(--neon-lime);
+  box-shadow: 0 0 12px rgba(163, 230, 53, 0.55);
+}
+
+.board-hud-speed[data-mod="invert"] {
+  border-color: var(--neon-amber);
+  color: var(--neon-amber);
+  box-shadow: 0 0 12px rgba(255, 176, 32, 0.55);
+}
+
+.board-hud-speed[data-mod="ice"] {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.55);
+}
+
+.board-hud-speed[data-mod="sticky"] {
+  border-color: var(--neon-violet);
+  color: var(--neon-violet);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+}
+
+/* Piece kit (catalog) */
+.kit-glyph {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kit-color) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--kit-color) 35%, white);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--kit-color) 28%, transparent);
+  color: color-mix(in srgb, var(--kit-color) 80%, var(--ink));
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.kit-tile {
+  width: 1.25rem;
+  height: 0.55rem;
+  border-radius: 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kit-color) 55%, white), var(--kit-color));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--kit-color) 60%, transparent);
+}
+
+.kit-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--kit-color);
+}
+
+.board-hud-clock {
+  color: rgba(255, 255, 255, 0.8);
+  transition: color var(--duration) var(--ease);
+}
+
+.board-hud-clock[data-low="true"] {
+  color: var(--danger);
+}
+
 .board-caption {
   position: absolute;
   inset-inline: 0;

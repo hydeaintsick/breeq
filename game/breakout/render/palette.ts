@@ -2,7 +2,7 @@
  * Neon palette for the breakout renderer, read from the shared design tokens
  * in `app/globals.css`. Falls back to the same literals the stylesheet declares.
  */
-import type { BonusKind, BrickColor } from "../engine/types";
+import type { BrickColor, PaddleModKind, ZoneKind } from "../engine/types";
 
 export interface NeonPalette {
   ink: string;
@@ -50,15 +50,52 @@ export function readNeonPalette(root?: Element | null): NeonPalette {
   };
 }
 
-/** Which neon a bonus kind glows in. */
-export const BONUS_COLOR: Record<BonusKind, BrickColor> = {
+export type Tint = BrickColor | "steel" | "white" | "danger";
+
+/** Resolve a catalog tint against the palette. */
+export function tintOf(p: NeonPalette, tint: Tint): string {
+  if (tint === "white") return "#ffffff";
+  if (tint === "steel") return p.steel;
+  if (tint === "danger") return p.danger;
+  return p.neon[tint];
+}
+
+/** Which color each zone kind glows in. */
+export const ZONE_TINT: Record<ZoneKind, Tint> = {
   slow: "cyan",
   fast2: "amber",
   fast3: "pink",
+  antigrav: "lime",
+  gravity: "violet",
+  portal: "blue",
+  fakePortal: "blue",
+  mirror: "cyan",
+  fog: "white",
+  split: "pink",
+  shrink: "danger",
+  grow: "lime",
+  invert: "amber",
+  ice: "cyan",
+  sticky: "violet",
 };
 
-export const BONUS_LABEL: Record<BonusKind, string> = {
+/** Text labels for zones that read best as type. Others are drawn as shapes. */
+export const ZONE_LABEL: Partial<Record<ZoneKind, string>> = {
   slow: "½",
   fast2: "×2",
   fast3: "×3",
+  antigrav: "↑",
+  gravity: "↓",
+  split: "+1",
+  shrink: "−",
+  grow: "+",
+  invert: "↔",
+};
+
+export const MOD_TINT: Record<PaddleModKind, Tint> = {
+  shrink: "danger",
+  grow: "lime",
+  invert: "amber",
+  ice: "cyan",
+  sticky: "violet",
 };

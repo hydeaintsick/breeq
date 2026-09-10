@@ -1,16 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FIRST_LIGHT } from "@/game/breakout/levels/first-light";
+import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
 import { mountBreakout, type HudState } from "@/game/breakout/preview";
 
-const LEVEL = FIRST_LIGHT;
+const LEVELS = SHOWCASE_LEVELS;
+const FIRST = LEVELS[0];
 
 const SPEED_LABEL: Record<NonNullable<HudState["bonus"]>, string> = {
   slow: "½ slow",
   fast2: "×2 fast",
   fast3: "×3 fast",
 };
+
+const MOD_LABEL: Record<NonNullable<HudState["mod"]>, string> = {
+  shrink: "shrunk",
+  grow: "wide",
+  invert: "inverted",
+  ice: "iced",
+  sticky: "sticky",
+};
+
+function clock(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 export function BreakoutPreview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -21,11 +36,16 @@ export function BreakoutPreview() {
     if (!canvas) {
       return;
     }
-    const handle = mountBreakout(canvas, LEVEL, { onHud: setHud });
+    // `?level=n` lets you open the page on a given level of the rotation.
+    const start = Number(new URLSearchParams(window.location.search).get("level") ?? 0) || 0;
+    const handle = mountBreakout(canvas, LEVELS, { onHud: setHud, start });
     return () => handle.destroy();
   }, []);
 
-  const lives = hud?.lives ?? LEVEL.lives;
+  const name = hud?.levelName ?? FIRST.name;
+  const author = hud?.author ?? FIRST.author;
+  const maxLives = hud?.maxLives ?? FIRST.lives;
+  const lives = hud?.lives ?? maxLives;
   const score = (hud?.score ?? 0).toLocaleString("en-US");
   const speed = hud?.bonus ? SPEED_LABEL[hud.bonus] : `×${(hud?.speed ?? 1).toFixed(1)}`;
   const caption = hud?.caption ?? "Autoplay. Move over the board to take the paddle.";
@@ -36,29 +56,40 @@ export function BreakoutPreview() {
       <div
         className="board-stage relative z-10 mx-auto"
         role="img"
-        aria-label={`A live brick-breaker level called ${LEVEL.name}, built by ${LEVEL.author}: neon glass bricks over a photo, bonus zones that slow the ball or speed it up, a glass paddle, three lives.`}
+        aria-label={`A live brick-breaker level called ${name}, built by ${author}: neon glass bricks over a photo, zones and obstacles that bend the ball, a glass paddle, ${maxLives} lives.`}
       >
         <canvas
           ref={canvasRef}
           className="block w-full"
-          style={{ aspectRatio: `${LEVEL.width} / ${LEVEL.height}` }}
+          style={{ aspectRatio: `${FIRST.width} / ${FIRST.height}` }}
         />
 
         <div className="board-hud" aria-hidden="true">
           <div className="board-hud-name">
-            <strong>{LEVEL.name}</strong>
-            <span>by {LEVEL.author}</span>
+            <strong>{name}</strong>
+            <span>by {author}</span>
           </div>
           <div className="board-hud-lives">
-            {Array.from({ length: LEVEL.lives }, (_, i) => (
+            {Array.from({ length: maxLives }, (_, i) => (
               <span key={i} className="board-hud-life" data-lost={i >= lives} />
             ))}
           </div>
           <div className="board-hud-stats">
+            {hud?.timeLeft !== null && hud?.timeLeft !== undefined ? (
+              <span className="board-hud-clock" data-low={hud.timeLeft <= 15}>
+                {clock(hud.timeLeft)}
+              </span>
+            ) : null}
             <span className="board-hud-score">{score}</span>
-            <span className="board-hud-speed" data-bonus={hud?.bonus ?? undefined}>
-              {speed}
-            </span>
+            {hud?.mod ? (
+              <span className="board-hud-speed" data-mod={hud.mod}>
+                {MOD_LABEL[hud.mod]}
+              </span>
+            ) : (
+              <span className="board-hud-speed" data-bonus={hud?.bonus ?? undefined}>
+                {speed}
+              </span>
+            )}
           </div>
         </div>
       </div>

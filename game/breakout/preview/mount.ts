@@ -1,14 +1,15 @@
 /**
- * Mount a breakout level on a canvas.
+ * Mount one or more breakout levels on a canvas.
  *
  * Runs the deterministic game at a fixed step, the autopilot plays, and the
  * visitor can take the paddle at any time by moving a pointer or a finger
- * over the board (the autopilot resumes after a few idle seconds). Owns the
- * browser side: DPR, resize, off-screen / hidden-tab pause, reduced motion.
+ * over the board (the autopilot resumes after a few idle seconds). When a
+ * game ends the next level in the rotation loads. Owns the browser side:
+ * DPR, resize, off-screen / hidden-tab pause, reduced motion.
  */
 import { Autopilot } from "../engine/autopilot";
 import { Game, RULES } from "../engine/game";
-import type { BonusKind, GameEvent, GameInput, GamePhase, Level } from "../engine/types";
+import type { GameEvent, GameInput, GamePhase, Level, PaddleModKind, SpeedZoneKind } from "../engine/types";
 import { readNeonPalette } from "../render/palette";
 import { BreakoutRenderer } from "../render/renderer";
 import { SceneFx, createScene } from "../render/scene";
@@ -21,8 +22,12 @@ export interface HudState {
   score: number;
   /** Effective speed multiplier. */
   speed: number;
-  bonus: BonusKind | null;
+  bonus: SpeedZoneKind | null;
+  mod: PaddleModKind | null;
   heat: number;
+  balls: number;
+  /** Seconds left on the timer rule, or null. */
+  timeLeft: number | null;
   phase: GamePhase;
   /** Who holds the paddle. */
   pilot: "auto" | "you";
@@ -37,13 +42,18 @@ export interface MountOptions {
   /** Seconds of pointer inactivity before the autopilot takes back the paddle. */
   handoverDelay?: number;
   maxDpr?: number;
+  /** Index of the level to start with (wraps). */
+  start?: number;
 }
 
 export interface BreakoutHandle {
   destroy(): void;
-  /** Swap the background photo (editor use). */
+  /** Swap the background photo of the current level (editor use). */
   setBackground(src: string): void;
+  /** Restart the current level. */
   restart(): void;
+  /** Jump to the next level in the rotation. */
+  next(): void;
 }
 
 const CAPTIONS = {
@@ -53,28 +63,36 @@ const CAPTIONS = {
   playYou: "You have the paddle.",
   lost: "Ball lost.",
   cleared: "Level cleared.",
-  over: "Game over. Restarting…",
-  frozen: "A player-built wall. Bricks, bonus zones, your photo behind.",
+  overLives: "Game over. Next level…",
+  overTimeout: "Out of time. Next level…",
+  overCrushed: "The wall came down. Next level…",
+  frozen: "A player-built wall. Bricks, zones, obstacles, your photo behind.",
 } as const;
 
-export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: MountOptions = {}): BreakoutHandle {
+export function mountBreakout(
+  canvas: HTMLCanvasElement,
+  levels: Level | Level[],
+  options: MountOptions = {},
+): BreakoutHandle {
+  const rotation = Array.isArray(levels) ? levels : [levels];
+  if (rotation.length === 0) throw new Error("mountBreakout needs at least one level");
   const maxDpr = options.maxDpr ?? 2;
   const controls = options.controls ?? "hybrid";
   const handoverDelay = options.handoverDelay ?? 3.5;
   let seed = options.seed ?? 1;
+  let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
 
   const palette = readNeonPalette();
-  const game = new Game(level, { seed, autoLaunch: controls !== "pointer" });
-  let pilot = new Autopilot(level, { seed: seed * 7 });
   const scene = createScene();
   const fx = new SceneFx(scene);
-  const renderer = new BreakoutRenderer(canvas, level, palette, () => draw());
 
   let destroyed = false;
   let raf = 0;
   let last = 0;
   let accumulator = 0;
   let endHold = 0;
+  let cssWidth = 0;
+  let dpr = 1;
 
   // Human input.
   let pointerX: number | null = null;
@@ -86,6 +104,12 @@ export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: 
   let visible = true;
   let hidden = document.visibilityState === "hidden";
 
+  // Current level.
+  let level = rotation[levelIndex];
+  let game = new Game(level, { seed, autoLaunch: controls !== "pointer" });
+  let pilot = new Autopilot(level, { seed: seed * 7 });
+  let renderer = new BreakoutRenderer(canvas, level, palette, () => draw());
+
   let hud: HudState = {
     levelName: level.name,
     author: level.author,
@@ -94,7 +118,10 @@ export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: 
     score: 0,
     speed: 1,
     bonus: null,
+    mod: null,
     heat: 0,
+    balls: 1,
+    timeLeft: level.rules.timer > 0 ? level.rules.timer : null,
     phase: "serve",
     pilot: "auto",
     caption: frozen ? CAPTIONS.frozen : CAPTIONS.serveAuto,
@@ -135,33 +162,48 @@ export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: 
         caption = CAPTIONS.cleared;
         break;
       case "over":
-        caption = CAPTIONS.over;
+        caption = s.ending === "timeout" ? CAPTIONS.overTimeout : s.ending === "crushed" ? CAPTIONS.overCrushed : CAPTIONS.overLives;
         break;
     }
     const next: HudState = {
-      ...hud,
+      levelName: level.name,
+      author: level.author,
       lives: s.lives,
+      maxLives: level.lives,
       score: s.score,
       speed: Math.round(s.speed.total * 10) / 10,
       bonus: s.speed.bonusKind,
+      mod: s.paddleMod?.kind ?? null,
       heat: Math.round(s.speed.heat),
+      balls: s.balls.length,
+      timeLeft: s.timeLeft === null ? null : Math.ceil(s.timeLeft),
       phase: s.phase,
       pilot: who,
       caption,
     };
-    if (
-      next.lives !== hud.lives ||
-      next.score !== hud.score ||
-      next.speed !== hud.speed ||
-      next.bonus !== hud.bonus ||
-      next.heat !== hud.heat ||
-      next.phase !== hud.phase ||
-      next.pilot !== hud.pilot ||
-      next.caption !== hud.caption
-    ) {
-      hud = next;
-      emitHud();
+    for (const key of Object.keys(next) as (keyof HudState)[]) {
+      if (next[key] !== hud[key]) {
+        hud = next;
+        emitHud();
+        return;
+      }
     }
+  };
+
+  const loadLevel = (index: number) => {
+    levelIndex = ((index % rotation.length) + rotation.length) % rotation.length;
+    level = rotation[levelIndex];
+    seed += 1;
+    game = new Game(level, { seed, autoLaunch: controls !== "pointer" });
+    pilot = new Autopilot(level, { seed: seed * 7 });
+    renderer = new BreakoutRenderer(canvas, level, palette, () => draw());
+    if (cssWidth > 0) renderer.resize(cssWidth, dpr);
+    scene.trail.length = 0;
+    scene.particles.length = 0;
+    scene.rings.length = 0;
+    endHold = 0;
+    accumulator = 0;
+    syncHud();
   };
 
   const restart = () => {
@@ -183,11 +225,11 @@ export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: 
     }
     if (steps === maxSteps) accumulator = 0;
 
-    fx.update(dt, game.state.phase === "play" ? game.state.ball : null);
+    fx.update(dt, game.state.phase === "play" ? game.state.balls.filter((b) => b.stuck === null) : []);
 
     if (game.finished) {
       endHold += dt;
-      if (endHold > 0.6) restart();
+      if (endHold > 0.6) loadLevel(levelIndex + 1);
     }
     syncHud();
   };
@@ -262,10 +304,10 @@ export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: 
 
   // --- browser plumbing -------------------------------------------------------
   const resize = () => {
-    const width = canvas.clientWidth || canvas.parentElement?.clientWidth || level.width;
-    const dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
+    cssWidth = canvas.clientWidth || canvas.parentElement?.clientWidth || level.width;
+    dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
     try {
-      renderer.resize(width, dpr);
+      renderer.resize(cssWidth, dpr);
       if (!destroyed) draw();
     } catch (error) {
       console.error("[kot] breakout preview failed to size.", error);
@@ -310,5 +352,8 @@ export function mountBreakout(canvas: HTMLCanvasElement, level: Level, options: 
       renderer.setBackground(src);
     },
     restart,
+    next() {
+      loadLevel(levelIndex + 1);
+    },
   };
 }
