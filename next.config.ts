@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  allowedDevOrigins: ["localhost", "heistglass.local"],
+  allowedDevOrigins: ["localhost", "heistglass.local", "breeq.local"],
+  serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
 };
 
 export default nextConfig;

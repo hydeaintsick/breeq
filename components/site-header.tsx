@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useId, useState } from "react";
+import { LogoMark } from "@/components/logo-mark";
+import { MenuIcon } from "@/components/menu-icon";
+import { SignOutButton } from "@/components/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ADMIN_DASHBOARD_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 
 const links = [
   { href: "/whitepaper", label: "Whitepaper" },
@@ -12,10 +18,12 @@ const links = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
   const close = () => setOpen(false);
+  const isAdmin = session?.user.role === "ADMIN";
 
   useEffect(() => {
     const onScroll = () => {
@@ -72,22 +80,38 @@ export function SiteHeader() {
               {link.label}
             </Link>
           ))}
-          <Link href="/play" className="btn-play play-shimmer">
+          {isAdmin ? (
+            <Link
+              href={ADMIN_DASHBOARD_PATH}
+              className="nav-link"
+              data-active={pathname.startsWith("/admin")}
+            >
+              Admin
+            </Link>
+          ) : null}
+          {session?.user ? (
+            <SignOutButton className="nav-link" />
+          ) : null}
+          <ThemeToggle />
+          <Link href={GAME_MENU_PATH} className="btn-play play-shimmer">
             Play
           </Link>
         </div>
 
-        <button
-          type="button"
-          className="relative z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline bg-white/70 text-ink md:hidden"
-          aria-expanded={open}
-          aria-controls={menuId}
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((current) => !current)}
-        >
-          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
-          <MenuIcon open={open} />
-        </button>
+        <div className="relative z-10 flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button
+            type="button"
+            className="header-chip"
+            aria-expanded={open}
+            aria-controls={menuId}
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((current) => !current)}
+          >
+            <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+            <MenuIcon open={open} />
+          </button>
+        </div>
       </nav>
 
       {open ? (
@@ -99,55 +123,35 @@ export function SiteHeader() {
             <Link
               key={link.href}
               href={link.href}
-              className="nav-link rounded-xl px-3 py-2.5"
+              className="nav-link flex min-h-11 items-center rounded-xl px-3"
               data-active={pathname === link.href}
               onClick={close}
             >
               {link.label}
             </Link>
           ))}
-          <Link href="/play" className="btn-play play-shimmer mt-1 w-full" onClick={close}>
+          {isAdmin ? (
+            <Link
+              href={ADMIN_DASHBOARD_PATH}
+              className="nav-link flex min-h-11 items-center rounded-xl px-3"
+              data-active={pathname.startsWith("/admin")}
+              onClick={close}
+            >
+              Admin
+            </Link>
+          ) : null}
+          {session?.user ? (
+            <SignOutButton className="nav-link flex min-h-11 items-center rounded-xl px-3 text-left" />
+          ) : null}
+          <Link
+            href={GAME_MENU_PATH}
+            className="btn-play play-shimmer mt-1 w-full"
+            onClick={close}
+          >
             Play
           </Link>
         </div>
       ) : null}
     </header>
-  );
-}
-
-/** Three neon bricks and a ball — the game in 22px. */
-function LogoMark() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="2" y="3" width="5.4" height="3.2" rx="1" fill="var(--neon-pink)" />
-      <rect x="8.3" y="3" width="5.4" height="3.2" rx="1" fill="var(--neon-violet)" />
-      <rect x="14.6" y="3" width="5.4" height="3.2" rx="1" fill="var(--neon-blue)" />
-      <rect x="5.15" y="7.4" width="5.4" height="3.2" rx="1" fill="var(--neon-cyan)" />
-      <rect x="11.45" y="7.4" width="5.4" height="3.2" rx="1" fill="var(--neon-lime)" />
-      <circle cx="11" cy="14.6" r="1.7" fill="var(--ink)" />
-      <rect x="7" y="18" width="8" height="2" rx="1" fill="var(--ink)" />
-    </svg>
-  );
-}
-
-function MenuIcon({ open }: { open: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      {open ? (
-        <path
-          d="M3.5 3.5l9 9M12.5 3.5l-9 9"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      ) : (
-        <path
-          d="M3 5h10M3 8h10M3 11h10"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
   );
 }

@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
-import { mountBreakout, type HudState } from "@/game/breakout/preview";
+import type { Level } from "@/game/breakout/engine/types";
+import { mountBreakout, type HudState, type MountOptions } from "@/game/breakout/preview";
 
-const LEVELS = SHOWCASE_LEVELS;
-const FIRST = LEVELS[0];
+const DEFAULT_LEVELS = SHOWCASE_LEVELS;
 
 const SPEED_LABEL: Record<NonNullable<HudState["bonus"]>, string> = {
   slow: "½ slow",
@@ -27,31 +27,54 @@ function clock(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function BreakoutPreview() {
+export function BreakoutPreview({
+  levels = DEFAULT_LEVELS,
+  start = 0,
+  seed,
+  controls = "hybrid",
+  followQuery = true,
+  compact = false,
+  showCaption = true,
+}: {
+  levels?: readonly Level[];
+  start?: number;
+  seed?: number;
+  controls?: MountOptions["controls"];
+  followQuery?: boolean;
+  compact?: boolean;
+  showCaption?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hud, setHud] = useState<HudState | null>(null);
+  const first = levels[0] ?? DEFAULT_LEVELS[0];
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) {
+    if (!canvas || levels.length === 0) {
       return;
     }
-    // `?level=n` lets you open the page on a given level of the rotation.
-    const start = Number(new URLSearchParams(window.location.search).get("level") ?? 0) || 0;
-    const handle = mountBreakout(canvas, LEVELS, { onHud: setHud, start });
+    const queryStart = followQuery
+      ? Number(new URLSearchParams(window.location.search).get("level") ?? start) || start
+      : start;
+    const handle = mountBreakout(canvas, [...levels], {
+      onHud: setHud,
+      start: queryStart,
+      seed,
+      controls,
+    });
     return () => handle.destroy();
-  }, []);
+  }, [levels, start, seed, controls, followQuery]);
 
-  const name = hud?.levelName ?? FIRST.name;
-  const author = hud?.author ?? FIRST.author;
-  const maxLives = hud?.maxLives ?? FIRST.lives;
+  const name = hud?.levelName ?? first.name;
+  const author = hud?.author ?? first.author;
+  const maxLives = hud?.maxLives ?? first.lives;
   const lives = hud?.lives ?? maxLives;
   const score = (hud?.score ?? 0).toLocaleString("en-US");
   const speed = hud?.bonus ? SPEED_LABEL[hud.bonus] : `×${(hud?.speed ?? 1).toFixed(1)}`;
   const caption = hud?.caption ?? "Autoplay. Move over the board to take the paddle.";
 
   return (
-    <figure className="relative mx-auto w-full max-w-[22rem]">
+    <figure className={`relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`}>
       <div className="board-aura" aria-hidden="true" />
       <div
         className="board-stage relative z-10 mx-auto"
@@ -61,7 +84,7 @@ export function BreakoutPreview() {
         <canvas
           ref={canvasRef}
           className="block w-full"
-          style={{ aspectRatio: `${FIRST.width} / ${FIRST.height}` }}
+          style={{ aspectRatio: `${first.width} / ${first.height}` }}
         />
 
         <div className="board-hud" aria-hidden="true">
@@ -94,11 +117,13 @@ export function BreakoutPreview() {
         </div>
       </div>
 
-      <figcaption className="relative mt-4 h-5 text-center text-xs tracking-wide text-ink-muted">
-        <span key={caption} className="board-caption" data-phase={hud?.phase ?? undefined}>
-          {caption}
-        </span>
-      </figcaption>
+      {showCaption ? (
+        <figcaption className="relative mt-4 h-5 text-center text-xs tracking-wide text-ink-muted">
+          <span key={caption} className="board-caption" data-phase={hud?.phase ?? undefined}>
+            {caption}
+          </span>
+        </figcaption>
+      ) : null}
     </figure>
   );
 }

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import { Suspense } from "react";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { auth } from "@/auth";
+import { AppChrome } from "@/components/app-chrome";
+import { Providers } from "@/components/providers";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,26 +27,27 @@ export const metadata: Metadata = {
     "A brick breaker built by players, for players. Design a wall over your own photo, place bonus zones, and dare everyone else to clear it.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const session = await auth();
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+
   return (
     <html
       lang="en"
+      data-theme={theme}
+      style={{ colorScheme: theme }}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col font-sans">
-        <a
-          href="#content"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-white"
-        >
+        <a href="#content" className="skip-link">
           Skip to content
         </a>
-        <Suspense fallback={null}>
-          <SiteHeader />
-        </Suspense>
-        <main id="content" className="flex flex-1 flex-col">
-          {children}
-        </main>
-        <SiteFooter />
+        <Providers session={session} theme={theme}>
+          <Suspense fallback={null}>
+            <AppChrome>{children}</AppChrome>
+          </Suspense>
+        </Providers>
       </body>
     </html>
   );

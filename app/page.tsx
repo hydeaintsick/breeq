@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { PieceKit } from "@/components/piece-kit";
 import { CATALOG, LEVEL_BUDGET } from "@/game/breakout/engine/catalog";
+import { GAME_MENU_PATH } from "@/lib/auth/paths";
 
 const steps = [
   {
@@ -48,7 +49,7 @@ export default function Home() {
             black hole — and dare everyone else to clear it.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Link href="/play" className="btn-play play-shimmer">
+            <Link href={GAME_MENU_PATH} className="btn-play play-shimmer">
               Play
             </Link>
             <a href="#how-it-works" className="nav-link">
