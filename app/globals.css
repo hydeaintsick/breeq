@@ -1214,23 +1214,26 @@ html[data-theme="dark"] {
   padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
 }
 
+/* Position dots: a tight cluster under the rail. Each slot stays 44px tall for
+   the thumb; the row is narrow so ten chapters read as one compact indicator. */
 .story-dots {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.15rem;
 }
 
 .story-dot {
   display: grid;
-  width: 2.75rem;
+  width: 1.25rem;
   height: 2.75rem;
   place-items: center;
 }
 
 .story-dot::after {
   content: "";
-  width: 0.42rem;
-  height: 0.42rem;
+  width: 0.36rem;
+  height: 0.36rem;
   border-radius: 999px;
   background: var(--ink);
   opacity: 0.22;
@@ -1240,7 +1243,7 @@ html[data-theme="dark"] {
 }
 
 .story-dot[aria-selected="true"]::after {
-  width: 1.15rem;
+  width: 0.95rem;
   opacity: 0.9;
 }
 

@@ -46,6 +46,31 @@ const episodes = [
     title: "Glass Sky",
     body: "The way home: a comet's tail, the rings of a giant, the Maw, the Sentinels' gate, twin suns — and one last wall, the glass sky of Vitra.",
   },
+  {
+    index: "04",
+    title: "Empty Nest",
+    body: "Under the glass, nobody is home. The Keepers — drones left to mind a dark city — show Kal the day the suns flickered and his people left.",
+  },
+  {
+    index: "05",
+    title: "Lumen Reef",
+    body: "A shallow ocean lit from below, and a reef that is a people. The Corallines sing of two fleets — then the Gnaw come at dusk, and Kal fights.",
+  },
+  {
+    index: "06",
+    title: "Ashen Court",
+    body: "A burned-out star, a court of Cindermoths who hoard the light, a queen called the Candle. The way on costs a cage, wardens, and a duel.",
+  },
+  {
+    index: "07",
+    title: "The Hush",
+    body: "A sky full of wrecks. The Ember Fleet — Kal's own kind — has held the line for years against a dark that eats light. Kal takes his place on the wall.",
+  },
+  {
+    index: "08",
+    title: "Second Sun",
+    body: "Aurel: one young sun, an unclaimed world. A glass sky built pane by pane, one last shadow, and the truth about twelve pods. Home is where they are.",
+  },
 ] as const;
 
 const earnSteps = [
@@ -126,12 +151,15 @@ export default function Home() {
           own. He does not know where he came from — only a warmth he remembers
           from inside the egg, and a pull toward the light. Every wall in the
           Story is a step on his way back to his origins: the shell he hatched
-          from, the pod that carried it, a chart with one star circled, and the
-          planet with a glass sky at the end of it.
+          from, the pod that carried it, a chart with one star circled, the
+          planet with a glass sky — and what he finds when nobody is home.
+          Beyond it, a migration&apos;s route through worlds of light and worlds
+          of ash, the peoples who live there, and a war against the dark that
+          made his people leave.
         </p>
-        <ol className="mt-12 grid gap-5 md:grid-cols-3">
+        <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {episodes.map((episode) => (
-            <li key={episode.index} className="glass p-7">
+            <li key={episode.index} className="glass p-6 sm:p-7">
               <p className="font-mono text-xs tracking-[0.16em] text-accent">
                 Episode {episode.index}
               </p>
@@ -145,7 +173,7 @@ export default function Home() {
           ))}
         </ol>
         <p className="mt-8 text-sm leading-6 text-ink-muted">
-          Three episodes, twenty-four walls, one new idea at a time. The ball
+          Eight episodes, seventy-four walls, one new idea at a time. The ball
           gets a little faster with every chapter, and each clear pays XP.{" "}
           <Link href={STORY_PATH} className="nav-link">
             Play the story
