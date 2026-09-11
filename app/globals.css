@@ -340,14 +340,75 @@ html[data-theme="dark"] {
     height: 2.75rem;
     border-radius: 999px;
     background: var(--kit-color);
-    border: 1px solid color-mix(in srgb, var(--kit-color) 40%, white);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--kit-color) 35%, transparent);
+    border: 2px solid color-mix(in srgb, var(--kit-color) 50%, white);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--kit-color) 28%, transparent);
+    opacity: 0.7;
   }
 
   .editor-swatch[data-active="true"] {
+    opacity: 1;
+    border-color: var(--ink);
     box-shadow:
-      0 0 0 4px rgba(91, 91, 255, 0.14),
-      0 0 16px color-mix(in srgb, var(--kit-color) 35%, transparent);
+      0 0 0 2px var(--bg),
+      0 0 0 4px var(--ink),
+      0 0 18px color-mix(in srgb, var(--kit-color) 50%, transparent);
+  }
+
+  .editor-swatch:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+
+  .editor-switch {
+    display: flex;
+    width: 100%;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 0.15rem;
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .editor-switch:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 0.75rem;
+  }
+
+  .editor-switch-track {
+    position: relative;
+    width: 48px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--field);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 0 1px var(--hairline);
+  }
+
+  .editor-switch[aria-checked="true"] .editor-switch-track {
+    background: var(--cta);
+    border-color: var(--cta);
+  }
+
+  .editor-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow: 0 4px 10px rgba(15, 17, 23, 0.18);
+    transition: transform var(--duration) var(--ease);
+  }
+
+  .editor-switch[aria-checked="true"] .editor-switch-thumb {
+    transform: translateX(20px);
+    background: var(--on-cta);
   }
 
   .editor-piece {
@@ -1922,6 +1983,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   .editor-chip,
   .editor-swatch,
   .editor-piece,
+  .editor-switch-thumb,
   .story-dot::after,
   .account-fold-chevron {
     transition: none !important;

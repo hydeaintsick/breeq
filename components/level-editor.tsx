@@ -86,6 +86,7 @@ export function LevelEditor({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [simulating, setSimulating] = useState(false);
 
   const issues = useMemo(() => validateLevel(level), [level]);
   const cost = useMemo(() => levelCost(level), [level]);
@@ -237,14 +238,32 @@ export function LevelEditor({
                 className="block h-full w-full"
                 style={{ aspectRatio: `${level.width} / ${level.height}` }}
               />
-              <button
-                type="button"
-                className="absolute inset-0 z-20 cursor-crosshair touch-none rounded-[inherit] bg-transparent"
-                aria-label="Place or remove a piece"
-                onPointerDown={onBoardPointer}
-              />
+              {simulating ? null : (
+                <button
+                  type="button"
+                  className="absolute inset-0 z-20 cursor-crosshair touch-none rounded-[inherit] bg-transparent"
+                  aria-label="Place or remove a piece"
+                  onPointerDown={onBoardPointer}
+                />
+              )}
             </div>
           </div>
+          <button
+            type="button"
+            className="editor-switch mt-4"
+            role="switch"
+            aria-checked={simulating}
+            onClick={() => {
+              const next = !simulating;
+              setSimulating(next);
+              handleRef.current?.setSimulating(next);
+            }}
+          >
+            Simulate gameplay
+            <span className="editor-switch-track" aria-hidden="true">
+              <span className="editor-switch-thumb" />
+            </span>
+          </button>
           <p className="mt-3 text-sm text-ink-muted">
             Budget {cost}/{LEVEL_BUDGET}
             {pendingPortalId != null ? " · Tap the twin portal." : null}
@@ -316,7 +335,7 @@ export function LevelEditor({
           </div>
 
           {tab === "brick" ? (
-            <div className="mt-4 flex flex-wrap gap-2" aria-label="Brick color">
+            <div className="mt-4 flex flex-wrap gap-3" aria-label="Brick color">
               {BRICK_COLORS.map((swatch) => (
                 <button
                   key={swatch}
@@ -325,6 +344,7 @@ export function LevelEditor({
                   data-active={color === swatch}
                   style={{ ["--kit-color" as string]: COLOR_VAR[swatch] }}
                   aria-label={swatch}
+                  aria-pressed={color === swatch}
                   onClick={() => setColor(swatch)}
                 />
               ))}

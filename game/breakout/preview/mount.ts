@@ -50,7 +50,10 @@ export interface MountOptions {
   maxDpr?: number;
   /** Index of the level to start with (wraps). */
   start?: number;
-  /** "edit": paint the serve frame only. No simulation, no paddle input. */
+  /**
+   * "edit": paint the serve frame only. No paddle input. Call
+   * `setSimulating(true)` to run the autopilot on the current draft.
+   */
   mode?: "play" | "edit";
   /**
    * Paint the authored serve frame and never run. Locked chapter cards use
@@ -103,6 +106,8 @@ export interface BreakoutHandle {
   next(): void;
   pause(): void;
   resume(): void;
+  /** Editor: run the autopilot, or freeze back to the authored serve frame. */
+  setSimulating(on: boolean): void;
 }
 
 const CAPTIONS = {
@@ -140,6 +145,8 @@ export function mountBreakout(
   let seed = options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
   let paused = false;
+  let simulating = false;
+  const wantsAutoLaunch = () => (editMode ? simulating : controls !== "pointer");
 
   const palette = readNeonPalette();
   const scene = createScene();
@@ -168,7 +175,7 @@ export function mountBreakout(
 
   // Current level.
   let level = rotation[levelIndex];
-  let game = new Game(level, { seed, autoLaunch: controls !== "pointer" });
+  let game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
   let pilot = new Autopilot(level, { seed: seed * 7 });
   let renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
 
@@ -267,7 +274,7 @@ export function mountBreakout(
   const applyLevel = (next: Level, { bumpSeed = true } = {}) => {
     level = next;
     if (bumpSeed) seed += 1;
-    game = new Game(level, { seed, autoLaunch: !editMode && controls !== "pointer" });
+    game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
     pilot = new Autopilot(level, { seed: seed * 7 });
     renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
     if (cssWidth > 0) renderer.resize(cssWidth, dpr);
@@ -356,17 +363,21 @@ export function mountBreakout(
     syncRail();
   };
 
+  const live = () => {
+    if (destroyed || !visible || hidden || paused) return false;
+    if (editMode) return simulating;
+    return !frozen;
+  };
+
   const frame = (now: number) => {
     raf = 0;
-    if (destroyed || frozen || !visible || hidden || paused) return;
+    if (!live()) return;
     const dt = last === 0 ? 0 : Math.min(0.05, (now - last) / 1000);
     last = now;
     tick(dt);
     draw();
     raf = requestAnimationFrame(frame);
   };
-
-  const live = () => !destroyed && !frozen && visible && !hidden && !paused;
 
   const schedule = () => {
     sfx?.setActive(live());
@@ -582,6 +593,21 @@ export function mountBreakout(
       if (!paused) return;
       paused = false;
       schedule();
+    },
+    setSimulating(on) {
+      if (!editMode || simulating === on) return;
+      simulating = on;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      last = 0;
+      if (on) frozen = false;
+      applyLevel(level, { bumpSeed: false });
+      if (on) {
+        schedule();
+        return;
+      }
+      sfx?.setActive(false);
+      haptics?.setActive(false);
     },
   };
 }
