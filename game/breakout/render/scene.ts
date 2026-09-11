@@ -48,6 +48,8 @@ export interface BreakoutScene {
   obstaclePulse: Map<number, number>;
   /** Screen shake amplitude in world units. */
   shake: number;
+  /** World point a human serve will fly toward, or null. */
+  aim: { x: number; y: number } | null;
 }
 
 export function createScene(): BreakoutScene {
@@ -65,6 +67,7 @@ export function createScene(): BreakoutScene {
     zonePulse: new Map(),
     obstaclePulse: new Map(),
     shake: 0,
+    aim: null,
   };
 }
 

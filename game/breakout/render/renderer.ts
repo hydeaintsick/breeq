@@ -8,7 +8,7 @@
  * scaling.
  */
 import { alpha, tint } from "../../shared/color";
-import type { Game } from "../engine/game";
+import { Game, serveDirection } from "../engine/game";
 import { LEVEL_DEFAULTS, paddleZoneTop } from "../engine/level";
 import type { Ball, Brick, Level, Obstacle, Zone } from "../engine/types";
 import { MOD_TINT, ZONE_LABEL, ZONE_TINT, tintOf, type NeonPalette, type Tint } from "./palette";
@@ -116,6 +116,11 @@ export class BreakoutRenderer {
   /** World x for a CSS-pixel x measured from the canvas's left edge. */
   worldX(cssX: number): number {
     return (cssX * this.dpr - this.ox) / this.scale;
+  }
+
+  /** World y for a CSS-pixel y measured from the canvas's top edge. */
+  worldY(cssY: number): number {
+    return (cssY * this.dpr - this.oy) / this.scale;
   }
 
   /**
@@ -284,6 +289,8 @@ export class BreakoutRenderer {
         this.ball(ctx, ball, game, scene);
       }
     }
+
+    if (state.phase === "serve") this.serveAim(ctx, game, scene);
 
     this.particles(ctx, scene.particles);
 
@@ -1095,6 +1102,38 @@ export class BreakoutRenderer {
       ctx.arc(ball.x, ball.y, r + 2.5, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, ball.ttl / 6));
       ctx.stroke();
     }
+  }
+
+  /** Dotted serve ray: where the ball will fly if the player launches now. */
+  private serveAim(ctx: Ctx, game: Game, scene: BreakoutScene): void {
+    const aim = scene.aim;
+    if (!aim) return;
+    const ball = game.state.balls[0];
+    if (!ball) return;
+    const { dx, dy } = serveDirection(ball.x, ball.y, aim.x, aim.y);
+    const r = this.level.ball.r;
+    const f = this.level.field;
+    const ox = ball.x + dx * (r + 4);
+    const oy = ball.y + dy * (r + 4);
+    let maxT = 108;
+    if (dx > 0.001) maxT = Math.min(maxT, (f.right - 6 - ox) / dx);
+    if (dx < -0.001) maxT = Math.min(maxT, (f.left + 6 - ox) / dx);
+    if (dy > 0.001) maxT = Math.min(maxT, (f.bottom - 6 - oy) / dy);
+    if (dy < -0.001) maxT = Math.min(maxT, (f.top + 6 - oy) / dy);
+    if (maxT < 8) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+      const u = (i + 1) / (n + 1);
+      const k = 1 - i / n;
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.18 + 0.5 * k})`;
+      ctx.beginPath();
+      ctx.arc(ox + dx * maxT * u, oy + dy * maxT * u, 1.05 + 0.55 * k, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private particles(ctx: Ctx, particles: Particle[]): void {

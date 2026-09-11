@@ -1,5 +1,5 @@
 export * from "./types";
-export { Game, RULES, predictX, type GameOptions, type PendingBrick } from "./game";
+export { Game, RULES, predictX, serveDirection, type GameOptions, type PendingBrick } from "./game";
 export { Autopilot, proveClearable, type AutopilotOptions, type Proof, type ProofOptions } from "./autopilot";
 export {
   rateDifficulty,

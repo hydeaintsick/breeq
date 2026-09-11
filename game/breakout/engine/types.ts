@@ -272,4 +272,10 @@ export interface GameInput {
   targetX: number;
   /** Request launch during `serve`, or release a stuck ball. */
   launch: boolean;
+  /**
+   * World point a human serve should fly toward. Omitted on autopilot and
+   * auto-serves: those still pick a seeded random angle.
+   */
+  aimX?: number;
+  aimY?: number;
 }

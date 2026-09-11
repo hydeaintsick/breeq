@@ -155,7 +155,7 @@ export class Game {
         this.followPaddle(s.balls[0]);
         s.phaseLeft -= dt;
         if (input.launch || (this.autoLaunch && s.phaseLeft <= 0)) {
-          this.launch(s.balls[0]);
+          this.launch(s.balls[0], input.aimX, input.aimY);
           s.phase = "play";
         }
         break;
@@ -268,13 +268,21 @@ export class Game {
     ball.y = this.level.paddle.y - this.level.ball.r - 0.5;
   }
 
-  private launch(ball: Ball): void {
-    const angle = this.rng.range(0.3, 0.6) * (this.rng.chance(0.5) ? 1 : -1);
-    ball.dx = Math.sin(angle);
-    ball.dy = -Math.cos(angle);
+  private launch(ball: Ball, aimX?: number, aimY?: number): void {
+    const dir =
+      aimX !== undefined && aimY !== undefined
+        ? serveDirection(ball.x, ball.y, aimX, aimY)
+        : this.randomServe();
+    ball.dx = dir.dx;
+    ball.dy = dir.dy;
     ball.stuck = null;
     ball.stuckFor = 0;
     this.emit({ t: this.state.time, type: "launch" });
+  }
+
+  private randomServe(): { dx: number; dy: number } {
+    const angle = this.rng.range(0.3, 0.6) * (this.rng.chance(0.5) ? 1 : -1);
+    return { dx: Math.sin(angle), dy: -Math.cos(angle) };
   }
 
   private emit(event: GameEvent): void {
@@ -1047,6 +1055,25 @@ export class Game {
       this.emit({ t: s.time, type: "zone", zone: z });
     }
   }
+}
+
+/**
+ * Unit direction of a serve from `(fromX, fromY)` toward `(aimX, aimY)`.
+ * Always up, clamped to `RULES.maxAngle` so a tap below the paddle still
+ * leaves the ball playable.
+ */
+export function serveDirection(
+  fromX: number,
+  fromY: number,
+  aimX: number,
+  aimY: number,
+): { dx: number; dy: number } {
+  let dx = aimX - fromX;
+  let dy = aimY - fromY;
+  if (dy >= -1e-6) dy = -1;
+  if (Math.hypot(dx, dy) < 1e-6) return { dx: 0, dy: -1 };
+  const angle = Math.max(-RULES.maxAngle, Math.min(RULES.maxAngle, Math.atan2(dx, -dy)));
+  return { dx: Math.sin(angle), dy: -Math.cos(angle) };
 }
 
 /** Where a ball will cross `y` if it keeps its heading, folding on the side walls. */
