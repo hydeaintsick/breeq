@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function StoryPage() {
   const { user } = await requireProgress();
-  const { episodes, storyPercent } = await getStoryShelf(user.id);
+  const { episodes } = await getStoryShelf(user.id);
 
   if (episodes.length === 0) {
     return (
@@ -34,7 +34,6 @@ export default async function StoryPage() {
   return (
     <StoryShelf
       episodes={episodes}
-      storyPercent={storyPercent}
       kicker="Story"
       title={
         <>

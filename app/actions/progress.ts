@@ -43,11 +43,11 @@ async function replayResult(userId: string): Promise<ChapterClearResult> {
 
 export async function awardChapterClear(
   chapterId: string,
-): Promise<ChapterClearResult | { error: "Chapter not found." }> {
+): Promise<ChapterClearResult | { error: "Chapter not found." | "Chapter locked." }> {
   const user = await requireUser();
   const chapter = await prisma.chapter.findUnique({
     where: { id: chapterId },
-    select: { id: true, xpReward: true },
+    select: { id: true, xpReward: true, episodeId: true },
   });
 
   if (!chapter) {
@@ -61,6 +61,22 @@ export async function awardChapterClear(
 
   if (existing) {
     return replayResult(user.id);
+  }
+
+  const siblings = await prisma.chapter.findMany({
+    where: { episodeId: chapter.episodeId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  const index = siblings.findIndex((row) => row.id === chapter.id);
+  const previousIds = siblings.slice(0, Math.max(0, index)).map((row) => row.id);
+  if (previousIds.length > 0) {
+    const clearedPrev = await prisma.chapterClear.count({
+      where: { userId: user.id, chapterId: { in: previousIds } },
+    });
+    if (clearedPrev < previousIds.length) {
+      return { error: "Chapter locked." as const };
+    }
   }
 
   const xpGained = chapter.xpReward || XP_PER_STORY_CLEAR;

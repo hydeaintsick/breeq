@@ -31,8 +31,10 @@ export function PlayCard({
   cover,
   locked = false,
   lockedHint,
+  frozen = false,
   fill = false,
   aura = true,
+  progress,
 }: {
   href?: string;
   onSelect?: (card: HTMLElement) => void;
@@ -45,16 +47,27 @@ export function PlayCard({
   cover?: string | null;
   locked?: boolean;
   lockedHint?: string;
+  /** Show the board frozen (serve frame) even when locked. */
+  frozen?: boolean;
   fill?: boolean;
   aura?: boolean;
+  progress?: { cleared: number; total: number; percent: number };
 }) {
+  const hasProgress = Boolean(progress && progress.total > 0);
+  const playClass = [
+    "btn-play pointer-events-none min-h-11",
+    hasProgress ? "mt-4" : "mt-5",
+    locked ? "" : "play-shimmer",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const copy = (
     <>
       {cover ? (
         <div className="absolute inset-0">
           <Image src={cover} alt="" fill className="object-cover" sizes="22rem" />
         </div>
-      ) : locked ? null : (
+      ) : locked && !frozen ? null : (
         <div
           className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none"
           inert={true}
@@ -65,6 +78,10 @@ export function PlayCard({
             controls="auto"
             followQuery={false}
             fill
+            frozen={frozen}
+            loop={!frozen}
+            showCaption={false}
+            showHud={false}
           />
         </div>
       )}
@@ -76,23 +93,32 @@ export function PlayCard({
         {locked && lockedHint ? (
           <p className="mt-1 max-w-[16rem] text-sm leading-6 text-white/75">{lockedHint}</p>
         ) : null}
-        <span
-          className={
-            locked
-              ? "btn-play pointer-events-none mt-5 min-h-11"
-              : "btn-play play-shimmer pointer-events-none mt-5 min-h-11"
-          }
-        >
+        {hasProgress && progress ? (
+          <div className="mode-card-progress" aria-hidden="true">
+            <span className="mode-card-progress-fill" style={{ width: `${progress.percent}%` }} />
+          </div>
+        ) : null}
+        <span className={playClass}>
           {locked ? "Locked" : action}
         </span>
       </div>
     </>
   );
 
+  const progressLabel =
+    progress && progress.total > 0
+      ? `${progress.cleared} of ${progress.total} chapters cleared.`
+      : null;
   const label = locked
     ? `Locked. ${title}. ${lockedHint ?? body}`
-    : `${action}. ${title}. ${body}`;
-  const cardClass = fill ? "mode-card mode-card-fill" : "mode-card";
+    : `${action}. ${title}. ${body}${progressLabel ? ` ${progressLabel}` : ""}`;
+  const cardClass = [
+    "mode-card",
+    fill ? "mode-card-fill" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const hasPreview = Boolean(cover) || !locked || frozen;
 
   return (
     <div className={fill ? "relative h-full w-full" : "relative w-full md:max-w-[22rem]"}>
@@ -102,6 +128,7 @@ export function PlayCard({
           className={cardClass}
           aria-disabled="true"
           data-cover={cover ? "true" : undefined}
+          data-preview={hasPreview ? "true" : undefined}
           role="group"
           aria-label={label}
         >

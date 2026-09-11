@@ -29,6 +29,13 @@ export function episodeIsComplete(episode: StoryEpisodeCard) {
   return episode.chapterCount > 0 && episode.chapters.every((chapter) => chapter.cleared);
 }
 
+/** Cleared walls in this episode only — never the whole campaign. */
+export function episodeProgress(episode: Pick<StoryEpisodeCard, "chapters">) {
+  const total = episode.chapters.length;
+  const cleared = episode.chapters.filter((chapter) => chapter.cleared).length;
+  return { cleared, total, percent: storyPercent(cleared, total) };
+}
+
 export function episodeIsLocked(episodes: readonly StoryEpisodeCard[], index: number) {
   const episode = episodes[index];
   if (!episode || episode.chapterCount === 0) {
@@ -46,6 +53,38 @@ export function episodeLockHint(episodes: readonly StoryEpisodeCard[], index: nu
     return "Clear the previous episode first.";
   }
   return null;
+}
+
+/** Playable once every earlier chapter in the episode is cleared. Replays stay open. */
+export function chapterIsLocked(
+  chapters: readonly Pick<StoryChapterCard, "cleared">[],
+  index: number,
+) {
+  if (!chapters[index]) {
+    return true;
+  }
+  return chapters.slice(0, index).some((previous) => !previous.cleared);
+}
+
+export function chapterLockHint(
+  chapters: readonly Pick<StoryChapterCard, "cleared">[],
+  index: number,
+) {
+  if (chapterIsLocked(chapters, index)) {
+    return "Clear the previous chapter first.";
+  }
+  return null;
+}
+
+/** First playable uncleared wall, or the last chapter once the episode is done. */
+export function continueChapterIndex(chapters: readonly Pick<StoryChapterCard, "cleared">[]) {
+  const playable = chapters.findIndex(
+    (chapter, index) => !chapterIsLocked(chapters, index) && !chapter.cleared,
+  );
+  if (playable >= 0) {
+    return playable;
+  }
+  return Math.max(0, chapters.length - 1);
 }
 
 const ORDER = [{ order: "asc" as const }, { createdAt: "asc" as const }];

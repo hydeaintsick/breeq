@@ -26,7 +26,7 @@ export default async function StoryEpisodePage({
 }) {
   const { slug } = await params;
   const { user } = await requireProgress();
-  const { episodes, storyPercent } = await getStoryShelf(user.id);
+  const { episodes } = await getStoryShelf(user.id);
   const episode = episodes.find((item) => item.slug === slug);
 
   if (!episode) {
@@ -36,7 +36,6 @@ export default async function StoryEpisodePage({
   return (
     <StoryShelf
       episodes={episodes}
-      storyPercent={storyPercent}
       initialSlug={slug}
       kicker="Story"
       title={

@@ -52,6 +52,12 @@ export interface MountOptions {
   start?: number;
   /** "edit": paint the serve frame only. No simulation, no paddle input. */
   mode?: "play" | "edit";
+  /**
+   * Paint the authored serve frame and never run. Locked chapter cards use
+   * this so the wall is visible but still. Distinct from reduced-motion
+   * freeze(), which advances a few seconds for a showcase pose.
+   */
+  frozen?: boolean;
   /** When false, a finished wall stays on the end frame instead of rotating. */
   loop?: boolean;
   /**
@@ -130,6 +136,7 @@ export function mountBreakout(
   const loop = options.loop ?? true;
   const rail = editMode ? null : (options.rail ?? null);
   const railGain = Math.max(1, options.railGain ?? 1.25);
+  const forceFrozen = Boolean(options.frozen);
   let seed = options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
   let paused = false;
@@ -155,7 +162,7 @@ export function mountBreakout(
   let humanTouched = false;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let frozen = reducedMotion.matches;
+  let frozen = forceFrozen || (!editMode && reducedMotion.matches);
   let visible = true;
   let hidden = document.visibilityState === "hidden";
 
@@ -389,6 +396,7 @@ export function mountBreakout(
   };
 
   const onReducedMotion = () => {
+    if (editMode || forceFrozen) return;
     if (reducedMotion.matches) freeze();
     else {
       frozen = false;
@@ -522,7 +530,7 @@ export function mountBreakout(
   document.addEventListener("visibilitychange", onVisibility);
   reducedMotion.addEventListener("change", onReducedMotion);
 
-  if (editMode) {
+  if (editMode || forceFrozen) {
     draw();
   } else if (frozen) {
     freeze();

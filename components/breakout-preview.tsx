@@ -39,6 +39,7 @@ export function BreakoutPreview({
   showCaption = true,
   showHud = true,
   paused = false,
+  frozen = false,
   loop = true,
   thumbRail = false,
   sound = false,
@@ -57,6 +58,8 @@ export function BreakoutPreview({
   showCaption?: boolean;
   showHud?: boolean;
   paused?: boolean;
+  /** Serve frame only, no autopilot. Locked chapter cards. */
+  frozen?: boolean;
   loop?: boolean;
   /** Touch strip under the board that steers the paddle (phone play). */
   thumbRail?: boolean;
@@ -88,6 +91,7 @@ export function BreakoutPreview({
       start: queryStart,
       seed,
       controls,
+      frozen,
       loop,
       sound,
       haptics,
@@ -98,7 +102,7 @@ export function BreakoutPreview({
       handle.destroy();
       handleRef.current = null;
     };
-  }, [levels, start, seed, controls, followQuery, loop, thumbRail, sound, haptics, onCleared, onOver]);
+  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, onCleared, onOver]);
 
   useEffect(() => {
     if (paused) {
