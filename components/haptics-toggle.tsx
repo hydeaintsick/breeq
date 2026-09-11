@@ -22,7 +22,10 @@ export function HapticsToggle({ variant = "row" }: { variant?: "row" | "menu" })
         aria-label={label}
         onClick={toggle}
       >
-        <span>Vibration</span>
+        <span className="flex items-center gap-2.5">
+          <VibrationIcon off={!enabled} />
+          Vibration
+        </span>
         <span className="text-xs font-medium uppercase tracking-[0.12em]">{enabled ? "On" : "Off"}</span>
       </button>
     );
@@ -44,7 +47,7 @@ export function HapticsToggle({ variant = "row" }: { variant?: "row" | "menu" })
 
 function VibrationIcon({ off }: { off: boolean }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
       <rect
         x="5.2"
         y="2.6"

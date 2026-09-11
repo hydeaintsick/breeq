@@ -7,14 +7,22 @@ import { useEffect, useId, useState } from "react";
 import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
 import { MenuIcon } from "@/components/menu-icon";
+import {
+  DashboardIcon,
+  ListIcon,
+  MailIcon,
+  PageIcon,
+  PlayIcon,
+  SignOutIcon,
+} from "@/components/nav-icons";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ADMIN_DASHBOARD_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 
 const links = [
-  { href: "/whitepaper", label: "Whitepaper" },
-  { href: "/terms", label: "Terms" },
-  { href: "/contact", label: "Contact" },
+  { href: "/whitepaper", label: "Whitepaper", Icon: PageIcon },
+  { href: "/terms", label: "Terms", Icon: ListIcon },
+  { href: "/contact", label: "Contact", Icon: MailIcon },
 ] as const;
 
 export function SiteHeader() {
@@ -80,7 +88,8 @@ export function SiteHeader() {
             <SignOutButton className="nav-link" />
           ) : null}
           <ThemeToggle />
-          <Link href={GAME_MENU_PATH} className="btn-play play-shimmer">
+          <Link href={GAME_MENU_PATH} className="btn-play play-shimmer gap-2">
+            <PlayIcon />
             Play
           </Link>
         </div>
@@ -110,31 +119,37 @@ export function SiteHeader() {
             <Link
               key={link.href}
               href={link.href}
-              className="nav-link flex min-h-11 items-center rounded-xl px-3"
+              className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
               data-active={pathname === link.href}
               onClick={close}
             >
+              <link.Icon />
               {link.label}
             </Link>
           ))}
           {isAdmin ? (
             <Link
               href={ADMIN_DASHBOARD_PATH}
-              className="nav-link flex min-h-11 items-center rounded-xl px-3"
+              className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
               data-active={pathname.startsWith("/admin")}
               onClick={close}
             >
+              <DashboardIcon />
               Admin
             </Link>
           ) : null}
           {session?.user ? (
-            <SignOutButton className="nav-link flex min-h-11 items-center rounded-xl px-3 text-left" />
+            <SignOutButton className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left">
+              <SignOutIcon />
+              Sign out
+            </SignOutButton>
           ) : null}
           <Link
             href={GAME_MENU_PATH}
-            className="btn-play play-shimmer mt-1 w-full"
+            className="btn-play play-shimmer mt-1 min-h-11 w-full gap-2"
             onClick={close}
           >
+            <PlayIcon />
             Play
           </Link>
         </div>

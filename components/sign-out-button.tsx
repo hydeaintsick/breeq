@@ -1,8 +1,15 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { signOut } from "next-auth/react";
 
-export function SignOutButton({ className }: { className?: string }) {
+export function SignOutButton({
+  className,
+  children = "Sign out",
+}: {
+  className?: string;
+  children?: ReactNode;
+}) {
   return (
     <button
       type="button"
@@ -11,7 +18,7 @@ export function SignOutButton({ className }: { className?: string }) {
         void signOut({ redirectTo: "/" });
       }}
     >
-      Sign out
+      {children}
     </button>
   );
 }

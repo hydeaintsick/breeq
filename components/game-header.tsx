@@ -7,6 +7,7 @@ import { HapticsToggle } from "@/components/haptics-toggle";
 import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
 import { MenuIcon } from "@/components/menu-icon";
+import { AccountIcon, EditorIcon, SignOutIcon } from "@/components/nav-icons";
 import { RankMeter } from "@/components/rank-meter";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SoundToggle } from "@/components/sound-toggle";
@@ -89,22 +90,27 @@ export function GameHeader({
           <div className="glass-sheet flex w-full max-w-xs flex-col gap-1 p-3">
             <Link
               href={ACCOUNT_PATH}
-              className="nav-link flex min-h-11 items-center rounded-xl px-3"
+              className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
               data-active={pathname === ACCOUNT_PATH}
             >
+              <AccountIcon />
               Account settings
             </Link>
             <HapticsToggle variant="menu" />
             {isAdmin ? (
               <Link
                 href={ADMIN_EDITOR_PATH}
-                className="nav-link flex min-h-11 items-center rounded-xl px-3"
+                className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
                 data-active={pathname.startsWith(ADMIN_EDITOR_PATH)}
               >
+                <EditorIcon />
                 Editor
               </Link>
             ) : null}
-            <SignOutButton className="nav-link flex min-h-11 items-center rounded-xl px-3 text-left" />
+            <SignOutButton className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left">
+              <SignOutIcon />
+              Sign out
+            </SignOutButton>
           </div>
         </div>
       ) : null}
