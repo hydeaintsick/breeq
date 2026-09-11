@@ -86,6 +86,12 @@ export interface MountOptions {
    */
   rail?: HTMLElement | null;
   /**
+   * Full-screen boards: the canvas fills its parent and the world is fitted
+   * (contain, centered) inside this element's box instead, so the photo runs
+   * edge to edge while the field keeps its aspect and clears the chrome.
+   */
+  fit?: HTMLElement | null;
+  /**
    * How much of the field the rail's full width covers. 1.25 means the whole
    * field fits in the central 80% of the rail: less thumb travel, and the
    * outer 10% on each side is slack so the paddle can be pinned to a wall
@@ -140,6 +146,7 @@ export function mountBreakout(
   const handoverDelay = options.handoverDelay ?? 3.5;
   const loop = options.loop ?? true;
   const rail = editMode ? null : (options.rail ?? null);
+  const fit = options.fit ?? null;
   const railGain = Math.max(1, options.railGain ?? 1.25);
   const forceFrozen = Boolean(options.frozen);
   let seed = options.seed ?? 1;
@@ -160,6 +167,7 @@ export function mountBreakout(
   let accumulator = 0;
   let endHold = 0;
   let cssWidth = 0;
+  let cssHeight = 0;
   let dpr = 1;
 
   // Human input.
@@ -277,7 +285,7 @@ export function mountBreakout(
     game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
     pilot = new Autopilot(level, { seed: seed * 7 });
     renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
-    if (cssWidth > 0) renderer.resize(cssWidth, dpr);
+    if (cssWidth > 0) renderer.view(viewport());
     scene.trail.length = 0;
     scene.particles.length = 0;
     scene.rings.length = 0;
@@ -419,7 +427,7 @@ export function mountBreakout(
   // --- pointer controls -----------------------------------------------------
   const toWorldX = (clientX: number) => {
     const rect = canvas.getBoundingClientRect();
-    return ((clientX - rect.left) / rect.width) * level.width;
+    return renderer.worldX(clientX - rect.left);
   };
   const onPointerMove = (e: PointerEvent) => {
     if (controls === "auto" || paused) return;
@@ -511,18 +519,50 @@ export function mountBreakout(
   }
 
   // --- browser plumbing -------------------------------------------------------
-  const resize = () => {
+  const viewport = () => {
+    if (!fit) return { width: cssWidth, height: cssHeight, dpr };
+    const c = canvas.getBoundingClientRect();
+    const f = fit.getBoundingClientRect();
+    return {
+      width: cssWidth,
+      height: cssHeight,
+      dpr,
+      fit: { x: f.left - c.left, y: f.top - c.top, width: f.width, height: f.height },
+    };
+  };
+  const applySize = () => {
     cssWidth = canvas.clientWidth || canvas.parentElement?.clientWidth || level.width;
+    cssHeight = fit
+      ? canvas.clientHeight || canvas.parentElement?.clientHeight || level.height
+      : (cssWidth * level.height) / level.width;
     dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
     try {
-      renderer.resize(cssWidth, dpr);
+      renderer.view(viewport());
       if (!destroyed) draw();
     } catch (error) {
       console.error("[breeq] breakout preview failed to size.", error);
     }
   };
+  // Re-rasterizing the photo is the most expensive thing this mount does, so a
+  // box that is still animating (a sheet growing, a rotating phone) is left
+  // stretched by CSS until it settles; only the first size is applied at once.
+  let resizeTimer = 0;
+  let sized = false;
+  const RESIZE_SETTLE = 90;
+  const resize = () => {
+    if (!sized) {
+      applySize();
+      sized = canvas.clientWidth > 0;
+      return;
+    }
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      if (!destroyed) applySize();
+    }, RESIZE_SETTLE);
+  };
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(canvas.parentElement ?? canvas);
+  if (fit) resizeObserver.observe(fit);
   resize();
 
   const intersection = new IntersectionObserver(
@@ -553,6 +593,7 @@ export function mountBreakout(
     destroy() {
       destroyed = true;
       if (raf) cancelAnimationFrame(raf);
+      window.clearTimeout(resizeTimer);
       sfx?.destroy();
       haptics?.destroy();
       resizeObserver.disconnect();

@@ -16,6 +16,7 @@ import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { QUIET_START } from "@/game/breakout/levels";
 import { GAME_MENU_PATH, STORY_PATH } from "@/lib/auth/paths";
+import { ambientPhoto, boardPhoto, screenPhoto } from "@/lib/photo";
 import {
   chapterIsLocked,
   chapterLockHint,
@@ -51,7 +52,7 @@ function chapterLevels(chapter: StoryChapterCard, backgroundUrl: string | null) 
         name: chapter.title,
         author: "Breeq",
       }),
-      backgroundUrl,
+      backgroundUrl ? boardPhoto(backgroundUrl) : backgroundUrl,
     ),
   ];
 }
@@ -65,7 +66,7 @@ function previewLevels(episode: StoryEpisodeCard) {
             name: episode.title,
             author: "Breeq",
           }),
-          episode.backgroundUrl,
+          episode.backgroundUrl ? boardPhoto(episode.backgroundUrl) : episode.backgroundUrl,
         ),
       ]
     : FALLBACK_LEVELS;
@@ -160,6 +161,8 @@ export function StoryShelf({
   const [grown, setGrown] = useState(Boolean(initialSlug));
   /** The sheet is shrinking back onto its card; unmounts when the morph ends. */
   const [closing, setClosing] = useState(false);
+  /** The grown sheet hides the whole page: the shelf behind it can rest. */
+  const [covered, setCovered] = useState(false);
   const originCardRef = useRef<HTMLElement | null>(null);
   const [playing, setPlaying] = useState<StoryChapterCard | null>(null);
   const [paused, setPaused] = useState(false);
@@ -201,6 +204,8 @@ export function StoryShelf({
       const plate = platesRef.current[index];
       if (plate) {
         plate.style.opacity = String(weight * weight);
+        // Plates that cannot be seen are not composited either.
+        plate.style.visibility = weight < 0.03 ? "hidden" : "";
       }
       if (Number.isInteger(index) && dist < bestDist) {
         bestDist = dist;
@@ -332,18 +337,17 @@ export function StoryShelf({
       return ok;
     };
 
+    // The sheet body is laid out at screen size from the first frame, so the
+    // rail can be aligned and shown while the frame is still growing.
     snap(false);
     let raf2 = 0;
     const raf1 = window.requestAnimationFrame(() => {
       snap(false);
-      raf2 = window.requestAnimationFrame(() => {
-        // No grow animation (direct /story/[slug]): the rail is already full size.
-        if (!origin) {
-          snap(true);
-        }
-      });
+      raf2 = window.requestAnimationFrame(() => snap(true));
     });
 
+    // Once the frame has grown, the page under it is fully hidden: its bloom
+    // and live boards can stop working until the sheet comes down.
     const sheet = sheetRef.current;
     const onEnd = (event: TransitionEvent) => {
       if (event.target !== sheet) {
@@ -353,9 +357,13 @@ export function StoryShelf({
         return;
       }
       snap(true);
+      setCovered(true);
     };
     sheet?.addEventListener("transitionend", onEnd);
-    const fallback = window.setTimeout(() => snap(true), 320);
+    const fallback = window.setTimeout(() => {
+      snap(true);
+      setCovered(true);
+    }, origin ? 320 : 0);
 
     return () => {
       window.cancelAnimationFrame(raf1);
@@ -411,6 +419,7 @@ export function StoryShelf({
     setGrown(false);
     setOrigin(null);
     setClosing(false);
+    setCovered(false);
     if (initialSlug) {
       router.push(STORY_PATH);
     }
@@ -436,6 +445,7 @@ export function StoryShelf({
     setCleared(null);
     setLost(null);
     setChapterReady(false);
+    setCovered(false);
     setOrigin(target);
     setGrown(false);
     setClosing(true);
@@ -639,7 +649,7 @@ export function StoryShelf({
       : { top: 0, left: 0, width: "100vw", height: "100svh" };
 
   return (
-    <div className="story-page">
+    <div className="story-page" data-covered={covered ? "true" : undefined}>
       <StoryAmbient episodes={shelf} platesRef={platesRef} />
       {kicker || title || body ? (
         <header className="story-page-copy">
@@ -683,6 +693,7 @@ export function StoryShelf({
                   fill
                   aura={false}
                   progress={progress}
+                  paused={covered}
                   onSelect={locked ? undefined : (card) => openEpisode(episode, card)}
                 />
               </div>
@@ -729,92 +740,97 @@ export function StoryShelf({
                   {open.backgroundUrl ? (
                     <div
                       className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url("${open.backgroundUrl.replace(/"/g, "")}")` }}
+                      style={{ backgroundImage: `url("${screenPhoto(open.backgroundUrl).replace(/"/g, "")}")` }}
                     />
                   ) : (
-                    <BreakoutFill episode={open} />
+                    <div className="story-sheet-body">
+                      <BreakoutFill episode={open} />
+                    </div>
                   )}
                 </div>
                 <div className="story-sheet-scrim" aria-hidden="true" />
-                <div className="story-sheet-bar">
-                  <p className="min-w-0 text-sm font-medium text-white/80">
-                    {openProgress
-                      ? `${openProgress.cleared} / ${openProgress.total} chapters`
-                      : "Episode"}
-                  </p>
-                  <button type="button" className="story-close" aria-label="Close episode" onClick={closeSheet}>
-                    <CloseGlyph />
-                  </button>
-                </div>
-                <header className="story-sheet-copy">
-                  <p className="font-mono text-xs tracking-[0.16em] text-accent">Episode</p>
-                  <h2 id={titleId} className="font-semibold tracking-tight text-white">
-                    {open.title}
-                  </h2>
-                  <div
-                    className="story-campaign mt-3"
-                    aria-label={
-                      openProgress
-                        ? `${openProgress.cleared} of ${openProgress.total} chapters cleared`
-                        : undefined
-                    }
-                  >
-                    <div
-                      className="rank-bar story-campaign-bar"
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={openProgress?.total ?? 0}
-                      aria-valuenow={openProgress?.cleared ?? 0}
-                    >
-                      <span
-                        className="rank-bar-fill"
-                        style={{ width: `${openProgress?.percent ?? 0}%` }}
-                      />
-                    </div>
-                    <p className="story-page-lede mt-2">
+                <div className="story-sheet-body">
+                  <div className="story-sheet-bar">
+                    <p className="min-w-0 text-sm font-medium text-white/80">
                       {openProgress
-                        ? `${openProgress.cleared} of ${openProgress.total} chapters cleared`
-                        : null}
+                        ? `${openProgress.cleared} / ${openProgress.total} chapters`
+                        : "Episode"}
                     </p>
+                    <button type="button" className="story-close" aria-label="Close episode" onClick={closeSheet}>
+                      <CloseGlyph />
+                    </button>
                   </div>
-                </header>
-                <div
-                  ref={chapterRailRef}
-                  className="story-rail"
-                  data-ready={chapterReady ? "true" : undefined}
-                  role="region"
-                  aria-roledescription="carousel"
-                  aria-label="Chapters"
-                >
-                  {open.chapters.map((chapter, index) => (
-                    <ChapterPlayCard
-                      key={chapter.id}
-                      chapter={chapter}
-                      index={index}
-                      active={index === chapterActive}
-                      backgroundUrl={open.backgroundUrl}
+                  <header className="story-sheet-copy">
+                    <p className="font-mono text-xs tracking-[0.16em] text-accent">Episode</p>
+                    <h2 id={titleId} className="font-semibold tracking-tight text-white">
+                      {open.title}
+                    </h2>
+                    <div
+                      className="story-campaign mt-3"
+                      aria-label={
+                        openProgress
+                          ? `${openProgress.cleared} of ${openProgress.total} chapters cleared`
+                          : undefined
+                      }
+                    >
+                      <div
+                        className="rank-bar story-campaign-bar"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={openProgress?.total ?? 0}
+                        aria-valuenow={openProgress?.cleared ?? 0}
+                      >
+                        <span
+                          className="rank-bar-fill"
+                          style={{ width: `${openProgress?.percent ?? 0}%` }}
+                        />
+                      </div>
+                      <p className="story-page-lede mt-2">
+                        {openProgress
+                          ? `${openProgress.cleared} of ${openProgress.total} chapters cleared`
+                          : null}
+                      </p>
+                    </div>
+                  </header>
+                  <div
+                    ref={chapterRailRef}
+                    className="story-rail"
+                    data-ready={chapterReady ? "true" : undefined}
+                    role="region"
+                    aria-roledescription="carousel"
+                    aria-label="Chapters"
+                  >
+                    {open.chapters.map((chapter, index) => (
+                      <ChapterPlayCard
+                        key={chapter.id}
+                        chapter={chapter}
+                        index={index}
+                        active={index === chapterActive}
+                        backgroundUrl={open.backgroundUrl}
                       locked={chapterIsLocked(open.chapters, index)}
                       hint={chapterLockHint(open.chapters, index)}
+                      live={covered}
                       onPlay={startChapter}
-                    />
-                  ))}
-                </div>
-                <div className="story-page-foot">
-                  {open.chapters.length > 1 ? (
-                    <div className="story-dots" role="tablist" aria-label="Chapter position">
-                      {open.chapters.map((chapter, index) => (
-                        <button
-                          key={chapter.id}
-                          type="button"
-                          className="story-dot"
-                          role="tab"
-                          aria-selected={index === chapterActive}
-                          aria-label={`Chapter ${index + 1}, ${chapter.title}`}
-                          onClick={() => goToChapter(index)}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
+                      />
+                    ))}
+                  </div>
+                  <div className="story-page-foot">
+                    {open.chapters.length > 1 ? (
+                      <div className="story-dots" role="tablist" aria-label="Chapter position">
+                        {open.chapters.map((chapter, index) => (
+                          <button
+                            key={chapter.id}
+                            type="button"
+                            className="story-dot"
+                            role="tab"
+                            aria-selected={index === chapterActive}
+                            aria-label={`Chapter ${index + 1}, ${chapter.title}`}
+                            onClick={() => goToChapter(index)}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
               {playing ? (
@@ -925,7 +941,7 @@ function StoryAmbient({
             <>
               <div className="story-ambient-drift" data-layer="wash" style={{ animationDelay: `${-index * 7}s` }}>
                 <img
-                  src={episode.backgroundUrl}
+                  src={ambientPhoto(episode.backgroundUrl)}
                   alt=""
                   className="story-ambient-wash"
                   draggable={false}
@@ -938,7 +954,7 @@ function StoryAmbient({
                 style={{ animationDelay: `${-index * 7 - 11}s` }}
               >
                 <img
-                  src={episode.backgroundUrl}
+                  src={ambientPhoto(episode.backgroundUrl)}
                   alt=""
                   className="story-ambient-core"
                   draggable={false}
@@ -979,6 +995,7 @@ function ChapterPlayCard({
   backgroundUrl,
   locked,
   hint,
+  live,
   onPlay,
 }: {
   chapter: StoryChapterCard;
@@ -987,6 +1004,8 @@ function ChapterPlayCard({
   backgroundUrl: string | null;
   locked: boolean;
   hint: string | null;
+  /** Boards mount only once the sheet has finished growing: the morph stays cheap. */
+  live: boolean;
   onPlay: (chapter: StoryChapterCard) => void;
 }) {
   const levels = useMemo(
@@ -1013,6 +1032,7 @@ function ChapterPlayCard({
           frozen={locked}
           fill
           aura={false}
+          preview={live}
           onSelect={locked ? undefined : () => onPlay(chapter)}
         />
       </div>

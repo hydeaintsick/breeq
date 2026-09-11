@@ -775,6 +775,15 @@ html[data-theme="dark"] {
   animation: aura-drift 14s ease-in-out infinite alternate;
 }
 
+/* Phones: a blurred layer that also moves is re-filtered every frame by the
+   GPU. The bloom stays; it holds still and is rasterized once. */
+@media (max-width: 640px) {
+  .board-aura {
+    animation: none;
+    transform: translate3d(0, 0.5%, 0) scale(1.03);
+  }
+}
+
 .board-hud {
   position: absolute;
   inset-inline: 0;
@@ -1122,6 +1131,15 @@ html[data-theme="dark"] {
   opacity: 0;
 }
 
+/* An open episode sheet hides the page: the bloom neither paints nor drifts. */
+.story-page[data-covered="true"] .story-ambient {
+  visibility: hidden;
+}
+
+.story-page[data-covered="true"] .story-ambient-drift {
+  animation-play-state: paused;
+}
+
 .story-ambient-drift {
   position: absolute;
   inset: -18%;
@@ -1150,7 +1168,7 @@ html[data-theme="dark"] {
 
 .story-ambient-wash {
   object-fit: cover;
-  filter: blur(56px) saturate(2.4) brightness(2.35) contrast(1.04);
+  filter: blur(18px) saturate(2.4) brightness(2.35) contrast(1.04);
   opacity: 0.72;
 }
 
@@ -1161,7 +1179,7 @@ html[data-theme="dark"] {
   height: 100%;
   object-fit: cover;
   border-radius: 46%;
-  filter: blur(32px) saturate(2.6) brightness(2.55) contrast(1.04);
+  filter: blur(14px) saturate(2.6) brightness(2.55) contrast(1.04);
   opacity: 0.8;
 }
 
@@ -1188,12 +1206,12 @@ html[data-theme="dark"] {
 
 html[data-theme="dark"] .story-ambient-wash {
   opacity: 0.95;
-  filter: blur(64px) saturate(2.1) brightness(1.45) contrast(1.12);
+  filter: blur(20px) saturate(2.1) brightness(1.45) contrast(1.12);
 }
 
 html[data-theme="dark"] .story-ambient-core {
   opacity: 0.92;
-  filter: blur(40px) saturate(2.2) brightness(1.5) contrast(1.1);
+  filter: blur(16px) saturate(2.2) brightness(1.5) contrast(1.1);
 }
 
 html[data-theme="dark"] .story-ambient-fallback {
@@ -1246,11 +1264,10 @@ html[data-theme="dark"] .story-ambient-scrim {
 .story-sheet {
   position: fixed;
   z-index: 70;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   background: #0b0d1a;
   border-radius: 1.6rem;
+  contain: layout paint;
   transition:
     top var(--duration) var(--ease),
     left var(--duration) var(--ease),
@@ -1265,6 +1282,31 @@ html[data-theme="dark"] .story-ambient-scrim {
   height: 100svh;
   max-width: none;
   border-radius: 0;
+}
+
+/* The sheet's content is laid out once, at screen size, and merely revealed
+   as the frame grows: nothing inside (four live boards, container queries)
+   is re-measured or re-rasterized per frame of the morph. Only the photo
+   layer above follows the frame, which is what makes it read as a zoom. */
+.story-sheet-body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100svh;
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.story-sheet[data-grown="true"] .story-sheet-body {
+  opacity: 1;
+}
+
+.story-sheet[data-closing="true"] .story-sheet-body {
+  opacity: 0;
+  transition-duration: calc(var(--duration) / 2);
 }
 
 .story-sheet-scrim {
@@ -1382,36 +1424,53 @@ html[data-theme="dark"] .story-ambient-scrim {
   background: #05060c;
 }
 
+/* The whole screen is the board. The canvas paints the photo edge to edge; the
+   field is fitted into the slot the chrome leaves free (a row for the pause
+   button on top, the thumb rail below), keeping its own aspect. */
 .story-play-stage {
-  /* Board + thumb rail share one width: the board keeps its 360/640 aspect and
-     gives up height so the rail always fits under it, even on short phones. */
-  --rail-reserve: 6.4rem;
-  --board-w: min(
-    100%,
-    calc(
-      (100svh - env(safe-area-inset-top) - max(0.75rem, env(safe-area-inset-bottom)) - var(--rail-reserve)) * 360 / 640
-    )
-  );
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) max(0.75rem, env(safe-area-inset-bottom))
-    env(safe-area-inset-left);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  margin: 0;
+  padding: calc(max(0.75rem, env(safe-area-inset-top)) + 3.1rem) max(0.5rem, env(safe-area-inset-right))
+    max(0.75rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+  background: #05060c;
 }
 
-.story-play-board {
-  width: var(--board-w);
-  border-radius: 1.1rem;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+.story-play-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.story-play-slot {
+  container-type: size;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  place-items: center;
+}
+
+.story-play-fit {
+  --field-ratio: calc(360 / 640);
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--field-ratio)));
+  max-width: 30rem;
+  pointer-events: none;
 }
 
 /* --- Thumb rail (touch control strip under the board) --------------------- */
 
 .thumb-rail-wrap {
-  width: var(--board-w, 100%);
+  position: relative;
+  z-index: 1;
+  width: min(100%, 26rem);
   padding-top: 0.9rem;
 }
 
@@ -1535,10 +1594,6 @@ html[data-theme="dark"] .story-ambient-scrim {
 
 .thumb-rail-label .board-caption[data-phase="cleared"] {
   color: #ffffff;
-}
-
-.story-play-board .board-hud {
-  padding-right: 4.5rem;
 }
 
 .story-pause {
@@ -1912,6 +1967,20 @@ html[data-theme="dark"] .story-ambient-scrim {
   }
 }
 
+/* A live board arriving in a card that was already on screen. */
+.mode-card-board {
+  animation: board-in 320ms var(--ease) both;
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes caption-in {
   from {
     opacity: 0;
@@ -1968,7 +2037,8 @@ html[data-theme="dark"] .story-ambient-scrim {
   .story-clear-badge,
   .story-clear-badge-number,
   .story-clear-spark,
-  .story-ambient-drift {
+  .story-ambient-drift,
+  .mode-card-board {
     animation: none !important;
   }
 

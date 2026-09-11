@@ -27,12 +27,36 @@ const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
 type Ctx = CanvasRenderingContext2D;
 
+/** A rectangle in CSS pixels, relative to the canvas. */
+export interface CssRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * How the canvas is laid out. The world is contain-fitted and centered inside
+ * `fit` (default: the whole canvas); the photo, wash, and vignette cover the
+ * whole canvas so a full-screen board reads as one image with the field in it.
+ */
+export interface Viewport {
+  width: number;
+  height: number;
+  dpr: number;
+  fit?: CssRect;
+}
+
 export class BreakoutRenderer {
   private readonly ctx: Ctx;
   private staticLayer: HTMLCanvasElement | null = null;
   private photo: HTMLImageElement | null = null;
   private photoSrc = "";
   private scale = 1;
+  private dpr = 1;
+  /** Where the world's origin sits on the canvas, device px. */
+  private ox = 0;
+  private oy = 0;
   private readonly brickCache = new Map<string, HTMLCanvasElement>();
 
   constructor(
@@ -56,13 +80,42 @@ export class BreakoutRenderer {
 
   /** Size to `cssWidth` CSS pixels at `dpr`; height follows the level ratio. */
   resize(cssWidth: number, dpr: number): void {
-    const scale = (cssWidth * dpr) / this.level.width;
-    if (scale === this.scale && this.staticLayer) return;
+    this.view({ width: cssWidth, height: (cssWidth * this.level.height) / this.level.width, dpr });
+  }
+
+  /** Lay the world out inside a canvas of any size (see `Viewport`). */
+  view(v: Viewport): void {
+    const { level } = this;
+    const fit = v.fit ?? { x: 0, y: 0, width: v.width, height: v.height };
+    const scale = Math.min((fit.width * v.dpr) / level.width, (fit.height * v.dpr) / level.height);
+    if (!(scale > 0)) return;
+    const cw = Math.round(v.width * v.dpr);
+    const ch = Math.round(v.height * v.dpr);
+    const ox = Math.round(fit.x * v.dpr + (fit.width * v.dpr - level.width * scale) / 2);
+    const oy = Math.round(fit.y * v.dpr + (fit.height * v.dpr - level.height * scale) / 2);
+    if (
+      this.staticLayer &&
+      scale === this.scale &&
+      cw === this.canvas.width &&
+      ch === this.canvas.height &&
+      ox === this.ox &&
+      oy === this.oy
+    ) {
+      return;
+    }
+    if (scale !== this.scale) this.brickCache.clear();
     this.scale = scale;
-    this.canvas.width = Math.round(this.level.width * scale);
-    this.canvas.height = Math.round(this.level.height * scale);
-    this.brickCache.clear();
+    this.dpr = v.dpr;
+    this.ox = ox;
+    this.oy = oy;
+    this.canvas.width = cw;
+    this.canvas.height = ch;
     this.staticLayer = this.paintStatic();
+  }
+
+  /** World x for a CSS-pixel x measured from the canvas's left edge. */
+  worldX(cssX: number): number {
+    return (cssX * this.dpr - this.ox) / this.scale;
   }
 
   /** Swap the author's photo at runtime (editor use). */
@@ -93,7 +146,7 @@ export class BreakoutRenderer {
   // ---------------------------------------------------------------------------
 
   private paintStatic(): HTMLCanvasElement {
-    const { level, palette: p, scale } = this;
+    const { level, palette: p, scale, ox, oy } = this;
     const layer = document.createElement("canvas");
     layer.width = this.canvas.width;
     layer.height = this.canvas.height;
@@ -103,6 +156,8 @@ export class BreakoutRenderer {
     const { width, height, field: f, background: bg } = level;
     const cw = layer.width;
     const ch = layer.height;
+    // The whole canvas, in world units (extends past the world when letterboxed).
+    const all = { x: -ox / scale, y: -oy / scale, w: cw / scale, h: ch / scale };
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#0b0d1a";
@@ -120,24 +175,25 @@ export class BreakoutRenderer {
       ctx.drawImage(img, (cw - w) / 2 - pad, (ch - h) / 2 - pad, w + pad * 2, h + pad * 2);
       ctx.restore();
     } else {
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.setTransform(scale, 0, 0, scale, ox, oy);
       const g = ctx.createRadialGradient(width * 0.5, height * 0.35, 20, width * 0.5, height * 0.35, height * 0.8);
       g.addColorStop(0, alpha(p.neon.violet, 0.35));
       g.addColorStop(0.5, alpha(p.neon.blue, 0.12));
       g.addColorStop(1, "rgba(11, 13, 26, 0)");
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(all.x, all.y, all.w, all.h);
     }
 
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.setTransform(scale, 0, 0, scale, ox, oy);
     const dim = Number.isFinite(bg.dim) ? Math.min(PHOTO_DIM_MAX, Math.max(PHOTO_DIM_MIN, bg.dim * 0.5)) : PHOTO_DIM_MIN;
     ctx.fillStyle = `rgba(6, 8, 18, ${dim})`;
-    ctx.fillRect(0, 0, width, height);
-    const vignette = ctx.createRadialGradient(width / 2, height / 2, height * 0.34, width / 2, height / 2, height * 0.82);
+    ctx.fillRect(all.x, all.y, all.w, all.h);
+    const reach = Math.max(height * 0.82, Math.hypot(all.w, all.h) / 2);
+    const vignette = ctx.createRadialGradient(width / 2, height / 2, height * 0.34, width / 2, height / 2, reach);
     vignette.addColorStop(0, "rgba(0, 0, 0, 0)");
     vignette.addColorStop(1, "rgba(0, 0, 0, 0.28)");
     ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(all.x, all.y, all.w, all.h);
 
     this.roundRect(ctx, f.left - 1, f.top - 1, f.right - f.left + 2, f.bottom - f.top + 2, 10);
     ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
@@ -162,7 +218,7 @@ export class BreakoutRenderer {
   // ---------------------------------------------------------------------------
 
   render(game: Game, scene: BreakoutScene): void {
-    const { ctx, staticLayer, scale, level, palette: p } = this;
+    const { ctx, staticLayer, scale, level, palette: p, ox, oy } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (!staticLayer) {
       ctx.fillStyle = "#0b0d1a";
@@ -173,7 +229,7 @@ export class BreakoutRenderer {
 
     const shakeX = scene.shake > 0.05 ? Math.sin(scene.time * 71) * scene.shake : 0;
     const shakeY = scene.shake > 0.05 ? Math.cos(scene.time * 53) * scene.shake * 0.6 : 0;
-    ctx.setTransform(scale, 0, 0, scale, shakeX * scale, shakeY * scale);
+    ctx.setTransform(scale, 0, 0, scale, ox + shakeX * scale, oy + shakeY * scale);
 
     const state = game.state;
     const f = level.field;

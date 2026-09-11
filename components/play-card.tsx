@@ -35,6 +35,8 @@ export function PlayCard({
   fill = false,
   aura = true,
   progress,
+  paused = false,
+  preview = true,
 }: {
   href?: string;
   onSelect?: (card: HTMLElement) => void;
@@ -52,6 +54,10 @@ export function PlayCard({
   fill?: boolean;
   aura?: boolean;
   progress?: { cleared: number; total: number; percent: number };
+  /** Hold the live board still (the card is hidden behind another surface). */
+  paused?: boolean;
+  /** Mount the live board at all. Off while the card's surface is still animating in. */
+  preview?: boolean;
 }) {
   const hasProgress = Boolean(progress && progress.total > 0);
   const playClass = [
@@ -67,9 +73,9 @@ export function PlayCard({
         <div className="absolute inset-0">
           <Image src={cover} alt="" fill className="object-cover" sizes="22rem" />
         </div>
-      ) : locked && !frozen ? null : (
+      ) : (locked && !frozen) || !preview ? null : (
         <div
-          className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none"
+          className="mode-card-board pointer-events-none absolute inset-0 [&_*]:pointer-events-none"
           inert={true}
         >
           <BreakoutPreview
@@ -80,6 +86,7 @@ export function PlayCard({
             fill
             frozen={frozen}
             loop={!frozen}
+            paused={paused}
             showCaption={false}
             showHud={false}
           />

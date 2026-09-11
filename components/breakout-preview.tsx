@@ -72,6 +72,7 @@ export function BreakoutPreview({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
+  const fitRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
   const first = levels[0] ?? DEFAULT_LEVELS[0];
@@ -96,13 +97,14 @@ export function BreakoutPreview({
       sound,
       haptics,
       rail: thumbRail ? railRef.current : null,
+      fit: contain ? fitRef.current : null,
     });
     handleRef.current = handle;
     return () => {
       handle.destroy();
       handleRef.current = null;
     };
-  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, onCleared, onOver]);
+  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, onCleared, onOver]);
 
   useEffect(() => {
     if (paused) {
@@ -122,63 +124,100 @@ export function BreakoutPreview({
 
   const hudVisible = showHud && !fill;
   const captionVisible = showCaption && !fill && !contain;
+  const boardLabel = `A live brick-breaker level called ${name}, built by ${author}: neon glass bricks over a photo, zones and obstacles that bend the ball, a glass paddle, ${maxLives} lives.`;
+
+  const hudView = hudVisible ? (
+    <div className="board-hud" aria-hidden="true">
+      <div className="board-hud-name">
+        <strong>{name}</strong>
+        <span>by {author}</span>
+      </div>
+      <div className="board-hud-lives">
+        {Array.from({ length: maxLives }, (_, i) => (
+          <span key={i} className="board-hud-life" data-lost={i >= lives} />
+        ))}
+      </div>
+      <div className="board-hud-stats">
+        {hud?.timeLeft !== null && hud?.timeLeft !== undefined ? (
+          <span className="board-hud-clock" data-low={hud.timeLeft <= 15}>
+            {clock(hud.timeLeft)}
+          </span>
+        ) : null}
+        <span className="board-hud-score">{score}</span>
+        {hud?.mod ? (
+          <span className="board-hud-speed" data-mod={hud.mod}>
+            {MOD_LABEL[hud.mod]}
+          </span>
+        ) : (
+          <span className="board-hud-speed" data-bonus={hud?.bonus ?? undefined}>
+            {speed}
+          </span>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  const railView = thumbRail ? (
+    <div className="thumb-rail-wrap">
+      <div
+        ref={railRef}
+        className="thumb-rail"
+        data-phase={hud?.phase ?? "serve"}
+        aria-label="Paddle control. Slide to move, tap to launch."
+      >
+        <span className="thumb-rail-chevron" data-side="left" aria-hidden="true" />
+        <span className="thumb-rail-chevron" data-side="right" aria-hidden="true" />
+        <span className="thumb-rail-ball" aria-hidden="true" />
+        <span className="thumb-rail-puck" aria-hidden="true" />
+      </div>
+      <p className="thumb-rail-label" aria-live="polite">
+        <span key={caption} className="board-caption" data-phase={hud?.phase ?? undefined}>
+          {caption}
+        </span>
+      </p>
+    </div>
+  ) : null;
+
+  if (contain) {
+    // Full-screen board: the canvas is the whole stage (photo edge to edge);
+    // the field is fitted into the box left free by the chrome and the rail.
+    return (
+      <figure className="story-play-stage" role="img" aria-label={boardLabel}>
+        <canvas ref={canvasRef} className="story-play-canvas" />
+        <div className="story-play-slot">
+          <div
+            ref={fitRef}
+            className="story-play-fit"
+            style={{ aspectRatio: `${first.width} / ${first.height}`, "--field-ratio": first.width / first.height } as React.CSSProperties}
+          >
+            {hudView}
+          </div>
+        </div>
+        {railView}
+      </figure>
+    );
+  }
 
   return (
     <figure
       className={
-        contain
-          ? "story-play-stage"
-          : fill
-            ? "absolute inset-0 z-0 h-full w-full max-w-none overflow-hidden"
-            : `relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`
+        fill
+          ? "absolute inset-0 z-0 h-full w-full max-w-none overflow-hidden"
+          : `relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`
       }
     >
-      {fill || contain ? null : <div className="board-aura" aria-hidden="true" />}
+      {fill ? null : <div className="board-aura" aria-hidden="true" />}
       <div
-        className={
-          contain
-            ? "story-play-board board-stage relative"
-            : `board-stage relative mx-auto ${fill ? "board-stage-fill" : "z-10"}`
-        }
+        className={`board-stage relative mx-auto ${fill ? "board-stage-fill" : "z-10"}`}
         role="img"
-        aria-label={`A live brick-breaker level called ${name}, built by ${author}: neon glass bricks over a photo, zones and obstacles that bend the ball, a glass paddle, ${maxLives} lives.`}
+        aria-label={boardLabel}
       >
         <canvas
           ref={canvasRef}
           className="block h-full w-full"
           style={{ aspectRatio: `${first.width} / ${first.height}` }}
         />
-
-        {hudVisible ? (
-          <div className="board-hud" aria-hidden="true">
-            <div className="board-hud-name">
-              <strong>{name}</strong>
-              <span>by {author}</span>
-            </div>
-            <div className="board-hud-lives">
-              {Array.from({ length: maxLives }, (_, i) => (
-                <span key={i} className="board-hud-life" data-lost={i >= lives} />
-              ))}
-            </div>
-            <div className="board-hud-stats">
-              {hud?.timeLeft !== null && hud?.timeLeft !== undefined ? (
-                <span className="board-hud-clock" data-low={hud.timeLeft <= 15}>
-                  {clock(hud.timeLeft)}
-                </span>
-              ) : null}
-              <span className="board-hud-score">{score}</span>
-              {hud?.mod ? (
-                <span className="board-hud-speed" data-mod={hud.mod}>
-                  {MOD_LABEL[hud.mod]}
-                </span>
-              ) : (
-                <span className="board-hud-speed" data-bonus={hud?.bonus ?? undefined}>
-                  {speed}
-                </span>
-              )}
-            </div>
-          </div>
-        ) : null}
+        {hudView}
       </div>
 
       {captionVisible ? (
@@ -189,26 +228,7 @@ export function BreakoutPreview({
         </figcaption>
       ) : null}
 
-      {thumbRail ? (
-        <div className="thumb-rail-wrap">
-          <div
-            ref={railRef}
-            className="thumb-rail"
-            data-phase={hud?.phase ?? "serve"}
-            aria-label="Paddle control. Slide to move, tap to launch."
-          >
-            <span className="thumb-rail-chevron" data-side="left" aria-hidden="true" />
-            <span className="thumb-rail-chevron" data-side="right" aria-hidden="true" />
-            <span className="thumb-rail-ball" aria-hidden="true" />
-            <span className="thumb-rail-puck" aria-hidden="true" />
-          </div>
-          <p className="thumb-rail-label" aria-live="polite">
-            <span key={caption} className="board-caption" data-phase={hud?.phase ?? undefined}>
-              {caption}
-            </span>
-          </p>
-        </div>
-      ) : null}
+      {railView}
     </figure>
   );
 }

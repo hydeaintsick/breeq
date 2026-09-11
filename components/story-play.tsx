@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { awardChapterClear, type ChapterClearResult } from "@/app/actions/progress";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
+import { screenPhoto } from "@/lib/photo";
 
 export function StoryPlay({
   chapterId,
@@ -37,7 +38,7 @@ export function StoryPlay({
           name: title,
           author: "Breeq",
         }),
-        backgroundUrl,
+        backgroundUrl ? screenPhoto(backgroundUrl) : backgroundUrl,
       ),
     ],
     [backgroundUrl, chapterId, storedLevel, title],
