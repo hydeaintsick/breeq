@@ -1453,6 +1453,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   padding: calc(max(0.75rem, env(safe-area-inset-top)) + 3.1rem) max(0.5rem, env(safe-area-inset-right))
     max(0.75rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
   background: #05060c;
+  touch-action: none;
 }
 
 .story-play-canvas {
@@ -1471,6 +1472,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   width: 100%;
   min-height: 0;
   place-items: center;
+  pointer-events: none;
 }
 
 .story-play-fit {
@@ -1488,6 +1490,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   z-index: 1;
   width: min(100%, 26rem);
   padding-top: 0.9rem;
+  pointer-events: none;
 }
 
 .thumb-rail {
@@ -1495,6 +1498,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   --rail-paddle-w: 0.18;
   --rail-ball: 0.5;
   position: relative;
+  pointer-events: auto;
   height: 3.5rem;
   border-radius: 999px;
   overflow: hidden;
@@ -1599,6 +1603,7 @@ html[data-theme="dark"] .story-ambient-scrim {
 
 .thumb-rail-label {
   position: relative;
+  pointer-events: none;
   height: 1.25rem;
   margin-top: 0.55rem;
   text-align: center;

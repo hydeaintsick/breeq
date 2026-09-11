@@ -350,14 +350,13 @@ export class BreakoutRenderer {
     ctx.arc(zone.x, zone.y, r, 0, TAU);
     ctx.fill();
 
-    ctx.shadowColor = alpha(color, 0.9);
-    ctx.shadowBlur = 10 * this.scale;
+    this.neonShadow(ctx, alpha(color, 0.9), 10);
     ctx.strokeStyle = alpha(color, active ? 1 : 0.85);
     ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.arc(zone.x, zone.y, r, 0, TAU);
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    this.clearShadow(ctx);
 
     // Rotating dashed outer ring; speed hints at the effect.
     const spin =
@@ -507,23 +506,22 @@ export class BreakoutRenderer {
         ctx.beginPath();
         ctx.arc(o.x, o.y, r, 0, TAU);
         ctx.fill();
-        ctx.shadowColor = alpha(color, 0.9);
-        ctx.shadowBlur = 10 * this.scale;
+        this.neonShadow(ctx, alpha(color, 0.9), 10);
         ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
         ctx.lineWidth = 1.5;
         ctx.stroke();
+        this.clearShadow(ctx);
         break;
       }
       case "rail": {
-        ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
-        ctx.shadowBlur = 8 * this.scale;
+        this.neonShadow(ctx, "rgba(255, 255, 255, 0.7)", 8);
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 + pulse * 0.15})`;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(o.x, o.y);
         ctx.lineTo(o.x + o.w, o.y);
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        this.clearShadow(ctx);
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         for (const ex of [o.x, o.x + o.w]) {
           ctx.beginPath();
@@ -535,15 +533,14 @@ export class BreakoutRenderer {
       case "trampoline": {
         const color = p.neon.lime;
         const sag = 1 + pulse * 3;
-        ctx.shadowColor = alpha(color, 0.9);
-        ctx.shadowBlur = 12 * this.scale;
+        this.neonShadow(ctx, alpha(color, 0.9), 12);
         ctx.strokeStyle = alpha(tint(color, 0.2), 0.95);
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(o.x, o.y);
         ctx.quadraticCurveTo(o.x + o.w / 2, o.y + sag * 2, o.x + o.w, o.y);
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        this.clearShadow(ctx);
         // Springs.
         ctx.strokeStyle = alpha(color, 0.55);
         ctx.lineWidth = 1;
@@ -563,15 +560,14 @@ export class BreakoutRenderer {
         const gx = game.guardX(o, time);
         const x = gx - o.w / 2;
         const y = o.y - o.h / 2;
-        ctx.shadowColor = alpha(p.steel, 0.6 + pulse * 0.4);
-        ctx.shadowBlur = 8 * this.scale;
+        this.neonShadow(ctx, alpha(p.steel, 0.6 + pulse * 0.4), 8);
         const g = ctx.createLinearGradient(0, y, 0, y + o.h);
         g.addColorStop(0, "rgba(255, 255, 255, 0.95)");
         g.addColorStop(1, alpha(p.steel, 0.8));
         ctx.fillStyle = g;
         this.roundRect(ctx, x, y, o.w, o.h, o.h / 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        this.clearShadow(ctx);
         ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
         ctx.lineWidth = 0.8;
         for (let i = 1; i < 4; i++) {
@@ -624,11 +620,10 @@ export class BreakoutRenderer {
         ctx.arc(hx, o.y, hr, 0, TAU);
         ctx.fill();
         ctx.strokeStyle = alpha(color, 0.9);
-        ctx.shadowColor = alpha(color, 0.8);
-        ctx.shadowBlur = 8 * this.scale;
+        this.neonShadow(ctx, alpha(color, 0.8), 8);
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        this.clearShadow(ctx);
         ctx.save();
         ctx.translate(hx, o.y);
         ctx.rotate(time * 9 * o.dir);
@@ -661,14 +656,14 @@ export class BreakoutRenderer {
         ctx.save();
         ctx.translate(o.x, o.y);
         ctx.rotate(-time * 2.2);
-        ctx.shadowColor = alpha(color, 0.9);
-        ctx.shadowBlur = 10 * this.scale;
+        this.neonShadow(ctx, alpha(color, 0.9), 10);
         ctx.strokeStyle = alpha(tint(color, 0.25), 0.9 + pulse * 0.1);
         ctx.lineWidth = 1.6;
         ctx.setLineDash([o.r * 1.4, o.r * 0.6]);
         ctx.beginPath();
         ctx.ellipse(0, 0, o.r * 1.35, o.r * 1.05, 0, 0, TAU);
         ctx.stroke();
+        this.clearShadow(ctx);
         ctx.restore();
         break;
       }
@@ -781,14 +776,19 @@ export class BreakoutRenderer {
     const color = steelLook ? p.steel : p.neon[brick.color];
     const bodyAlpha = dim ? 0.3 : 1;
 
-    // Glow.
+    // Glow in device pixels. `shadowBlur` on an offscreen canvas is a no-op on
+    // iOS (and Safari applies the CTM to the radius, so a Mac simulator glows
+    // while a phone stays flat). `filter: blur` matches on both.
+    const glowWorld = steelLook ? 6 : dim ? 4 : 12;
+    const glowPx = Math.max(1, glowWorld * scale);
     ctx.save();
-    ctx.shadowColor = alpha(color, steelLook ? 0.35 : dim ? 0.15 : 0.85);
-    ctx.shadowBlur = (steelLook ? 6 : dim ? 4 : 12) * scale;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if ("filter" in ctx) ctx.filter = `blur(${glowPx}px)`;
     ctx.fillStyle = alpha(color, steelLook ? 0.5 : 0.95 * bodyAlpha);
-    this.roundRect(ctx, x, y, brick.w, brick.h, BRICK_RADIUS);
+    this.roundRect(ctx, x * scale, y * scale, brick.w * scale, brick.h * scale, BRICK_RADIUS * scale);
     ctx.fill();
     ctx.restore();
+    ctx.filter = "none";
 
     // Glass body.
     const g = ctx.createLinearGradient(0, y, 0, y + brick.h);
@@ -989,12 +989,11 @@ export class BreakoutRenderer {
     const iced = s.paddleMod?.kind === "ice";
 
     ctx.save();
-    ctx.shadowColor = alpha(accent, 0.9);
-    ctx.shadowBlur = (14 + scene.paddleFlash * 18) * this.scale;
+    this.neonShadow(ctx, alpha(accent, 0.9), 14 + scene.paddleFlash * 18);
     ctx.fillStyle = alpha(accent, 0.9);
     this.roundRect(ctx, x + 3, y + pd.height - 3, width - 6, 3, 1.5);
     ctx.fill();
-    ctx.shadowBlur = 0;
+    this.clearShadow(ctx);
 
     const g = ctx.createLinearGradient(0, y, 0, y + pd.height);
     g.addColorStop(0, iced ? "rgba(225, 250, 255, 0.98)" : "rgba(255, 255, 255, 0.96)");
@@ -1189,6 +1188,24 @@ export class BreakoutRenderer {
 
   private fx(c: FxColor): string {
     return tintOf(this.palette, c as Tint);
+  }
+
+  /**
+   * iOS Safari drops canvas shadows when both offsets are 0, and it applies
+   * the current transform to `shadowBlur` (against the spec). A hairline
+   * offset keeps the glow on a phone; the radius stays in device pixels.
+   */
+  private neonShadow(ctx: Ctx, color: string, blurWorld: number): void {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blurWorld * this.scale;
+    ctx.shadowOffsetX = 0.01;
+    ctx.shadowOffsetY = 0.01;
+  }
+
+  private clearShadow(ctx: Ctx): void {
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
   }
 
   private roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {

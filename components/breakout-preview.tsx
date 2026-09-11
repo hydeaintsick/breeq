@@ -163,7 +163,7 @@ export function BreakoutPreview({
         ref={railRef}
         className="thumb-rail"
         data-phase={hud?.phase ?? "serve"}
-        aria-label="Paddle control. Slide to move, tap to launch."
+        aria-label="Paddle control. Slide to move. Tap anywhere to launch."
       >
         <span className="thumb-rail-chevron" data-side="left" aria-hidden="true" />
         <span className="thumb-rail-chevron" data-side="right" aria-hidden="true" />

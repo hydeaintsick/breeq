@@ -120,7 +120,7 @@ const CAPTIONS = {
   serveAuto: "Autoplay. Move over the board to take the paddle.",
   serveYou: "Tap or click to launch.",
   /** Pointer-only games before the first touch. */
-  serveTouch: "Slide to move. Tap to launch.",
+  serveTouch: "Slide to move. Tap anywhere to launch.",
   playAuto: "Autoplay. Move over the board to take the paddle.",
   playYou: "You have the paddle.",
   /** Pointer-only games stay quiet during play. */
@@ -209,13 +209,18 @@ export function mountBreakout(
   const humanActive = () => controls === "pointer" || (controls === "hybrid" && scene.time - lastPointerT < handoverDelay);
 
   const input = (): GameInput => {
+    // Pointer-only games always accept a launch, even before the rail has a
+    // target (tap-anywhere to serve). Hybrid still needs a pointer on the board.
+    if (controls === "pointer") {
+      const launch = pointerLaunch;
+      pointerLaunch = false;
+      return { targetX: pointerX ?? game.state.paddleX, launch };
+    }
     if (humanActive() && pointerX !== null) {
       const launch = pointerLaunch;
       pointerLaunch = false;
       return { targetX: pointerX, launch };
     }
-    // Human-only games wait for the first touch instead of letting the demo pilot serve.
-    if (controls === "pointer") return { targetX: game.state.paddleX, launch: false };
     return pilot.input(game.state, game.bricks);
   };
 
@@ -430,26 +435,45 @@ export function mountBreakout(
     return renderer.worldX(clientX - rect.left);
   };
   const onPointerMove = (e: PointerEvent) => {
-    if (controls === "auto" || paused) return;
+    if (controls === "auto" || paused || rail) return;
     humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
   };
   const onPointerDown = (e: PointerEvent) => {
-    if (controls === "auto" || paused) return;
+    if (controls === "auto" || paused || !e.isPrimary) return;
     sfx?.unlock();
     humanTouched = true;
-    pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
     pointerLaunch = true;
+    // With a thumb rail, the board is a launch surface only — steering stays
+    // on the rail so a finger never covers the field.
+    if (rail) {
+      if (pointerX === null) pointerX = game.state.paddleX;
+      return;
+    }
+    pointerX = toWorldX(e.clientX);
   };
   const onPointerLeave = () => {
     if (controls === "hybrid") lastPointerT = -Infinity;
+  };
+  const stage = canvas.parentElement;
+  const onStageDown = (e: PointerEvent) => {
+    if (controls === "auto" || paused || !e.isPrimary) return;
+    if (rail && (e.target === rail || rail.contains(e.target as Node))) return;
+    sfx?.unlock();
+    humanTouched = true;
+    lastPointerT = scene.time;
+    pointerLaunch = true;
+    if (pointerX === null) pointerX = game.state.paddleX;
   };
   if (!editMode) {
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointerleave", onPointerLeave);
+    // Capture on the stage so overlays (the fit slot, HUD, caption) cannot
+    // swallow a serve tap. The rail still owns its own tap-vs-drag.
+    if (rail && stage) stage.addEventListener("pointerdown", onStageDown, true);
   }
   canvas.style.touchAction = editMode || controls === "pointer" ? "none" : "pan-y";
 
@@ -603,6 +627,7 @@ export function mountBreakout(
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointerleave", onPointerLeave);
+      if (rail && stage) stage.removeEventListener("pointerdown", onStageDown, true);
       if (rail) {
         rail.removeEventListener("pointerdown", onRailDown);
         rail.removeEventListener("pointermove", onRailMove);
