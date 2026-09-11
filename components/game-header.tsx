@@ -11,6 +11,7 @@ import { AccountIcon, EditorIcon, SignOutIcon } from "@/components/nav-icons";
 import { RankMeter } from "@/components/rank-meter";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SoundToggle } from "@/components/sound-toggle";
+import { SwipeToggle } from "@/components/swipe-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ACCOUNT_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 import type { Progress, StarTally } from "@/lib/progress";
@@ -99,6 +100,7 @@ export function GameHeader({
               Account settings
             </Link>
             <HapticsToggle variant="menu" />
+            <SwipeToggle variant="menu" />
             {isAdmin ? (
               <Link
                 href={ADMIN_EDITOR_PATH}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSwipe } from "@/components/swipe-provider";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
 import type { Level } from "@/game/breakout/engine/types";
 import { mountBreakout, type BreakoutHandle, type HudState, type MountOptions } from "@/game/breakout/preview";
@@ -81,6 +82,7 @@ export function BreakoutPreview({
   const fitRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
+  const { anywhere: swipeAnywhere } = useSwipe();
   const first = levels[0] ?? DEFAULT_LEVELS[0];
   // A board that (re)mounts while the surface is paused must start paused too.
   const pausedRef = useRef(paused);
@@ -178,7 +180,11 @@ export function BreakoutPreview({
         ref={railRef}
         className="thumb-rail"
         data-phase={hud?.phase ?? "serve"}
-        aria-label="Paddle control. Slide to move. Tap anywhere to launch."
+        aria-label={
+          swipeAnywhere
+            ? "Paddle control. Slide anywhere to move. Tap to aim and launch."
+            : "Paddle control. Slide to move. Tap to aim and launch."
+        }
       >
         <span className="thumb-rail-chevron" data-side="left" aria-hidden="true" />
         <span className="thumb-rail-chevron" data-side="right" aria-hidden="true" />

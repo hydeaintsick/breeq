@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { AccountForm } from "@/components/account-form";
+import { PlaySettings } from "@/components/play-settings";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Account",
-  description: "Your Breeq account.",
+  description: "Your Breeq account and play controls.",
 };
 
 export default async function AccountPage() {
@@ -45,7 +46,7 @@ export default async function AccountPage() {
         Settings
       </h1>
       <p className="mt-4 text-base leading-7 text-ink-muted">
-        How you show up on the shelf. Sign out lives in the menu.
+        How you show up on the shelf, and how the paddle follows your finger. Sign out lives in the menu.
       </p>
 
       <AccountForm
@@ -59,6 +60,10 @@ export default async function AccountPage() {
           user?.walletAddress || providers.has("metamask") || providers.has("google"),
         )}
       />
+
+      <div className="mt-4">
+        <PlaySettings />
+      </div>
     </section>
   );
 }

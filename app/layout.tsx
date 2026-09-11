@@ -7,6 +7,7 @@ import { AppChrome } from "@/components/app-chrome";
 import { Providers } from "@/components/providers";
 import { HAPTICS_COOKIE, parseHaptics } from "@/lib/haptics";
 import { parseSound, SOUND_COOKIE } from "@/lib/sound";
+import { parseSwipe, SWIPE_COOKIE } from "@/lib/swipe";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
@@ -35,6 +36,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
   const sound = parseSound(jar.get(SOUND_COOKIE)?.value);
   const haptics = parseHaptics(jar.get(HAPTICS_COOKIE)?.value);
+  const swipe = parseSwipe(jar.get(SWIPE_COOKIE)?.value);
 
   return (
     <html
@@ -49,7 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#content" className="skip-link">
           Skip to content
         </a>
-        <Providers session={session} theme={theme} sound={sound} haptics={haptics}>
+        <Providers session={session} theme={theme} sound={sound} haptics={haptics} swipe={swipe}>
           <Suspense fallback={null}>
             <AppChrome>{children}</AppChrome>
           </Suspense>

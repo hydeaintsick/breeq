@@ -15,6 +15,7 @@ import type { GameEvent, GameInput, GamePhase, GameState, Level, PaddleModKind, 
 import { readNeonPalette } from "../render/palette";
 import { BreakoutRenderer, type CssRect } from "../render/renderer";
 import { SceneFx, createScene } from "../render/scene";
+import { isSwipeAnywhereEnabled } from "./swipe";
 
 export interface HudState {
   levelName: string;
@@ -90,12 +91,13 @@ export interface MountOptions {
    */
   haptics?: boolean;
   /**
-   * Optional thumb rail: a touch strip outside the board that steers the paddle,
-   * so a finger never covers the play field. Pointer input on it maps its
-   * width onto the field (see `railGain`); a quick tap launches. The mount
-   * writes `--rail-paddle`, `--rail-paddle-w`, `--rail-ball` (0..1 of the rail
-   * width) and `data-ball` on the element every frame so CSS can mirror the
-   * paddle and the ball without touching React.
+   * Optional thumb rail: a touch strip under the board that steers the paddle.
+   * Pointer-only games also accept a relative swipe anywhere on the stage when
+   * the player has "Swipe anywhere" on (see `isSwipeAnywhereEnabled`). A quick
+   * tap launches toward that point. The mount writes `--rail-paddle`,
+   * `--rail-paddle-w`, `--rail-ball` (0..1 of the rail width) and `data-ball`
+   * on the element every frame so CSS can mirror the paddle and the ball
+   * without touching React.
    */
   rail?: HTMLElement | null;
   /**
@@ -138,9 +140,11 @@ export interface BreakoutHandle {
 
 const CAPTIONS = {
   serveAuto: "Autoplay. Move over the board to take the paddle.",
-  serveYou: "Tap or click to launch.",
-  /** Pointer-only games before the first touch. */
-  serveTouch: "Slide to move. Tap anywhere to launch.",
+  serveYou: "Tap where you want the ball to go.",
+  /** Pointer-only games before the first touch, rail-only steering. */
+  serveTouch: "Slide to move. Tap to aim and launch.",
+  /** Pointer-only games when full-page swipe is on. */
+  serveTouchAnywhere: "Slide anywhere to move. Tap to aim and launch.",
   playAuto: "Autoplay. Move over the board to take the paddle.",
   playYou: "You have the paddle.",
   /** Pointer-only games stay quiet during play. */
@@ -152,6 +156,8 @@ const CAPTIONS = {
   overCrushed: "The wall came down. Next level…",
   frozen: "A player-built wall. Bricks, zones, obstacles, your photo behind.",
 } as const;
+
+const serveTouchCaption = () => (isSwipeAnywhereEnabled() ? CAPTIONS.serveTouchAnywhere : CAPTIONS.serveTouch);
 
 export function mountBreakout(
   canvas: HTMLCanvasElement,
@@ -193,6 +199,15 @@ export function mountBreakout(
   // Human input.
   let pointerX: number | null = null;
   let pointerLaunch = false;
+  let pointerAimX: number | null = null;
+  let pointerAimY: number | null = null;
+  let playDrag: {
+    id: number;
+    originClientX: number;
+    originWorldX: number;
+    originPaddleX: number;
+    moved: boolean;
+  } | null = null;
   let lastPointerT = -Infinity;
   let humanTouched = false;
 
@@ -221,25 +236,38 @@ export function mountBreakout(
     timeLeft: level.rules.timer > 0 ? level.rules.timer : null,
     phase: "serve",
     pilot: "auto",
-    caption: frozen ? CAPTIONS.frozen : controls === "pointer" ? CAPTIONS.serveTouch : CAPTIONS.serveAuto,
+    caption: frozen ? CAPTIONS.frozen : controls === "pointer" ? serveTouchCaption() : CAPTIONS.serveAuto,
   };
   const emitHud = () => options.onHud?.(hud);
   emitHud();
 
   const humanActive = () => controls === "pointer" || (controls === "hybrid" && scene.time - lastPointerT < handoverDelay);
 
+  const aimed = (): Pick<GameInput, "aimX" | "aimY"> =>
+    pointerAimX === null || pointerAimY === null ? {} : { aimX: pointerAimX, aimY: pointerAimY };
+
   const input = (): GameInput => {
-    // Pointer-only games always accept a launch, even before the rail has a
+    // Pointer-only games always accept a launch, even before a drag has a
     // target (tap-anywhere to serve). Hybrid still needs a pointer on the board.
     if (controls === "pointer") {
       const launch = pointerLaunch;
       pointerLaunch = false;
-      return { targetX: pointerX ?? game.state.paddleX, launch };
+      const shot = aimed();
+      if (launch) {
+        pointerAimX = null;
+        pointerAimY = null;
+      }
+      return { targetX: pointerX ?? game.state.paddleX, launch, ...shot };
     }
     if (humanActive() && pointerX !== null) {
       const launch = pointerLaunch;
       pointerLaunch = false;
-      return { targetX: pointerX, launch };
+      const shot = aimed();
+      if (launch) {
+        pointerAimX = null;
+        pointerAimY = null;
+      }
+      return { targetX: pointerX, launch, ...shot };
     }
     return pilot.input(game.state, game.bricks);
   };
@@ -271,7 +299,7 @@ export function mountBreakout(
     let caption: string;
     switch (s.phase) {
       case "serve":
-        caption = who === "you" ? CAPTIONS.serveYou : controls === "pointer" ? CAPTIONS.serveTouch : CAPTIONS.serveAuto;
+        caption = who === "you" ? CAPTIONS.serveYou : controls === "pointer" ? serveTouchCaption() : CAPTIONS.serveAuto;
         break;
       case "play":
         caption = controls === "pointer" ? CAPTIONS.playTouch : who === "you" ? CAPTIONS.playYou : CAPTIONS.playAuto;
@@ -324,6 +352,9 @@ export function mountBreakout(
     endHold = 0;
     accumulator = 0;
     humanTouched = false;
+    pointerAimX = null;
+    pointerAimY = null;
+    playDrag = null;
     sfx?.setLevel(level);
     syncHud();
     if (!destroyed) draw();
@@ -341,6 +372,9 @@ export function mountBreakout(
     scene.trail.length = 0;
     endHold = 0;
     humanTouched = false;
+    pointerAimX = null;
+    pointerAimY = null;
+    playDrag = null;
   };
 
   const tick = (dt: number) => {
@@ -401,6 +435,12 @@ export function mountBreakout(
   };
 
   const draw = () => {
+    const aimX = pointerAimX;
+    const aimY = pointerAimY;
+    scene.aim =
+      game.state.phase === "serve" && aimX !== null && aimY !== null && !playDrag?.moved
+        ? { x: aimX, y: aimY }
+        : null;
     renderer.render(game, scene);
     syncRail();
   };
@@ -463,53 +503,128 @@ export function mountBreakout(
     const rect = canvas.getBoundingClientRect();
     return renderer.worldX(clientX - rect.left);
   };
+  const toWorldY = (clientY: number) => {
+    const rect = canvas.getBoundingClientRect();
+    return renderer.worldY(clientY - rect.top);
+  };
+  const aimAtClient = (clientX: number, clientY: number) => {
+    pointerAimX = toWorldX(clientX);
+    pointerAimY = toWorldY(clientY);
+  };
+  const isPlayChrome = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    if (rail && (target === rail || rail.contains(target))) return true;
+    return Boolean(target.closest("button, a, input, textarea, select, [role='button']"));
+  };
+
+  // Hybrid demos: hover the board to take the paddle, click to launch toward
+  // that point. Pointer-only games use the stage handlers below: a tap aims
+  // and launches; a relative swipe steers when the player has that setting on.
   const onPointerMove = (e: PointerEvent) => {
-    if (controls === "auto" || paused || rail) return;
+    if (controls !== "hybrid" || paused || rail) return;
     humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
+    if (game.state.phase === "serve") aimAtClient(e.clientX, e.clientY);
   };
   const onPointerDown = (e: PointerEvent) => {
-    if (controls === "auto" || paused || !e.isPrimary) return;
+    if (controls !== "hybrid" || paused || !e.isPrimary) return;
     sfx?.unlock();
     humanTouched = true;
     lastPointerT = scene.time;
     pointerLaunch = true;
-    // With a thumb rail, the board is a launch surface only — steering stays
-    // on the rail so a finger never covers the field.
-    if (rail) {
-      if (pointerX === null) pointerX = game.state.paddleX;
-      return;
-    }
     pointerX = toWorldX(e.clientX);
+    aimAtClient(e.clientX, e.clientY);
   };
   const onPointerLeave = () => {
     if (controls === "hybrid") lastPointerT = -Infinity;
+    if (!playDrag && !pointerLaunch) {
+      pointerAimX = null;
+      pointerAimY = null;
+    }
   };
   const stage = canvas.parentElement;
-  const onStageDown = (e: PointerEvent) => {
-    if (controls === "auto" || paused || !e.isPrimary) return;
-    if (rail && (e.target === rail || rail.contains(e.target as Node))) return;
+  const playSurface = stage ?? canvas;
+  const STEER_SLOP = 12;
+  const onPlayDown = (e: PointerEvent) => {
+    if (controls !== "pointer" || paused || !e.isPrimary) return;
+    if (isPlayChrome(e.target)) return;
+    e.preventDefault();
     sfx?.unlock();
     humanTouched = true;
     lastPointerT = scene.time;
-    pointerLaunch = true;
+    aimAtClient(e.clientX, e.clientY);
     if (pointerX === null) pointerX = game.state.paddleX;
+    playDrag = {
+      id: e.pointerId,
+      originClientX: e.clientX,
+      originWorldX: toWorldX(e.clientX),
+      originPaddleX: pointerX,
+      moved: false,
+    };
+    try {
+      playSurface.setPointerCapture(e.pointerId);
+    } catch {
+      // Capture is best-effort (e.g. synthetic events).
+    }
+  };
+  const onPlayMove = (e: PointerEvent) => {
+    if (controls !== "pointer" || paused) return;
+    if (playDrag && playDrag.id === e.pointerId) {
+      lastPointerT = scene.time;
+      aimAtClient(e.clientX, e.clientY);
+      if (Math.abs(e.clientX - playDrag.originClientX) > STEER_SLOP) playDrag.moved = true;
+      if (isSwipeAnywhereEnabled()) {
+        pointerX = playDrag.originPaddleX + (toWorldX(e.clientX) - playDrag.originWorldX);
+      }
+      return;
+    }
+    if (!e.isPrimary || e.buttons !== 0 || e.pointerType !== "mouse") return;
+    if (isPlayChrome(e.target)) return;
+    if (game.state.phase === "serve") aimAtClient(e.clientX, e.clientY);
+  };
+  const onPlayUp = (e: PointerEvent) => {
+    if (playDrag === null || playDrag.id !== e.pointerId) return;
+    const dragged = playDrag.moved;
+    playDrag = null;
+    if (controls === "auto" || paused) return;
+    if (!dragged) {
+      aimAtClient(e.clientX, e.clientY);
+      pointerLaunch = true;
+      lastPointerT = scene.time;
+    }
+  };
+  const onPlayCancel = (e: PointerEvent) => {
+    if (playDrag?.id === e.pointerId) playDrag = null;
+  };
+  const onPlayLeave = (e: PointerEvent) => {
+    if (playDrag || pointerLaunch) return;
+    if (e.pointerType !== "mouse") return;
+    pointerAimX = null;
+    pointerAimY = null;
   };
   if (!editMode) {
-    canvas.addEventListener("pointermove", onPointerMove);
-    canvas.addEventListener("pointerdown", onPointerDown);
-    canvas.addEventListener("pointerleave", onPointerLeave);
-    // Capture on the stage so overlays (the fit slot, HUD, caption) cannot
-    // swallow a serve tap. The rail still owns its own tap-vs-drag.
-    if (rail && stage) stage.addEventListener("pointerdown", onStageDown, true);
+    if (controls === "pointer") {
+      playSurface.style.touchAction = "none";
+      playSurface.addEventListener("pointerdown", onPlayDown);
+      playSurface.addEventListener("pointermove", onPlayMove);
+      playSurface.addEventListener("pointerup", onPlayUp);
+      playSurface.addEventListener("pointercancel", onPlayCancel);
+      playSurface.addEventListener("lostpointercapture", onPlayCancel);
+      playSurface.addEventListener("pointerleave", onPlayLeave);
+    } else if (controls === "hybrid") {
+      canvas.addEventListener("pointermove", onPointerMove);
+      canvas.addEventListener("pointerdown", onPointerDown);
+      canvas.addEventListener("pointerleave", onPointerLeave);
+    }
   }
   canvas.style.touchAction = editMode || controls === "pointer" ? "none" : "pan-y";
 
   // --- thumb rail controls ----------------------------------------------------
   // Absolute mapping: the thumb's place on the rail is where the paddle goes
   // (the engine glides it there at paddle speed, so a far touch never snaps).
-  // A quick tap without travel launches; a drag never does.
+  // A quick tap without travel launches toward that column; a drag never does.
+  // The board itself also steers with a relative swipe when that setting is on.
   const railToWorldX = (clientX: number) => {
     const rect = rail!.getBoundingClientRect();
     const railU = rect.width > 0 ? (clientX - rect.left) / rect.width : 0.5;
@@ -553,6 +668,9 @@ export function mountBreakout(
     if (isTap) {
       pointerLaunch = true;
       lastPointerT = scene.time;
+      const ball = game.state.balls[0];
+      pointerAimX = railToWorldX(e.clientX);
+      pointerAimY = (ball?.y ?? level.paddle.y) - 100;
     }
   };
   const onRailCancel = (e: PointerEvent) => {
@@ -656,7 +774,12 @@ export function mountBreakout(
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointerleave", onPointerLeave);
-      if (rail && stage) stage.removeEventListener("pointerdown", onStageDown, true);
+      playSurface.removeEventListener("pointerdown", onPlayDown);
+      playSurface.removeEventListener("pointermove", onPlayMove);
+      playSurface.removeEventListener("pointerup", onPlayUp);
+      playSurface.removeEventListener("pointercancel", onPlayCancel);
+      playSurface.removeEventListener("lostpointercapture", onPlayCancel);
+      playSurface.removeEventListener("pointerleave", onPlayLeave);
       if (rail) {
         rail.removeEventListener("pointerdown", onRailDown);
         rail.removeEventListener("pointermove", onRailMove);

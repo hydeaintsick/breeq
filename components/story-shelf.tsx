@@ -11,6 +11,7 @@ import { SoundToggle } from "@/components/sound-toggle";
 import { StoryClear } from "@/components/story-clear";
 import { StoryLose } from "@/components/story-lose";
 import { StoryPlay } from "@/components/story-play";
+import { SwipeToggle } from "@/components/swipe-toggle";
 import { useStoryTheme } from "@/components/use-story-theme";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
@@ -1032,6 +1033,7 @@ export function StoryShelf({
                           </button>
                           <SoundToggle variant="row" />
                           <HapticsToggle variant="row" />
+                          <SwipeToggle variant="row" />
                           <button type="button" className="btn-glass min-h-11 w-full" onClick={quitRun}>
                             Quit
                           </button>

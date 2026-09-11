@@ -9,6 +9,8 @@ import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
 import { StoryClear } from "@/components/story-clear";
 import { StoryLose } from "@/components/story-lose";
+import { useSwipe } from "@/components/swipe-provider";
+import { SwipeToggle } from "@/components/swipe-toggle";
 import type { GameEvent } from "@/game/breakout/engine/types";
 import { TUTORIAL } from "@/game/breakout/levels";
 import type { BreakoutHandle, CssRect } from "@/game/breakout/preview";
@@ -65,14 +67,18 @@ const WELCOME: Step = {
   targets: [],
 };
 
-const CONTROLS: Step = {
-  id: "controls",
-  kicker: "Controls",
-  title: "Move and launch.",
-  body: "Slide along the rail to move the paddle. Tap anywhere on the board to launch the ball, then keep it in play.",
-  action: "Got it",
-  targets: [{ kind: "paddle" }, { kind: "dom", selector: ".thumb-rail" }],
-};
+function controlsStep(swipeAnywhere: boolean): Step {
+  return {
+    id: "controls",
+    kicker: "Controls",
+    title: "Move and launch.",
+    body: swipeAnywhere
+      ? "Slide anywhere on the screen to move the paddle. Tap where you want the ball to go, then keep it in play."
+      : "Slide along the rail to move the paddle. Tap where you want the ball to go, then keep it in play.",
+    action: "Got it",
+    targets: [{ kind: "paddle" }, { kind: "dom", selector: ".thumb-rail" }],
+  };
+}
 
 function glassStep(): Step {
   return {
@@ -137,6 +143,7 @@ function union(a: CssRect, b: CssRect): CssRect {
 
 export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   const router = useRouter();
+  const { anywhere: swipeAnywhere } = useSwipe();
   const rootRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const seen = useRef<Set<StepId>>(new Set());
@@ -230,13 +237,14 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
     if (current.id === "welcome") {
       seen.current.add("welcome");
       seen.current.add("controls");
-      stepRef.current = CONTROLS;
-      setStep(CONTROLS);
+      const next = controlsStep(swipeAnywhere);
+      stepRef.current = next;
+      setStep(next);
       return;
     }
     stepRef.current = null;
     setStep(null);
-  }, []);
+  }, [swipeAnywhere]);
 
   // Where the light goes, in CSS pixels relative to the run's box.
   const measure = useCallback(() => {
@@ -430,6 +438,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
               </button>
               <SoundToggle variant="row" />
               <HapticsToggle variant="row" />
+              <SwipeToggle variant="row" />
               <button type="button" className="btn-glass min-h-11 w-full" onClick={() => router.push(STORY_PATH)}>
                 Quit
               </button>
