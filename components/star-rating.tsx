@@ -28,7 +28,8 @@ function GhostStar() {
  * inside the SVG, so the glow around it is never boxed in.
  */
 function LitStar({ fill }: { fill: number }) {
-  const id = useId();
+  // React ids carry punctuation (`«r3»`) that breaks `url(#…)` paint references.
+  const id = `star-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const clipId = `${id}-clip`;
   const faceId = `${id}-face`;
   const bodyId = `${id}-body`;
