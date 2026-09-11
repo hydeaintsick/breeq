@@ -446,6 +446,52 @@ html[data-theme="dark"] {
     box-shadow: 0 0 0 4px rgba(91, 91, 255, 0.14);
   }
 
+  /* "Coming soon" pill next to a kicker. Ink on glass, no neon. */
+  .coming-soon {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 0 1px var(--hairline);
+  }
+
+  /* Live difficulty of a draft wall. The fill takes the tier's color. */
+  .difficulty {
+    --difficulty-color: var(--ink-muted);
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 0 1px var(--hairline);
+  }
+
+  .difficulty[data-tier="1"] { --difficulty-color: var(--neon-cyan); }
+  .difficulty[data-tier="2"] { --difficulty-color: var(--neon-lime); }
+  .difficulty[data-tier="3"] { --difficulty-color: var(--neon-amber); }
+  .difficulty[data-tier="4"] { --difficulty-color: var(--neon-pink); }
+  .difficulty[data-tier="5"] { --difficulty-color: var(--danger); }
+
+  .difficulty-label {
+    color: var(--difficulty-color);
+  }
+
+  .difficulty-fill {
+    background: var(--difficulty-color);
+  }
+
+  .difficulty-bar[data-rating="true"] .difficulty-fill {
+    opacity: 0.55;
+  }
+
   .mode-switch {
     position: relative;
     display: grid;
@@ -1699,6 +1745,67 @@ html[data-theme="dark"] .story-ambient-scrim {
   padding: 1.25rem;
   background: rgba(5, 6, 12, 0.55);
   @apply backdrop-blur-[16px];
+}
+
+/* --- Story intro: the chapter's beat, tapped away to serve ------------------ */
+
+.story-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  background: rgba(5, 6, 12, 0.55);
+  @apply backdrop-blur-[16px];
+  color: #ffffff;
+  text-align: center;
+  cursor: pointer;
+  animation: clear-in 360ms var(--ease) both;
+}
+
+.story-intro-body {
+  width: 100%;
+  max-width: 20rem;
+}
+
+.story-intro-text {
+  margin-top: 1.25rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.story-intro-cue {
+  display: inline-block;
+  margin-top: 2rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  animation: intro-cue 1.8s var(--ease) infinite alternate;
+}
+
+@keyframes intro-cue {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-intro {
+    animation: none;
+  }
+
+  .story-intro-cue {
+    animation: none;
+    opacity: 0.8;
+  }
 }
 
 /* --- Story clear screen ---------------------------------------------------- */

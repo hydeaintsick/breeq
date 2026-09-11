@@ -2,6 +2,17 @@ export * from "./types";
 export { Game, RULES, predictX, type GameOptions, type PendingBrick } from "./game";
 export { Autopilot, proveClearable, type AutopilotOptions, type Proof, type ProofOptions } from "./autopilot";
 export {
+  rateDifficulty,
+  difficultyTier,
+  sampleSkill,
+  DIFFICULTY_DEFAULTS,
+  type Difficulty,
+  type DifficultyOptions,
+  type DifficultyTier,
+  type DifficultyLabel,
+  type SkillSample,
+} from "./difficulty";
+export {
   createLevel,
   validateLevel,
   levelCost,

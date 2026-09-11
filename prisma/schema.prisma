@@ -80,6 +80,8 @@ model Episode {
   title         String
   slug          String    @unique
   order         Int       @default(0)
+  /// One line of story under the episode title on the shelf.
+  tagline       String?
   backgroundUrl String?
   chapters      Chapter[]
   createdAt     DateTime  @default(now())
@@ -94,6 +96,8 @@ model Chapter {
   slug      String
   order     Int            @default(0)
   xpReward  Int            @default(100)
+  /// One or two sentences of story shown on the chapter card and before the run.
+  intro     String?
   level     Json
   clears    ChapterClear[]
   createdAt DateTime       @default(now())

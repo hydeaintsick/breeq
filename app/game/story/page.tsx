@@ -61,8 +61,8 @@ export default async function StoryPage({
       }
       body={
         tutorial.required
-          ? "Start with a two-minute tutorial. Then each episode is a run of walls: finish one to unlock the next."
-          : "Each episode is a run of walls. Finish one to unlock the next."
+          ? "Start with a two-minute tutorial. Then follow Kal, a small gecko far from home, one wall at a time: finish an episode to unlock the next."
+          : "Kal woke up on a world that is not his own. Each episode is a run of walls on his way home: finish one to unlock the next."
       }
     />
   );

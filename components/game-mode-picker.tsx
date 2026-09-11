@@ -22,7 +22,7 @@ export function GameModePicker({
         href={STORY_PATH}
         kicker="01"
         title="Story"
-        body={tutorialRequired ? "Starts with a two-minute tutorial, then the campaign." : "The campaign. One wall, then the next."}
+        body={tutorialRequired ? "Starts with a two-minute tutorial, then Kal's way home." : "Follow Kal, a galactic gecko, home. One wall, then the next."}
         action={tutorialRequired ? "Learn to play" : "Play Story"}
         levels={STORY_LEVELS}
         seed={11}

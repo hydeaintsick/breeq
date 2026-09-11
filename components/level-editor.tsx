@@ -22,8 +22,10 @@ import {
   type PieceTint,
 } from "@/game/breakout/engine";
 import { mountBreakout, type BreakoutHandle } from "@/game/breakout/preview";
+import { DifficultyMeter } from "@/components/difficulty-meter";
 import { saveChapter } from "@/app/actions/editor";
 import { ADMIN_EDITOR_PATH } from "@/lib/auth/paths";
+import { CHAPTER_INTRO_MAX } from "@/lib/chapter-intro";
 
 type FamilyTab = "brick" | "zone" | "obstacle" | "rule" | "erase";
 
@@ -61,6 +63,7 @@ export function LevelEditor({
   chapterId,
   episodeTitle,
   initialTitle,
+  initialIntro = "",
   initialXpReward,
   initialLevel,
 }: {
@@ -68,6 +71,7 @@ export function LevelEditor({
   chapterId: string;
   episodeTitle: string;
   initialTitle: string;
+  initialIntro?: string;
   initialXpReward: number;
   initialLevel: Level;
 }) {
@@ -75,6 +79,7 @@ export function LevelEditor({
   const stageRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [title, setTitle] = useState(initialTitle);
+  const [intro, setIntro] = useState(initialIntro);
   const [xpReward, setXpReward] = useState(initialXpReward);
   const [level, setLevel] = useState(initialLevel);
   const [history, setHistory] = useState<Level[]>([]);
@@ -181,6 +186,7 @@ export function LevelEditor({
         episodeId,
         chapterId,
         title,
+        intro,
         xpReward,
         level: serializeLevel({ ...level, name: title }),
       });
@@ -277,6 +283,7 @@ export function LevelEditor({
           ) : (
             <p className="mt-3 text-sm text-ink-muted">Ready to save as a draft.</p>
           )}
+          <DifficultyMeter level={level} blocked={errors.length > 0} />
         </div>
 
         <div className="min-w-0">
@@ -291,6 +298,26 @@ export function LevelEditor({
               }}
               className="field"
               maxLength={60}
+            />
+          </label>
+          <label className="mt-4 grid gap-2 text-sm text-ink-muted">
+            <span className="flex items-baseline justify-between gap-3">
+              Story text
+              <span className="tabular-nums text-xs">
+                {intro.length}/{CHAPTER_INTRO_MAX}
+              </span>
+            </span>
+            <textarea
+              value={intro}
+              onChange={(event) => {
+                setIntro(event.target.value);
+                setDirty(true);
+                setSaved(false);
+              }}
+              className="field min-h-[5.5rem] resize-y leading-6"
+              maxLength={CHAPTER_INTRO_MAX}
+              rows={3}
+              placeholder="One or two sentences of Kal's story. Shown on the chapter card and before the run."
             />
           </label>
           <label className="mt-4 grid gap-2 text-sm text-ink-muted">

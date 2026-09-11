@@ -25,6 +25,7 @@ export function PlayCard({
   kicker,
   title,
   body,
+  meta,
   action,
   levels,
   seed,
@@ -43,6 +44,8 @@ export function PlayCard({
   kicker: string;
   title: string;
   body: string;
+  /** Small line under the body: XP, "Cleared", a count. */
+  meta?: string;
   action: string;
   levels: readonly Level[];
   seed: number;
@@ -97,6 +100,7 @@ export function PlayCard({
         <p className="font-mono text-xs tracking-[0.16em] text-accent">{kicker}</p>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">{title}</h2>
         <p className="mt-2 max-w-[16rem] text-sm leading-6 text-white/75">{body}</p>
+        {meta ? <p className="mt-1 font-mono text-xs tracking-[0.08em] text-white/60">{meta}</p> : null}
         {locked && lockedHint ? (
           <p className="mt-1 max-w-[16rem] text-sm leading-6 text-white/75">{lockedHint}</p>
         ) : null}
@@ -118,7 +122,7 @@ export function PlayCard({
       : null;
   const label = locked
     ? `Locked. ${title}. ${lockedHint ?? body}`
-    : `${action}. ${title}. ${body}${progressLabel ? ` ${progressLabel}` : ""}`;
+    : `${action}. ${title}. ${body}${meta ? ` ${meta}.` : ""}${progressLabel ? ` ${progressLabel}` : ""}`;
   const cardClass = [
     "mode-card",
     fill ? "mode-card-fill" : "",

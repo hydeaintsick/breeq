@@ -185,6 +185,8 @@ export function StoryShelf({
   const originCardRef = useRef<HTMLElement | null>(null);
   const [playing, setPlaying] = useState<StoryChapterCard | null>(null);
   const [paused, setPaused] = useState(false);
+  /** The chapter's story beat is up; the board waits underneath until it is tapped away. */
+  const [intro, setIntro] = useState(false);
   /** The wall came down: score is known at once, the payout arrives a beat later. */
   const [cleared, setCleared] = useState<{ score: number; result: ChapterClearResult | null } | null>(null);
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
@@ -531,6 +533,10 @@ export function StoryShelf({
           setPlaying(null);
           return;
         }
+        if (intro) {
+          setIntro(false);
+          return;
+        }
         setPaused(true);
         return;
       }
@@ -538,7 +544,7 @@ export function StoryShelf({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cleared, closeSheet, lost, open, playing]);
+  }, [cleared, closeSheet, intro, lost, open, playing]);
 
   const goTo = useCallback((index: number) => {
     const next = Math.max(0, Math.min(shelf.length - 1 + offset, index));
@@ -657,6 +663,8 @@ export function StoryShelf({
     setCleared(null);
     setLost(null);
     setRunId(0);
+    // The story beat opens the run; a tap dismisses it and serves the ball.
+    setIntro(Boolean(chapter.intro));
     setPlaying(chapter);
   }
 
@@ -744,7 +752,8 @@ export function StoryShelf({
                 <PlayCard
                   kicker={String(index + 1).padStart(2, "0")}
                   title={episode.title}
-                  body={chapterLabel(progress.cleared, progress.total)}
+                  body={episode.tagline ?? chapterLabel(progress.cleared, progress.total)}
+                  meta={episode.tagline ? chapterLabel(progress.cleared, progress.total) : undefined}
                   action="Play"
                   levels={previewLevels(episode)}
                   seed={11 + index}
@@ -836,6 +845,7 @@ export function StoryShelf({
                     <h2 id={titleId} className="font-semibold tracking-tight text-white">
                       {open.title}
                     </h2>
+                    {open.tagline ? <p className="story-page-lede mt-2">{open.tagline}</p> : null}
                     <div
                       className="story-campaign mt-3"
                       aria-label={
@@ -912,7 +922,7 @@ export function StoryShelf({
                     storedLevel={playing.level}
                     backgroundUrl={open.backgroundUrl}
                     seed={17 + runId}
-                    paused={paused}
+                    paused={paused || intro}
                     onCleared={({ score }) => {
                       setPaused(false);
                       setLost(null);
@@ -929,7 +939,7 @@ export function StoryShelf({
                       setLost({ score, reason });
                     }}
                   />
-                  {cleared || lost ? null : (
+                  {cleared || lost || intro ? null : (
                     <button
                       type="button"
                       className="story-pause"
@@ -939,6 +949,21 @@ export function StoryShelf({
                       <CloseGlyph />
                     </button>
                   )}
+                  {intro && playing.intro && !cleared && !lost ? (
+                    <button
+                      type="button"
+                      className="story-intro"
+                      onClick={() => setIntro(false)}
+                      aria-label={`Chapter ${playingIndex + 1}, ${playing.title}. ${playing.intro} Tap to begin.`}
+                    >
+                      <div className="story-intro-body">
+                        <p className="story-clear-kicker">Chapter {String(playingIndex + 1).padStart(2, "0")}</p>
+                        <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{playing.title}</h3>
+                        <p className="story-intro-text">{playing.intro}</p>
+                        <span className="story-intro-cue">Tap to begin</span>
+                      </div>
+                    </button>
+                  ) : null}
                   {cleared ? (
                     <StoryClear
                       key={playing.id}
@@ -1110,7 +1135,8 @@ function ChapterPlayCard({
         <PlayCard
           kicker={String(index + 1).padStart(2, "0")}
           title={chapter.title}
-          body={chapter.cleared ? "Cleared" : `${chapter.xpReward} XP`}
+          body={chapter.intro ?? (chapter.cleared ? "Cleared" : `${chapter.xpReward} XP`)}
+          meta={chapter.intro ? (chapter.cleared ? `Cleared · ${chapter.xpReward} XP` : `${chapter.xpReward} XP`) : undefined}
           action={chapter.cleared ? "Replay" : "Play"}
           levels={levels}
           seed={19 + index * 13}

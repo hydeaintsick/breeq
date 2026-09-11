@@ -10,6 +10,7 @@ import { slugify } from "@/lib/slug";
 import { createDraftLevel, parseStoredLevel, serializeLevel } from "@/game/breakout/engine";
 import { uploadStoryBackground } from "@/lib/cloudinary";
 import { XP_PER_STORY_CLEAR } from "@/lib/progress";
+import { CHAPTER_INTRO_MAX, normalizeIntro } from "@/lib/chapter-intro";
 
 type ActionState = { error: string } | null;
 type MoveDirection = "up" | "down";
@@ -152,6 +153,8 @@ export async function saveChapter(input: {
   episodeId: string;
   chapterId: string;
   title: string;
+  /** The chapter's story beat; empty clears it. */
+  intro?: string;
   xpReward: number;
   level: unknown;
 }): Promise<{ ok: true } | { error: string }> {
@@ -160,6 +163,11 @@ export async function saveChapter(input: {
 
   if (title.length < 2 || title.length > 60) {
     return { error: "Chapter name must be 2–60 characters." };
+  }
+
+  const intro = normalizeIntro(input.intro);
+  if (intro.length > CHAPTER_INTRO_MAX) {
+    return { error: `Story text must be ${CHAPTER_INTRO_MAX} characters or fewer.` };
   }
 
   const xpReward = parseXp(input.xpReward);
@@ -187,6 +195,7 @@ export async function saveChapter(input: {
     where: { id: chapter.id },
     data: {
       title,
+      intro: intro || null,
       xpReward,
       level: serializeLevel(level) as Prisma.InputJsonValue,
     },

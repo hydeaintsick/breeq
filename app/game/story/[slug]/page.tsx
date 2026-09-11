@@ -45,7 +45,7 @@ export default async function StoryEpisodePage({
           Choose an <span className="text-neon">episode</span>.
         </>
       }
-      body="Each episode is a run of walls. Finish one to unlock the next."
+      body="Kal woke up on a world that is not his own. Each episode is a run of walls on his way home: finish one to unlock the next."
     />
   );
 }
