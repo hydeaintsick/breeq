@@ -164,16 +164,10 @@ export class BreakoutRenderer {
     ctx.fillRect(0, 0, cw, ch);
 
     if (this.photo) {
-      const img = this.photo;
-      const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
-      const w = img.naturalWidth * s;
-      const h = img.naturalHeight * s;
       const blurPx = Math.max(24, Math.round(Math.min(cw, ch) * PHOTO_BLUR) + bg.blur * scale);
-      const pad = blurPx * 2;
-      ctx.save();
-      if ("filter" in ctx) ctx.filter = `blur(${blurPx}px)`;
-      ctx.drawImage(img, (cw - w) / 2 - pad, (ch - h) / 2 - pad, w + pad * 2, h + pad * 2);
-      ctx.restore();
+      const wash = photoWash(this.photo, cw, ch, blurPx);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(wash, 0, 0, cw, ch);
     } else {
       ctx.setTransform(scale, 0, 0, scale, ox, oy);
       const g = ctx.createRadialGradient(width * 0.5, height * 0.35, 20, width * 0.5, height * 0.35, height * 0.8);
@@ -776,19 +770,17 @@ export class BreakoutRenderer {
     const color = steelLook ? p.steel : p.neon[brick.color];
     const bodyAlpha = dim ? 0.3 : 1;
 
-    // Glow in device pixels. `shadowBlur` on an offscreen canvas is a no-op on
-    // iOS (and Safari applies the CTM to the radius, so a Mac simulator glows
-    // while a phone stays flat). `filter: blur` matches on both.
-    const glowWorld = steelLook ? 6 : dim ? 4 : 12;
-    const glowPx = Math.max(1, glowWorld * scale);
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if ("filter" in ctx) ctx.filter = `blur(${glowPx}px)`;
-    ctx.fillStyle = alpha(color, steelLook ? 0.5 : 0.95 * bodyAlpha);
-    this.roundRect(ctx, x * scale, y * scale, brick.w * scale, brick.h * scale, BRICK_RADIUS * scale);
-    ctx.fill();
-    ctx.restore();
-    ctx.filter = "none";
+    // Glow.
+    this.halo(
+      ctx,
+      x,
+      y,
+      brick.w,
+      brick.h,
+      color,
+      steelLook ? 6 : dim ? 4 : 12,
+      steelLook ? 0.4 : dim ? 0.2 : 0.85,
+    );
 
     // Glass body.
     const g = ctx.createLinearGradient(0, y, 0, y + brick.h);
@@ -1191,9 +1183,10 @@ export class BreakoutRenderer {
   }
 
   /**
-   * iOS Safari drops canvas shadows when both offsets are 0, and it applies
-   * the current transform to `shadowBlur` (against the spec). A hairline
-   * offset keeps the glow on a phone; the radius stays in device pixels.
+   * A glow of `blurWorld` world units. Both engines blur in device space and
+   * ignore the transform, so the radius carries the scale; the hairline
+   * offset is there for older WebKit, which skips a shadow sitting exactly
+   * under its shape.
    */
   private neonShadow(ctx: Ctx, color: string, blurWorld: number): void {
     ctx.shadowColor = color;
@@ -1206,6 +1199,30 @@ export class BreakoutRenderer {
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
+  }
+
+  /**
+   * A halo around a rounded rect, stacked from translucent passes.
+   *
+   * WebKit implements no canvas filter at all, so `blur()` is not available
+   * to soften a glow sprite, and it is the neon that carries this whole
+   * design. Overlapping fills need nothing from the engine. `spread` is in
+   * world units; the passes crowd against the tile, so the falloff is quick
+   * with a faint tail. Cached with the sprite, so it is drawn once per look.
+   */
+  private halo(ctx: Ctx, x: number, y: number, w: number, h: number, color: string, spread: number, peak: number): void {
+    // Enough passes that the rings land under a device pixel and read as one
+    // gradient; the sprite is painted once, so the count is free.
+    const steps = 32;
+    const step = 1 - (1 - peak) ** (1 / steps);
+    ctx.save();
+    ctx.fillStyle = alpha(color, step);
+    for (let i = steps; i >= 1; i -= 1) {
+      const grow = spread * (i / steps) ** 1.7;
+      this.roundRect(ctx, x - grow, y - grow, w + grow * 2, h + grow * 2, BRICK_RADIUS + grow);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {
@@ -1226,4 +1243,56 @@ export class BreakoutRenderer {
 
 function easeOut(t: number): number {
   return 1 - (1 - t) ** 3;
+}
+
+function smoothCanvas(w: number, h: number): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(w));
+  canvas.height = Math.max(1, Math.round(h));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D is not available");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  return canvas;
+}
+
+/**
+ * The author's photo, cover-cropped to `cw × ch` and blurred by roughly
+ * `radius` device pixels. Returned small: the caller stretches it over the
+ * whole canvas, which is the last step of the blur.
+ *
+ * `ctx.filter = "blur()"` cannot do this: WebKit has never shipped canvas
+ * filters, so every iPhone fell through to the sharp photo at full
+ * brightness, edge to edge, with the neon lost on top of it. Averaging the
+ * image down in halves and letting the browser interpolate on the way back
+ * up blurs on every engine — and asks a phone for far less work than a
+ * 100px gaussian over a full-screen canvas.
+ */
+function photoWash(img: HTMLImageElement, cw: number, ch: number, radius: number): HTMLCanvasElement {
+  // A bilinear stretch reads like a gaussian of about half the scale factor.
+  const factor = Math.max(2, radius * 2);
+  const tw = Math.max(3, Math.round(cw / factor));
+  const th = Math.max(3, Math.round(ch / factor));
+
+  const cover = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+  const sw = Math.min(img.naturalWidth, cw / cover);
+  const sh = Math.min(img.naturalHeight, ch / cover);
+  let stage = smoothCanvas(Math.min(cw, tw * 8), Math.min(ch, th * 8));
+  stage
+    .getContext("2d")!
+    .drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, stage.width, stage.height);
+
+  // Halving averages; one giant downscale aliases into speckles instead.
+  while (stage.width > tw * 2 && stage.height > th * 2) {
+    const next = smoothCanvas(Math.max(tw, stage.width / 2), Math.max(th, stage.height / 2));
+    next.getContext("2d")!.drawImage(stage, 0, 0, next.width, next.height);
+    stage = next;
+  }
+  const thumb = smoothCanvas(tw, th);
+  thumb.getContext("2d")!.drawImage(stage, 0, 0, tw, th);
+
+  // Back up once here, once in the caller: a single huge stretch creases.
+  const wash = smoothCanvas(Math.min(cw, tw * 8), Math.min(ch, th * 8));
+  wash.getContext("2d")!.drawImage(thumb, 0, 0, wash.width, wash.height);
+  return wash;
 }
