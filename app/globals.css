@@ -1314,11 +1314,20 @@ html[data-theme="dark"] .story-ambient-scrim {
   position: relative;
   z-index: 2;
   opacity: 0;
+  transition: opacity var(--duration) var(--ease);
 }
 
 .story-sheet .story-rail[data-ready="true"] {
   opacity: 1;
-  transition: opacity var(--duration) var(--ease);
+}
+
+/* Shrinking back onto its card: the morph in reverse, nothing tappable. */
+.story-sheet[data-closing="true"] {
+  pointer-events: none;
+}
+
+.story-sheet[data-closing="true"] .story-rail {
+  transition-duration: calc(var(--duration) / 2);
 }
 
 .story-sheet .story-page-foot {

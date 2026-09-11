@@ -11,6 +11,7 @@ import { SoundToggle } from "@/components/sound-toggle";
 import { StoryClear } from "@/components/story-clear";
 import { StoryLose } from "@/components/story-lose";
 import { StoryPlay } from "@/components/story-play";
+import { useStoryTheme } from "@/components/use-story-theme";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { QUIET_START } from "@/game/breakout/levels";
@@ -96,6 +97,29 @@ function scrollToSlide(root: HTMLElement, index: number, behavior: ScrollBehavio
   return true;
 }
 
+/**
+ * Where the sheet shrinks back to: the card the episode was opened from when it
+ * is still on the page, otherwise the card at the episode's slot in the rail
+ * (direct `/story/[slug]` visits never clicked a card).
+ */
+function cardRect(
+  rail: HTMLElement | null,
+  episodes: readonly StoryEpisodeCard[],
+  episode: StoryEpisodeCard,
+  card: HTMLElement | null,
+): DOMRect | null {
+  if (card?.isConnected) {
+    return card.getBoundingClientRect();
+  }
+  const index = episodes.findIndex((item) => item.id === episode.id);
+  const slide = rail?.querySelector<HTMLElement>(`[data-story-slide="${index}"]`);
+  const target = slide?.querySelector<HTMLElement>(".story-rail-frame") ?? slide ?? null;
+  if (!target || target.offsetWidth < 8) {
+    return null;
+  }
+  return target.getBoundingClientRect();
+}
+
 function openingChapterIndex(episodes: readonly StoryEpisodeCard[], slug?: string) {
   const episode = episodes.find((item) => item.slug === slug);
   if (!episode) {
@@ -134,6 +158,9 @@ export function StoryShelf({
   });
   const [origin, setOrigin] = useState<DOMRect | null>(null);
   const [grown, setGrown] = useState(Boolean(initialSlug));
+  /** The sheet is shrinking back onto its card; unmounts when the morph ends. */
+  const [closing, setClosing] = useState(false);
+  const originCardRef = useRef<HTMLElement | null>(null);
   const [playing, setPlaying] = useState<StoryChapterCard | null>(null);
   const [paused, setPaused] = useState(false);
   /** The wall came down: score is known at once, the payout arrives a beat later. */
@@ -149,6 +176,9 @@ export function StoryShelf({
   const chapterTargetRef = useRef(chapterActive);
   const [chapterSnap, setChapterSnap] = useState(0);
   const [chapterReady, setChapterReady] = useState(false);
+
+  // The theme plays under the shelf and the episode sheet, and steps aside for a run.
+  useStoryTheme(playing !== null);
 
   const syncFromRail = useCallback(() => {
     const root = railRef.current;
@@ -361,7 +391,7 @@ export function StoryShelf({
   }, [open, open?.chapters.length, syncFromChapterRail]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || closing) {
       return;
     }
     if (!origin || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -370,7 +400,76 @@ export function StoryShelf({
     }
     const frame = window.setTimeout(() => setGrown(true), 20);
     return () => window.clearTimeout(frame);
-  }, [open, origin]);
+  }, [closing, open, origin]);
+
+  const finishClose = useCallback(() => {
+    setPlaying(null);
+    setPaused(false);
+    setCleared(null);
+    setLost(null);
+    setOpen(null);
+    setGrown(false);
+    setOrigin(null);
+    setClosing(false);
+    if (initialSlug) {
+      router.push(STORY_PATH);
+    }
+  }, [initialSlug, router]);
+
+  /**
+   * Close is the opening morph played backwards: the sheet shrinks onto the
+   * episode card it grew from (re-measured, the shelf may have moved), then
+   * unmounts once the size transition ends.
+   */
+  const closeSheet = useCallback(() => {
+    if (closing) {
+      return;
+    }
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const target = open ? cardRect(railRef.current, shelf, open, originCardRef.current) : null;
+    if (!target || reduced) {
+      finishClose();
+      return;
+    }
+    setPlaying(null);
+    setPaused(false);
+    setCleared(null);
+    setLost(null);
+    setChapterReady(false);
+    setOrigin(target);
+    setGrown(false);
+    setClosing(true);
+  }, [closing, finishClose, open, shelf]);
+
+  useEffect(() => {
+    if (!closing) {
+      return;
+    }
+    const sheet = sheetRef.current;
+    let done = false;
+    const finish = () => {
+      if (done) {
+        return;
+      }
+      done = true;
+      finishClose();
+    };
+    const onEnd = (event: TransitionEvent) => {
+      if (event.target !== sheet) {
+        return;
+      }
+      if (event.propertyName !== "width" && event.propertyName !== "height" && event.propertyName !== "top") {
+        return;
+      }
+      finish();
+    };
+    sheet?.addEventListener("transitionend", onEnd);
+    const fallback = window.setTimeout(finish, 360);
+    return () => {
+      sheet?.removeEventListener("transitionend", onEnd);
+      window.clearTimeout(fallback);
+    };
+  }, [closing, finishClose]);
 
   useEffect(() => {
     if (!open && !playing) {
@@ -406,18 +505,11 @@ export function StoryShelf({
         setPaused(true);
         return;
       }
-      setPlaying(null);
-      setPaused(false);
-      setOpen(null);
-      setGrown(false);
-      setOrigin(null);
-      if (initialSlug) {
-        router.push(STORY_PATH);
-      }
+      closeSheet();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cleared, initialSlug, lost, open, playing, router]);
+  }, [cleared, closeSheet, lost, open, playing]);
 
   const goTo = useCallback((index: number) => {
     const next = Math.max(0, Math.min(shelf.length - 1, index));
@@ -465,8 +557,10 @@ export function StoryShelf({
       return;
     }
     const current = shelf[index] ?? episode;
+    originCardRef.current = card;
     setOrigin(card.getBoundingClientRect());
     setGrown(false);
+    setClosing(false);
     setOpen(current);
     const start = continueChapterIndex(current.chapters);
     chapterTargetRef.current = start;
@@ -489,19 +583,6 @@ export function StoryShelf({
     });
     setShelf((current) => current.map(patch));
     setOpen((current) => (current ? patch(current) : current));
-  }
-
-  function closeSheet() {
-    setPlaying(null);
-    setPaused(false);
-    setCleared(null);
-    setLost(null);
-    setOpen(null);
-    setGrown(false);
-    setOrigin(null);
-    if (initialSlug) {
-      router.push(STORY_PATH);
-    }
   }
 
   function quitRun() {
@@ -638,6 +719,7 @@ export function StoryShelf({
                 ref={sheetRef}
                 className="story-sheet"
                 data-grown={grown}
+                data-closing={closing ? "true" : undefined}
                 style={sheetStyle}
                 role="dialog"
                 aria-modal="true"
