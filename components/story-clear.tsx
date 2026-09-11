@@ -12,8 +12,8 @@ import { progressFromXp, type Progress } from "@/lib/progress";
 const T = {
   starsStart: 380,
   starLead: 220,
-  starGap: 340,
-  starSettle: 420,
+  starGap: 440,
+  starSettle: 620,
   /** When there is no star grade (tutorial), XP starts on this beat. */
   xpStart: 720,
   xpDur: 1000,

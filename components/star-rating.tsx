@@ -1,6 +1,11 @@
 "use client";
 
+import { useId } from "react";
 import { STARS_PER_CLEAR } from "@/game/breakout/engine/stars";
+
+/** A soft five-point star: rounded tips and valleys, centered in a 24×24 box. */
+const STAR_PATH =
+  "M11.1 4.02Q12 2.2 12.9 4.02L14.34 6.94Q15 8.27 16.47 8.49L19.69 8.96Q21.7 9.25 20.25 10.67L17.92 12.94Q16.85 13.98 17.1 15.44L17.65 18.65Q18 20.65 16.2 19.71L13.32 18.19Q12 17.5 10.68 18.19L7.8 19.71Q6 20.65 6.35 18.65L6.9 15.44Q7.15 13.98 6.08 12.94L3.75 10.67Q2.3 9.25 4.31 8.96L7.53 8.49Q9 8.27 9.66 6.94Z";
 
 function clampFill(value: number) {
   if (value <= 0) return 0;
@@ -8,25 +13,71 @@ function clampFill(value: number) {
   return value;
 }
 
-function StarGlyph({ className }: { className?: string }) {
+/** The unlit slot: a hairline outline over a faint glass fill. */
+function GhostStar() {
   return (
-    <svg className={className} viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">
-      <path d="M12 2.4l2.62 6.38 6.88.62-5.22 4.58 1.58 6.72L12 16.92 6.14 20.7l1.58-6.72L2.5 9.4l6.88-.62L12 2.4z" />
+    <svg className="star-ghost" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={STAR_PATH} />
+    </svg>
+  );
+}
+
+/**
+ * The lit star, a glossy glass gem: a soft shaded body under a gradient face,
+ * a bright specular cap and a thin rim. A partial fill clips every layer
+ * inside the SVG, so the glow around it is never boxed in.
+ */
+function LitStar({ fill }: { fill: number }) {
+  const id = useId();
+  const clipId = `${id}-clip`;
+  const faceId = `${id}-face`;
+  const bodyId = `${id}-body`;
+  const specId = `${id}-spec`;
+  const shadeId = `${id}-shade`;
+  const width = 24 * clampFill(fill);
+
+  return (
+    <svg className="star-lit" viewBox="0 0 24 24" aria-hidden="true">
+      <defs>
+        <clipPath id={clipId}>
+          <rect x="0" y="-2" width={width} height="28" />
+        </clipPath>
+        <linearGradient id={faceId} x1="0.25" y1="0" x2="0.75" y2="1">
+          <stop offset="0" className="star-face-hi" />
+          <stop offset="0.55" className="star-face-mid" />
+          <stop offset="1" className="star-face-lo" />
+        </linearGradient>
+        <linearGradient id={bodyId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" className="star-body-hi" />
+          <stop offset="1" className="star-body-lo" />
+        </linearGradient>
+        <radialGradient id={specId} cx="0.36" cy="0.2" r="0.5">
+          <stop offset="0" stopColor="white" stopOpacity="0.6" />
+          <stop offset="0.5" stopColor="white" stopOpacity="0.16" />
+          <stop offset="1" stopColor="white" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={shadeId} cx="0.5" cy="1.05" r="0.75">
+          <stop offset="0" stopColor="#0b0d1a" stopOpacity="0.45" />
+          <stop offset="1" stopColor="#0b0d1a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <g clipPath={`url(#${clipId})`}>
+        <path d={STAR_PATH} transform="translate(0.35 1.15)" fill={`url(#${bodyId})`} className="star-body" />
+        <path d={STAR_PATH} fill={`url(#${faceId})`} />
+        <path d={STAR_PATH} fill={`url(#${shadeId})`} />
+        <path d={STAR_PATH} fill={`url(#${specId})`} />
+        <path d={STAR_PATH} className="star-rim" />
+      </g>
     </svg>
   );
 }
 
 function Star({ fill }: { fill: number }) {
   const lit = clampFill(fill);
-  const pct = Math.round(lit * 100);
   return (
     <span className="star" data-on={lit >= 0.97 ? "true" : lit > 0.02 ? "partial" : "false"}>
-      <StarGlyph className="star-ghost" />
-      {pct > 0 ? (
-        <span className="star-lit" style={{ width: `${pct}%` }}>
-          <StarGlyph />
-        </span>
-      ) : null}
+      <GhostStar />
+      {lit > 0.02 ? <LitStar fill={lit} /> : null}
     </span>
   );
 }
