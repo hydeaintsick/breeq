@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     "breeq.local",
     "ngrok-free.app",
     "breeq.space",
+    "breeq-mu.vercel.app",
   ],
   devIndicators: {
     position: "bottom-left",
