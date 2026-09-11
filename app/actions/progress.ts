@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { GAME_ROOT_PATH } from "@/lib/auth/paths";
 import { campaignPercent } from "@/lib/campaign";
-import { progressFromXp, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
+import { progressFromXp, xpAfter, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
 
 /** What the clear screen animates: XP before → after, and the campaign bar. */
 export type ChapterClearResult = {
@@ -75,6 +75,11 @@ export async function awardChapterClear(
   }
 
   const xpGained = chapter.xpReward || XP_PER_STORY_CLEAR;
+  const balance = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { xp: true },
+  });
+  const xpBefore = balance?.xp ?? 0;
 
   try {
     const [, updated] = await prisma.$transaction([
@@ -83,7 +88,7 @@ export async function awardChapterClear(
       }),
       prisma.user.update({
         where: { id: user.id },
-        data: { xp: { increment: xpGained } },
+        data: { xp: xpAfter(xpBefore, xpGained) },
         select: { xp: true },
       }),
     ]);
@@ -94,7 +99,7 @@ export async function awardChapterClear(
     return {
       firstClear: true,
       xpGained,
-      before: progressFromXp(updated.xp - xpGained),
+      before: progressFromXp(xpBefore),
       progress: progressFromXp(updated.xp),
       storyPercent: await campaignPercent(user.id),
     };

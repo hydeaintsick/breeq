@@ -6,6 +6,19 @@ export const XP_PER_STORY_CLEAR = 100;
 /** XP granted once for finishing the how-to-play run. */
 export const XP_TUTORIAL_CLEAR = 50;
 
+/**
+ * The total to store after paying `reward`.
+ *
+ * Payouts write this absolute number rather than `{ increment: reward }`:
+ * accounts made before the XP field existed hold `null`, which Prisma reads
+ * as the default 0 while Mongo's `$inc` quietly skips them — the clear screen
+ * counted the XP up and the database kept none of it. One board per player,
+ * so reading the balance before writing it races with nothing.
+ */
+export function xpAfter(current: number | null | undefined, reward: number) {
+  return Math.max(0, Math.floor(current ?? 0)) + reward;
+}
+
 /** Earn unlocks at this player level (admins bypass). */
 export const EARN_UNLOCK_LEVEL = 5;
 

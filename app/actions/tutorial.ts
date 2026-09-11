@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { ADMIN_DASHBOARD_PATH, GAME_ROOT_PATH } from "@/lib/auth/paths";
 import { campaignPercent } from "@/lib/campaign";
-import { progressFromXp, XP_TUTORIAL_CLEAR } from "@/lib/progress";
+import { progressFromXp, xpAfter, XP_TUTORIAL_CLEAR } from "@/lib/progress";
 import { SITE_SETTINGS_ID } from "@/lib/tutorial";
 import type { ChapterClearResult } from "@/app/actions/progress";
 
@@ -36,7 +36,7 @@ export async function completeTutorial(): Promise<ChapterClearResult> {
 
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { tutorialDoneAt: new Date(), xp: { increment: XP_TUTORIAL_CLEAR } },
+    data: { tutorialDoneAt: new Date(), xp: xpAfter(xpBefore, XP_TUTORIAL_CLEAR) },
     select: { xp: true },
   });
 
@@ -46,7 +46,7 @@ export async function completeTutorial(): Promise<ChapterClearResult> {
   return {
     firstClear: true,
     xpGained: XP_TUTORIAL_CLEAR,
-    before: progressFromXp(updated.xp - XP_TUTORIAL_CLEAR),
+    before: progressFromXp(xpBefore),
     progress: progressFromXp(updated.xp),
     storyPercent: await campaignPercent(user.id),
   };
