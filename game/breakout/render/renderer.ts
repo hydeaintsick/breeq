@@ -785,17 +785,21 @@ export class BreakoutRenderer {
     const color = steelLook ? p.steel : p.neon[brick.color];
     const bodyAlpha = dim ? 0.3 : 1;
 
-    // Glow.
-    this.halo(
-      ctx,
-      x,
-      y,
-      brick.w,
-      brick.h,
-      color,
-      steelLook ? 6 : dim ? 4 : 12,
-      steelLook ? 0.4 : dim ? 0.2 : 0.85,
-    );
+    // Glow: the tile's own silhouette, softened, laid under the body. Only the
+    // falloff shows past the edge, so the glass stays crisp and readable —
+    // ambient light behind the brick, not a brighter brick.
+    const glowWorld = steelLook ? 6 : dim ? 4 : 12;
+    const peak = steelLook ? 0.35 : dim ? 0.18 : 0.62;
+    const silhouette = smoothCanvas(sprite.width, sprite.height);
+    const sctx = silhouette.getContext("2d")!;
+    sctx.setTransform(scale, 0, 0, scale, 0, 0);
+    sctx.fillStyle = alpha(color, peak);
+    this.roundRect(sctx, x - 1.5, y - 1.5, brick.w + 3, brick.h + 3, BRICK_RADIUS + 1.5);
+    sctx.fill();
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(bloom(silhouette, glowWorld * scale), 0, 0, sprite.width, sprite.height);
+    ctx.restore();
 
     // Glass body.
     const g = ctx.createLinearGradient(0, y, 0, y + brick.h);
@@ -1216,30 +1220,6 @@ export class BreakoutRenderer {
     ctx.shadowOffsetY = 0;
   }
 
-  /**
-   * A halo around a rounded rect, stacked from translucent passes.
-   *
-   * WebKit implements no canvas filter at all, so `blur()` is not available
-   * to soften a glow sprite, and it is the neon that carries this whole
-   * design. Overlapping fills need nothing from the engine. `spread` is in
-   * world units; the passes crowd against the tile, so the falloff is quick
-   * with a faint tail. Cached with the sprite, so it is drawn once per look.
-   */
-  private halo(ctx: Ctx, x: number, y: number, w: number, h: number, color: string, spread: number, peak: number): void {
-    // Enough passes that the rings land under a device pixel and read as one
-    // gradient; the sprite is painted once, so the count is free.
-    const steps = 32;
-    const step = 1 - (1 - peak) ** (1 / steps);
-    ctx.save();
-    ctx.fillStyle = alpha(color, step);
-    for (let i = steps; i >= 1; i -= 1) {
-      const grow = spread * (i / steps) ** 1.7;
-      this.roundRect(ctx, x - grow, y - grow, w + grow * 2, h + grow * 2, BRICK_RADIUS + grow);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
   private roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {
     const rr = Math.max(0, Math.min(r, w / 2, h / 2));
     ctx.beginPath();
@@ -1269,6 +1249,39 @@ function smoothCanvas(w: number, h: number): HTMLCanvasElement {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   return canvas;
+}
+
+/**
+ * A translucent canvas blurred by roughly `radius` device pixels, same size
+ * as the source. The same trick as the photo wash, for sprites: average down
+ * in halves to about one sample per `radius`, then let bilinear interpolation
+ * carry it back up in doublings. Reads like a gaussian, runs on every engine
+ * (WebKit has no canvas `filter`, and `shadowBlur` scales with the transform),
+ * and keeps the alpha falloff smooth all the way to zero.
+ */
+function bloom(src: HTMLCanvasElement, radius: number): HTMLCanvasElement {
+  const factor = Math.max(2, radius);
+  const tw = Math.max(2, Math.round(src.width / factor));
+  const th = Math.max(2, Math.round(src.height / factor));
+
+  let stage = src;
+  while (stage.width > tw * 2 && stage.height > th * 2) {
+    const next = smoothCanvas(Math.max(tw, stage.width / 2), Math.max(th, stage.height / 2));
+    next.getContext("2d")!.drawImage(stage, 0, 0, next.width, next.height);
+    stage = next;
+  }
+  const thumb = smoothCanvas(tw, th);
+  thumb.getContext("2d")!.drawImage(stage, 0, 0, tw, th);
+
+  let up = thumb;
+  while (up.width * 2 <= src.width && up.height * 2 <= src.height) {
+    const next = smoothCanvas(up.width * 2, up.height * 2);
+    next.getContext("2d")!.drawImage(up, 0, 0, next.width, next.height);
+    up = next;
+  }
+  const out = smoothCanvas(src.width, src.height);
+  out.getContext("2d")!.drawImage(up, 0, 0, out.width, out.height);
+  return out;
 }
 
 /**
