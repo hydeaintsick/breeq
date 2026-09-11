@@ -20,7 +20,8 @@ export default function LoginPage() {
         Take the <span className="text-neon">paddle</span>
       </h1>
       <p className="mt-3 max-w-sm text-center text-base leading-7 text-ink-muted">
-        Sign in to play. New here? Switch to sign up and pick a username.
+        Sign in with email, username, or a wallet. New here? Switch to sign up
+        and pick a username.
       </p>
       <div className="mt-8 w-full">
         <AuthForm googleEnabled={googleEnabled} />

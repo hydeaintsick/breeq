@@ -36,6 +36,7 @@ export async function registerAccount(input: {
         name: username,
         email,
         passwordHash: await hash(password, 12),
+        passwordSetAt: new Date(),
         role: isAdminEmail(email) ? "ADMIN" : "PLAYER",
       },
     });

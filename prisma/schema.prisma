@@ -20,6 +20,7 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  passwordSetAt DateTime?
   walletAddress String?
   role          Role           @default(PLAYER)
   xp            Int            @default(0)

@@ -17,17 +17,24 @@ export default async function AccountPage() {
       email: true,
       walletAddress: true,
       name: true,
+      passwordHash: true,
+      passwordSetAt: true,
+      updatedAt: true,
       accounts: { select: { provider: true } },
     },
   });
 
   const username = user?.username ?? sessionUser.username ?? sessionUser.name ?? "Player";
   const providers = new Set(user?.accounts.map((account) => account.provider));
+  const hasPassword = Boolean(user?.passwordHash);
   const methods = [
-    user?.email ? "Email" : null,
+    hasPassword ? "Password" : null,
     user?.walletAddress || providers.has("metamask") ? "MetaMask" : null,
     providers.has("google") ? "Google" : null,
   ].filter((value): value is string => Boolean(value));
+  const passwordSetAt =
+    user?.passwordSetAt?.toISOString() ??
+    (user && hasPassword ? user.updatedAt.toISOString() : null);
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-xl flex-col justify-center px-6 pb-20 pt-28">
@@ -46,6 +53,11 @@ export default async function AccountPage() {
         email={user?.email ?? ""}
         wallet={user?.walletAddress ?? null}
         methods={methods}
+        hasPassword={hasPassword}
+        passwordSetAt={passwordSetAt}
+        hasOtherMethods={Boolean(
+          user?.walletAddress || providers.has("metamask") || providers.has("google"),
+        )}
       />
     </section>
   );

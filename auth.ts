@@ -8,7 +8,7 @@ import { getAddress, isAddress, verifyMessage } from "viem";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail, type Role } from "@/lib/auth/paths";
 import { SIWE_NONCE_COOKIE, siweMessage } from "@/lib/auth/siwe";
-import { uniqueUsername } from "@/lib/auth/username";
+import { normalizeUsername, uniqueUsername } from "@/lib/auth/username";
 
 const googleEnabled = Boolean(
   process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET,
@@ -27,6 +27,23 @@ async function withRole<T extends { id: string; email?: string | null; role: Rol
   }
 
   return user;
+}
+
+async function findUserForPasswordLogin(identifier: string) {
+  const normalized = identifier.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.includes("@")) {
+    return prisma.user.findUnique({
+      where: { email: normalized },
+    });
+  }
+
+  return prisma.user.findUnique({
+    where: { username: normalizeUsername(normalized) },
+  });
 }
 
 function toAuthUser(user: {
@@ -124,6 +141,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
         address: { label: "Address", type: "text" },
         signature: { label: "Signature", type: "text" },
@@ -139,20 +157,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return authorizeWallet(addressRaw, signature);
           }
 
-          const email =
-            typeof credentials?.email === "string"
-              ? credentials.email.trim().toLowerCase()
-              : "";
+          const identifier =
+            typeof credentials?.username === "string" && credentials.username.trim()
+              ? credentials.username.trim()
+              : typeof credentials?.email === "string"
+                ? credentials.email.trim()
+                : "";
           const password =
             typeof credentials?.password === "string" ? credentials.password : "";
 
-          if (!email || !password) {
+          if (!identifier || !password) {
             return null;
           }
 
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
+          const user = await findUserForPasswordLogin(identifier);
 
           if (!user?.passwordHash) {
             return null;

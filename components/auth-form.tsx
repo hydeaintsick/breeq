@@ -20,8 +20,10 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
 
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
+    const identifier = String(form.get("identifier") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const username = String(form.get("username") ?? "").trim();
+    const loginId = mode === "signup" ? email : identifier;
 
     try {
       if (mode === "signup") {
@@ -33,7 +35,8 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
       }
 
       const result = await signIn("credentials", {
-        email,
+        email: loginId,
+        username: loginId,
         password,
         redirect: false,
         redirectTo: AFTER_AUTH_PATH,
@@ -43,7 +46,7 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
         setError(
           mode === "signup"
             ? "Account created, but sign-in failed. Try signing in."
-            : "Email or password is not right.",
+            : "Username, email, or password is not right.",
         );
         return;
       }
@@ -169,17 +172,33 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
           </label>
         ) : null}
 
-        <label className="grid gap-2 text-sm text-ink-muted">
-          Email
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="field"
-            disabled={pending}
-          />
-        </label>
+        {mode === "signin" ? (
+          <label className="grid gap-2 text-sm text-ink-muted">
+            Email or username
+            <input
+              name="identifier"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+              className="field"
+              disabled={pending}
+            />
+          </label>
+        ) : (
+          <label className="grid gap-2 text-sm text-ink-muted">
+            Email
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className="field"
+              disabled={pending}
+            />
+          </label>
+        )}
 
         <label className="grid gap-2 text-sm text-ink-muted">
           Password
