@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { Chevron, coverStyle, place, SIDE, useDeck } from "@/components/deck";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { PlayCard } from "@/components/play-card";
 import { SoundToggle } from "@/components/sound-toggle";
@@ -109,11 +110,12 @@ function scrollToSlide(root: HTMLElement, index: number, behavior: ScrollBehavio
 
 /**
  * Where the sheet shrinks back to: the card the episode was opened from when it
- * is still on the page, otherwise the card at the episode's slot in the rail
- * (direct `/story/[slug]` visits never clicked a card).
+ * is still on the page, otherwise the cover at the episode's slot in the deck
+ * (direct `/story/[slug]` visits never clicked a card). That cover is the open
+ * one, so its box is not leaning or scaled.
  */
 function cardRect(
-  rail: HTMLElement | null,
+  stage: HTMLElement | null,
   episodes: readonly StoryEpisodeCard[],
   episode: StoryEpisodeCard,
   card: HTMLElement | null,
@@ -123,12 +125,11 @@ function cardRect(
     return card.getBoundingClientRect();
   }
   const index = episodes.findIndex((item) => item.id === episode.id) + offset;
-  const slide = rail?.querySelector<HTMLElement>(`[data-story-slide="${index}"]`);
-  const target = slide?.querySelector<HTMLElement>(".story-rail-frame") ?? slide ?? null;
-  if (!target || target.offsetWidth < 8) {
+  const slide = stage?.querySelector<HTMLElement>(`[data-story-slide="${index}"]`);
+  if (!slide || slide.offsetWidth < 8) {
     return null;
   }
-  return target.getBoundingClientRect();
+  return slide.getBoundingClientRect();
 }
 
 function openingChapterIndex(episodes: readonly StoryEpisodeCard[], slug?: string) {
@@ -164,8 +165,6 @@ export function StoryShelf({
 }) {
   const router = useRouter();
   const titleId = useId();
-  const railRef = useRef<HTMLDivElement>(null);
-  const aligned = useRef(false);
   /** Slides ahead of the first episode. */
   const offset = tutorial ? 1 : 0;
   /** The story waits for the tutorial. */
@@ -219,45 +218,39 @@ export function StoryShelf({
   // The theme plays under the shelf and the episode sheet, and steps aside for a run.
   useStoryTheme(playing !== null);
 
-  const syncFromRail = useCallback(() => {
-    const root = railRef.current;
-    if (!root) {
-      return;
-    }
-    const slides = [...root.querySelectorAll<HTMLElement>("[data-story-slide]")];
-    if (slides.length === 0) {
-      return;
-    }
-    const mid = root.scrollLeft + root.clientWidth / 2;
-    const span = Math.max(root.clientWidth, 1);
-    let best = 0;
-    let bestDist = Number.POSITIVE_INFINITY;
-    for (const slide of slides) {
-      const index = Number(slide.dataset.storySlide);
-      const center = slide.offsetLeft + slide.offsetWidth / 2;
-      const dist = Math.abs(center - mid);
-      const weight = Math.max(0, 1 - dist / span);
-      const plate = platesRef.current[index];
-      if (plate) {
-        plate.style.opacity = String(weight * weight);
-        // Plates that cannot be seen are not composited either.
-        plate.style.visibility = weight < 0.03 ? "hidden" : "";
+  /**
+   * The bloom behind the deck is the open cover's photo. `pos` is the rack's
+   * position in covers, fractional mid-drag, so two plates cross-fade under a
+   * finger that is halfway between episodes.
+   */
+  const paintPlates = useCallback((pos: number) => {
+    platesRef.current.forEach((plate, index) => {
+      if (!plate) {
+        return;
       }
-      if (Number.isInteger(index) && dist < bestDist) {
-        bestDist = dist;
-        best = index;
-      }
-    }
-    setActive((current) => (current === best ? current : best));
+      const weight = Math.max(0, 1 - Math.abs(index - pos));
+      plate.style.opacity = String(weight * weight);
+      // Plates that cannot be seen are not composited either.
+      plate.style.visibility = weight < 0.03 ? "hidden" : "";
+    });
   }, []);
 
-  const scrollRail = useCallback((index: number, behavior: ScrollBehavior) => {
-    const root = railRef.current;
-    if (!root) {
-      return;
-    }
-    scrollToSlide(root, index, behavior);
-  }, []);
+  const {
+    stageRef,
+    coverRef,
+    go: goTo,
+    last: lastSlide,
+    stageProps,
+  } = useDeck({
+    count: shelf.length + offset,
+    active,
+    onChange: setActive,
+    onPaint: paintPlates,
+  });
+
+  useEffect(() => {
+    paintPlates(active);
+  }, [active, paintPlates]);
 
   const syncFromChapterRail = useCallback(() => {
     if (!chapterAligned.current) {
@@ -302,52 +295,17 @@ export function StoryShelf({
     setShelf(episodes);
   }, [episodes]);
 
-  useLayoutEffect(() => {
-    if (aligned.current) {
+  useEffect(() => {
+    if (!open) {
       return;
     }
-    scrollRail(active, "auto");
-    aligned.current = true;
-    syncFromRail();
-  }, [active, scrollRail, syncFromRail]);
-
-  useEffect(() => {
     const onResize = () => {
-      scrollRail(active, "auto");
-      syncFromRail();
-      if (open) {
-        scrollChapterRail(chapterTargetRef.current, "auto");
-        syncFromChapterRail();
-      }
+      scrollChapterRail(chapterTargetRef.current, "auto");
+      syncFromChapterRail();
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [active, open, scrollChapterRail, scrollRail, syncFromChapterRail, syncFromRail]);
-
-  useEffect(() => {
-    const root = railRef.current;
-    if (!root) {
-      return;
-    }
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) {
-        return;
-      }
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        syncFromRail();
-      });
-    };
-    root.addEventListener("scroll", onScroll, { passive: true });
-    syncFromRail();
-    return () => {
-      root.removeEventListener("scroll", onScroll);
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [shelf.length, syncFromRail]);
+  }, [open, scrollChapterRail, syncFromChapterRail]);
 
   useLayoutEffect(() => {
     if (!open || !grown) {
@@ -471,7 +429,7 @@ export function StoryShelf({
       return;
     }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const target = open ? cardRect(railRef.current, shelf, open, originCardRef.current, offset) : null;
+    const target = open ? cardRect(stageRef.current, shelf, open, originCardRef.current, offset) : null;
     if (!target || reduced) {
       finishClose();
       return;
@@ -485,7 +443,7 @@ export function StoryShelf({
     setOrigin(target);
     setGrown(false);
     setClosing(true);
-  }, [closing, finishClose, offset, open, shelf]);
+  }, [closing, finishClose, offset, open, shelf, stageRef]);
 
   useEffect(() => {
     if (!closing) {
@@ -561,12 +519,6 @@ export function StoryShelf({
     return () => window.removeEventListener("keydown", onKey);
   }, [cleared, closeSheet, intro, lost, open, playing]);
 
-  const goTo = useCallback((index: number) => {
-    const next = Math.max(0, Math.min(shelf.length - 1 + offset, index));
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scrollRail(next, reduced ? "auto" : "smooth");
-  }, [offset, scrollRail, shelf.length]);
-
   // Fresh from the tutorial: let the card land, then carry the player on to
   // the first episode, now unlocked. The query is dropped so a reload stays put.
   const arrived = useRef(false);
@@ -596,6 +548,10 @@ export function StoryShelf({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
+      // A focused cover already turned the deck itself.
+      if (event.defaultPrevented) {
+        return;
+      }
       if (event.key === "ArrowRight") {
         event.preventDefault();
         if (open) {
@@ -723,37 +679,37 @@ export function StoryShelf({
       ) : null}
 
       <div
-        ref={railRef}
-        className="story-rail"
-        role="region"
+        {...stageProps}
+        className="story-deck"
+        role="group"
         aria-roledescription="carousel"
         aria-label="Episodes"
       >
         {tutorial ? (
-          <div
-            className="story-rail-item"
-            data-story-slide={0}
-            aria-current={active === 0 ? "true" : undefined}
+          <StoryCover
+            slide={0}
+            active={active}
+            label="Tutorial, How to Play"
+            coverRef={coverRef(0)}
+            onTurn={goTo}
           >
-            <div className="story-rail-frame">
-              <PlayCard
-                href={TUTORIAL_PATH}
-                kicker="00"
-                title="How to Play"
-                body={
-                  tutorial.done
-                    ? "Done. Replay it any time."
-                    : "The paddle, the first two bricks, a zone. About two minutes."
-                }
-                action={tutorial.done ? "Replay" : "Start"}
-                levels={TUTORIAL_LEVELS}
-                seed={7}
-                fill
-                aura={false}
-                paused={covered}
-              />
-            </div>
-          </div>
+            <PlayCard
+              href={TUTORIAL_PATH}
+              kicker="00"
+              title="How to Play"
+              body={
+                tutorial.done
+                  ? "Done. Replay it any time."
+                  : "The paddle, the first two bricks, a zone. About two minutes."
+              }
+              action={tutorial.done ? "Replay" : "Start"}
+              levels={TUTORIAL_LEVELS}
+              seed={7}
+              fill
+              aura={false}
+              paused={covered || Math.abs(active) >= SIDE}
+            />
+          </StoryCover>
         ) : null}
         {shelf.map((episode, index) => {
           const locked = gate || episodeIsLocked(shelf, index);
@@ -761,61 +717,81 @@ export function StoryShelf({
           const progress = episodeProgress(episode);
           const slide = index + offset;
           return (
-            <div
+            <StoryCover
               key={episode.id}
-              className="story-rail-item"
-              data-story-slide={slide}
-              aria-current={slide === active ? "true" : undefined}
+              slide={slide}
+              active={active}
+              label={`Episode ${index + 1}, ${episode.title}`}
+              coverRef={coverRef(slide)}
+              onTurn={goTo}
             >
-              <div className="story-rail-frame">
-                <PlayCard
-                  kicker={String(index + 1).padStart(2, "0")}
-                  title={episode.title}
-                  body={episode.tagline ?? chapterLabel(progress.cleared, progress.total)}
-                  meta={episode.tagline ? chapterLabel(progress.cleared, progress.total) : undefined}
-                  action="Play"
-                  levels={previewLevels(episode)}
-                  seed={11 + index}
-                  cover={episode.backgroundUrl}
-                  locked={locked}
-                  lockedHint={hint ?? undefined}
-                  fill
-                  aura={false}
-                  progress={progress}
-                  stars={progress.starValue}
-                  paused={covered}
-                  onSelect={locked ? undefined : (card) => openEpisode(episode, card)}
-                />
-              </div>
-            </div>
+              <PlayCard
+                kicker={String(index + 1).padStart(2, "0")}
+                title={episode.title}
+                body={episode.tagline ?? chapterLabel(progress.cleared, progress.total)}
+                meta={episode.tagline ? chapterLabel(progress.cleared, progress.total) : undefined}
+                action="Play"
+                levels={previewLevels(episode)}
+                seed={11 + index}
+                cover={episode.backgroundUrl}
+                locked={locked}
+                lockedHint={hint ?? undefined}
+                fill
+                aura={false}
+                progress={progress}
+                stars={progress.starValue}
+                paused={covered || Math.abs(slide - active) >= SIDE}
+                onSelect={locked ? undefined : (card) => openEpisode(episode, card)}
+              />
+            </StoryCover>
           );
         })}
       </div>
 
       <div className="story-page-foot">
         {shelf.length + offset > 1 ? (
-          <div className="story-dots" role="tablist" aria-label="Episode position">
-            {tutorial ? (
-              <button
-                type="button"
-                className="story-dot"
-                role="tab"
-                aria-selected={active === 0}
-                aria-label="Tutorial, How to Play"
-                onClick={() => goTo(0)}
-              />
-            ) : null}
-            {shelf.map((episode, index) => (
-              <button
-                key={episode.id}
-                type="button"
-                className="story-dot"
-                role="tab"
-                aria-selected={index + offset === active}
-                aria-label={`Episode ${index + 1}, ${episode.title}`}
-                onClick={() => goTo(index + offset)}
-              />
-            ))}
+          <div className="story-deck-nav">
+            <button
+              type="button"
+              className="lore-arrow"
+              aria-label="Previous episode"
+              disabled={active === 0}
+              onClick={() => goTo(active - 1)}
+            >
+              <Chevron direction="left" />
+            </button>
+            <div className="story-dots" role="tablist" aria-label="Episode position">
+              {tutorial ? (
+                <button
+                  type="button"
+                  className="story-dot"
+                  role="tab"
+                  aria-selected={active === 0}
+                  aria-label="Tutorial, How to Play"
+                  onClick={() => goTo(0)}
+                />
+              ) : null}
+              {shelf.map((episode, index) => (
+                <button
+                  key={episode.id}
+                  type="button"
+                  className="story-dot"
+                  role="tab"
+                  aria-selected={index + offset === active}
+                  aria-label={`Episode ${index + 1}, ${episode.title}`}
+                  onClick={() => goTo(index + offset)}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              className="lore-arrow"
+              aria-label="Next episode"
+              disabled={active === lastSlide}
+              onClick={() => goTo(active + 1)}
+            >
+              <Chevron direction="right" />
+            </button>
           </div>
         ) : null}
         <Link href={GAME_MENU_PATH} className="nav-link inline-flex min-h-11 items-center">
@@ -1047,6 +1023,54 @@ export function StoryShelf({
             portal,
           )
         : null}
+    </div>
+  );
+}
+
+/**
+ * One cover in the episode deck. The open one is the live card; the others lean
+ * back in its shade, inert, under a plain button that turns the deck to them.
+ */
+function StoryCover({
+  slide,
+  active,
+  label,
+  coverRef,
+  onTurn,
+  children,
+}: {
+  slide: number;
+  active: number;
+  label: string;
+  coverRef: (node: HTMLDivElement | null) => void;
+  onTurn: (index: number) => void;
+  children: ReactNode;
+}) {
+  const placement = place(slide - active);
+  const isOpen = slide === active;
+  const hidden = placement.opacity === 0;
+  return (
+    <div
+      ref={coverRef}
+      className="story-deck-cover"
+      data-story-slide={slide}
+      data-open={isOpen ? "true" : undefined}
+      style={coverStyle(placement)}
+      aria-current={isOpen ? "true" : undefined}
+      aria-hidden={hidden ? "true" : undefined}
+    >
+      <div className="story-deck-frame" inert={!isOpen}>
+        {children}
+      </div>
+      {isOpen ? null : (
+        <button
+          type="button"
+          className="story-deck-turn"
+          aria-label={`Show ${label}`}
+          tabIndex={-1}
+          onClick={() => onTurn(slide)}
+        />
+      )}
     </div>
   );
 }

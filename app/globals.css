@@ -1150,6 +1150,7 @@ html[data-theme="dark"] {
 
 .story-page-copy,
 .story-rail,
+.story-deck,
 .story-page-foot {
   position: relative;
   z-index: 1;
@@ -1255,6 +1256,111 @@ html[data-theme="dark"] {
   .story-rail-item {
     flex-basis: 100%;
   }
+}
+
+/* The episode deck: the same booklet as the home page, cards only. It takes
+   the rail's slot and sizes the open cover from whichever is tighter, the
+   height left under the title or the width of the page, so the neighbours
+   always show on both sides — on a phone as on a desktop. */
+.story-deck {
+  --deck-card: min(22rem, calc(100cqw - 3.75rem), calc(100cqh * 3 / 4));
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.7rem;
+  container-type: size;
+  perspective: 1400px;
+  touch-action: pan-y;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.story-deck[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.story-deck-cover {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--deck-card);
+  aspect-ratio: 3 / 4;
+  margin: calc(var(--deck-card) * -2 / 3) 0 0 calc(var(--deck-card) / -2);
+  border-radius: 1.6rem;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition:
+    transform 360ms var(--ease),
+    opacity 360ms var(--ease);
+}
+
+.story-deck[data-dragging="true"] .story-deck-cover {
+  transition: none;
+}
+
+.story-deck-frame {
+  position: absolute;
+  inset: 0;
+}
+
+/* The open card lifts on hover like every mode card; a leaning cover must not. */
+.story-deck-cover:not([data-open="true"]) .mode-card:hover {
+  transform: none;
+}
+
+.story-deck-cover img,
+.story-deck-cover canvas {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Covers behind the open one sit in its shade. Its own compositor layer: the
+   shade changes on every frame of a drag and must not repaint the card. */
+.story-deck-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border-radius: inherit;
+  background: #0b0d1a;
+  opacity: var(--deck-dim, 0);
+  pointer-events: none;
+  will-change: opacity;
+  transition: opacity 360ms var(--ease);
+}
+
+.story-deck[data-dragging="true"] .story-deck-cover::after {
+  transition: none;
+}
+
+/* The copy only reads on the card facing the player; it fades as the cover leans away. */
+.story-deck-cover .mode-card-copy {
+  opacity: calc(1 - var(--deck-dim, 0) * 2.4);
+  will-change: opacity;
+  transition: opacity 360ms var(--ease);
+}
+
+.story-deck[data-dragging="true"] .story-deck-cover .mode-card-copy {
+  transition: none;
+}
+
+/* A tap on a leaning cover turns the deck to it instead of opening it. */
+.story-deck-turn {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.story-deck-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .story-page-foot {
@@ -2846,7 +2952,10 @@ html[data-theme="dark"] .lore-halo-photo {
   .lore-cover::after,
   .lore-cover-copy,
   .lore-halo-plate,
-  .lore-arrow {
+  .lore-arrow,
+  .story-deck-cover,
+  .story-deck-cover::after,
+  .story-deck-cover .mode-card-copy {
     transition: none !important;
   }
 
