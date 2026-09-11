@@ -6,6 +6,7 @@ import {
   useId,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
@@ -13,6 +14,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { STORY_PATH } from "@/lib/auth/paths";
+import { ambientPhoto } from "@/lib/photo";
 
 export type LoreEpisode = {
   /** "01" … "08", as printed on the cover. */
@@ -25,7 +27,7 @@ export type LoreEpisode = {
   cover: string | null;
 };
 
-/** Covers kept in the rack on each side of the open one. */
+/** Covers kept in the rack on each side of the open one; the last one is fading out. */
 const SIDE = 3;
 /** A press that travels further than this is a drag, not a tap. */
 const DRAG_START = 6;
@@ -34,11 +36,21 @@ const TURN_AT = 0.25;
 /** A flick this fast (px/ms) turns the page whatever the distance. */
 const FLICK = 0.45;
 
+type Placement = {
+  transform: string;
+  opacity: number;
+  zIndex: number;
+  /** How deep in the open cover's shade this one sits, 0–1. */
+  dim: number;
+};
+
 /**
  * Where a cover sits for its distance `d` from the open one (negative = to the
  * left). Fractions of `d` fall out of a drag, so every value is continuous.
+ * Covers stay opaque up to two places back (no see-through stack); the third
+ * melts away quickly and anything further is not drawn at all.
  */
-function place(d: number) {
+function place(d: number): Placement {
   const a = Math.abs(d);
   const s = Math.sign(d);
   const lean = Math.min(a, 1);
@@ -46,13 +58,32 @@ function place(d: number) {
   const x = s * (lean * 0.58 + deep * 0.2);
   const rotate = -s * lean * 30;
   const scale = 1 - lean * 0.12 - deep * 0.05;
-  const opacity = a > SIDE + 0.6 ? 0 : Math.max(0, 1 - deep * 0.3);
+  const opacity = a <= SIDE - 1 ? 1 : Math.max(0, SIDE - a);
   return {
-    transform: `translateX(calc(${x.toFixed(4)} * var(--lore-card))) rotateY(${rotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
+    transform: `translateX(calc(${x.toFixed(4)} * var(--lore-card) * var(--lore-spread, 1))) rotateY(${rotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
     opacity,
     zIndex: 20 - Math.round(a),
-    dim: lean * 0.4 + deep * 0.12,
+    dim: Math.min(1, lean * 0.45 + deep * 0.16),
   };
+}
+
+function coverStyle(p: Placement): CSSProperties {
+  return {
+    transform: p.transform,
+    opacity: p.opacity,
+    zIndex: p.zIndex,
+    visibility: p.opacity === 0 ? "hidden" : undefined,
+    ["--lore-dim" as string]: p.dim,
+  };
+}
+
+/** The same values as `coverStyle`, written straight to the element mid-drag. */
+function paintCover(el: HTMLElement, p: Placement) {
+  el.style.transform = p.transform;
+  el.style.opacity = String(p.opacity);
+  el.style.zIndex = String(p.zIndex);
+  el.style.visibility = p.opacity === 0 ? "hidden" : "";
+  el.style.setProperty("--lore-dim", String(p.dim));
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -78,16 +109,18 @@ type Drag = {
   velocity: number;
   width: number;
   moved: boolean;
+  /** Where the rack is under the finger, in covers. */
+  pos: number;
 };
 
 export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
   const pageId = useId();
   const stageRef = useRef<HTMLDivElement>(null);
+  const coverRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const dragRef = useRef<Drag | null>(null);
+  const frameRef = useRef(0);
   const suppressClick = useRef(false);
   const [active, setActive] = useState(0);
-  /** Offset from `active`, in covers, while a finger holds the rack. */
-  const [shift, setShift] = useState(0);
   const [dragging, setDragging] = useState(false);
   const last = episodes.length - 1;
 
@@ -98,11 +131,37 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
     [last],
   );
 
+  /**
+   * Mid-drag the covers are moved by hand, once per frame, without a React
+   * render: pointer events can arrive at 120 Hz and eight covers with photos
+   * are not worth reconciling for every one of them.
+   */
+  const paint = useCallback((pos: number) => {
+    coverRefs.current.forEach((el, index) => {
+      if (el) {
+        paintCover(el, place(index - pos));
+      }
+    });
+  }, []);
+
+  const schedulePaint = useCallback(() => {
+    if (frameRef.current) {
+      return;
+    }
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = 0;
+      const drag = dragRef.current;
+      if (drag) {
+        paint(drag.pos);
+      }
+    });
+  }, [paint]);
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || dragRef.current) {
       return;
     }
-    const cover = stageRef.current?.querySelector<HTMLElement>(".lore-cover");
+    const cover = coverRefs.current[active];
     dragRef.current = {
       id: event.pointerId,
       startX: event.clientX,
@@ -111,6 +170,7 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
       velocity: 0,
       width: Math.max(cover?.offsetWidth ?? 280, 1),
       moved: false,
+      pos: active,
     };
   };
 
@@ -130,6 +190,8 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
       } catch {
         // A pointer the browser no longer knows about: the drag still works from the stage.
       }
+      // Transitions off at once, before the first hand-moved frame lands.
+      event.currentTarget.dataset.dragging = "true";
       setDragging(true);
     }
     const dt = Math.max(1, event.timeStamp - drag.lastT);
@@ -138,8 +200,8 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
     drag.lastX = event.clientX;
     drag.lastT = event.timeStamp;
     // Pulling right brings the previous cover forward: the rack moves with the hand.
-    const pos = rubber(active - dx / drag.width, last);
-    setShift(pos - active);
+    drag.pos = rubber(active - dx / drag.width, last);
+    schedulePaint();
   };
 
   const endDrag = (event: PointerEvent<HTMLDivElement>) => {
@@ -154,6 +216,10 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    if (frameRef.current) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = 0;
+    }
     // The tap that ends a drag is not a tap on a cover.
     suppressClick.current = true;
     window.setTimeout(() => {
@@ -166,8 +232,11 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
       const direction = Math.abs(travelled) >= TURN_AT ? Math.sign(travelled) : -Math.sign(drag.velocity);
       next = active + direction * Math.max(1, Math.round(Math.abs(travelled)));
     }
+    next = clamp(next, 0, last);
+    // Transitions back on, then the covers glide from under the finger to their slots.
+    delete event.currentTarget.dataset.dragging;
+    paint(next);
     setDragging(false);
-    setShift(0);
     go(next);
   };
 
@@ -200,35 +269,61 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
     }
   };
 
-  // A finger that leaves for the page scroll (pointercancel) must not leave the rack half-turned.
+  // A finger that leaves for the page scroll (pointercancel) or a tab switch
+  // must not leave the rack half-turned.
   useEffect(() => {
     if (!dragging) {
       return;
     }
     const reset = () => {
       dragRef.current = null;
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = 0;
+      }
+      delete stageRef.current?.dataset.dragging;
+      paint(active);
       setDragging(false);
-      setShift(0);
     };
     window.addEventListener("blur", reset);
     return () => window.removeEventListener("blur", reset);
-  }, [dragging]);
+  }, [active, dragging, paint]);
 
-  const pos = active + shift;
+  useEffect(
+    () => () => {
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    },
+    [],
+  );
+
   const open = episodes[active];
 
   return (
     <>
       <div className="lore-halo" aria-hidden="true">
-        {episodes.map((episode, index) => (
-          <div key={episode.slug} className="lore-halo-plate" data-on={index === active ? "true" : undefined}>
-            {episode.cover ? (
-              <Image src={episode.cover} alt="" width={64} height={114} sizes="64px" className="lore-halo-photo" />
-            ) : (
-              <div className="lore-halo-fallback" />
-            )}
-          </div>
-        ))}
+        {episodes.map((episode, index) => {
+          const ambient = episode.cover ? ambientPhoto(episode.cover) : null;
+          return (
+            <div key={episode.slug} className="lore-halo-plate" data-on={index === active ? "true" : undefined}>
+              {episode.cover && ambient ? (
+                <Image
+                  src={ambient}
+                  alt=""
+                  width={64}
+                  height={114}
+                  sizes="64px"
+                  className="lore-halo-photo"
+                  // Cloudinary already served a 64px, server-blurred thumbnail.
+                  unoptimized={ambient !== episode.cover}
+                />
+              ) : (
+                <div className="lore-halo-fallback" />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="lore-grid">
@@ -247,16 +342,19 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
           onKeyDown={onKeyDown}
         >
           {episodes.map((episode, index) => {
-            const { transform, opacity, zIndex, dim } = place(index - pos);
+            const placement = place(index - active);
             const isOpen = index === active;
-            const hidden = opacity === 0;
+            const hidden = placement.opacity === 0;
             return (
               <button
                 key={episode.slug}
+                ref={(node) => {
+                  coverRefs.current[index] = node;
+                }}
                 type="button"
                 className="lore-cover"
                 data-open={isOpen ? "true" : undefined}
-                style={{ transform, opacity, zIndex, visibility: hidden ? "hidden" : undefined, ["--lore-dim" as string]: dim }}
+                style={coverStyle(placement)}
                 aria-label={isOpen ? `Episode ${episode.index}, ${episode.title}. Turn the page.` : `Open episode ${episode.index}, ${episode.title}.`}
                 aria-current={isOpen ? "true" : undefined}
                 aria-hidden={hidden ? "true" : undefined}
@@ -268,7 +366,7 @@ export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
                     src={episode.cover}
                     alt=""
                     fill
-                    sizes="(min-width: 1024px) 20rem, (min-width: 640px) 18rem, 64vw"
+                    sizes="(min-width: 1024px) 18rem, (min-width: 640px) 18rem, 64vw"
                     className="object-cover"
                     draggable={false}
                   />

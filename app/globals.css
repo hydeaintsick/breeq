@@ -2492,13 +2492,13 @@ html[data-theme="dark"] .story-ambient-scrim {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  contain: strict;
 }
 
+/* Only the open cover's plate (and the one fading out under it) is drawn. */
 .lore-halo-plate {
   position: absolute;
-  inset: -12%;
+  inset: -8%;
   opacity: 0;
   visibility: hidden;
   transition:
@@ -2512,8 +2512,10 @@ html[data-theme="dark"] .story-ambient-scrim {
   transition-delay: 0s;
 }
 
-/* A 64px thumbnail stretched over the section: the browser's upscale does most
-   of the blur, the filter only smooths the blocks. Cheap on a phone GPU. */
+/* A 64px thumbnail, blurred on the server, stretched over the section: the
+   browser's upscale is the bloom, the small filter only hides the blocks. A
+   large CSS blur over a section-sized layer is the one thing a phone GPU
+   cannot afford here (see .story-ambient-wash). */
 .lore-halo-photo,
 .lore-halo-fallback {
   position: absolute;
@@ -2524,21 +2526,25 @@ html[data-theme="dark"] .story-ambient-scrim {
 
 .lore-halo-photo {
   object-fit: cover;
-  filter: blur(34px) saturate(2.2) brightness(2) contrast(1.04);
+  filter: blur(14px) saturate(2.2) brightness(2) contrast(1.04);
   opacity: 0.42;
 }
 
-/* The bloom is brightest behind the rack and thins out toward the copy. */
+/* The bloom is brightest behind the rack, thins out toward the copy, and
+   fades into the page above and below. Gradients, not a mask: a mask costs a
+   render surface the size of the section on every frame. */
 .lore-halo::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse 78% 70% at 50% 42%,
-    transparent 0%,
-    color-mix(in srgb, var(--bg) 45%, transparent) 55%,
-    color-mix(in srgb, var(--bg) 80%, transparent) 100%
-  );
+  background:
+    linear-gradient(180deg, var(--bg) 0%, transparent 22%, transparent 78%, var(--bg) 100%),
+    radial-gradient(
+      ellipse 78% 70% at 50% 42%,
+      transparent 0%,
+      color-mix(in srgb, var(--bg) 45%, transparent) 55%,
+      color-mix(in srgb, var(--bg) 80%, transparent) 100%
+    );
 }
 
 .lore-halo-fallback {
@@ -2549,7 +2555,7 @@ html[data-theme="dark"] .story-ambient-scrim {
 }
 
 html[data-theme="dark"] .lore-halo-photo {
-  filter: blur(34px) saturate(1.9) brightness(1.15) contrast(1.1);
+  filter: blur(14px) saturate(1.9) brightness(1.15) contrast(1.1);
   opacity: 0.5;
 }
 
@@ -2616,7 +2622,8 @@ html[data-theme="dark"] .lore-halo-photo {
   -webkit-user-drag: none;
 }
 
-/* Covers behind the open one sit in its shade. */
+/* Covers behind the open one sit in its shade. Its own compositor layer: the
+   shade changes on every frame of a drag and must not repaint the photo. */
 .lore-cover::after {
   content: "";
   position: absolute;
@@ -2625,6 +2632,7 @@ html[data-theme="dark"] .lore-halo-photo {
   background: #0b0d1a;
   opacity: var(--lore-dim, 0);
   pointer-events: none;
+  will-change: opacity;
   transition: opacity 360ms var(--ease);
 }
 
@@ -2660,7 +2668,8 @@ html[data-theme="dark"] .lore-halo-photo {
   background: linear-gradient(180deg, transparent 0%, rgba(11, 13, 26, 0.55) 30%, rgba(11, 13, 26, 0.94) 100%);
   text-shadow: 0 1px 16px rgba(11, 13, 26, 0.85);
   /* The title only reads on the cover facing the reader; it fades as the cover leans away. */
-  opacity: calc(1 - var(--lore-dim, 0) * 2.6);
+  opacity: calc(1 - var(--lore-dim, 0) * 2.4);
+  will-change: opacity;
   transition: opacity 360ms var(--ease);
 }
 
@@ -2757,8 +2766,10 @@ html[data-theme="dark"] .lore-halo-photo {
 
 @media (min-width: 1024px) {
   .lore-grid {
-    --lore-card: 20rem;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+    --lore-card: 18rem;
+    /* A tighter fan: the far covers stay inside the rack's column, clear of the copy. */
+    --lore-spread: 0.82;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
     align-items: center;
     gap: 3rem;
     margin-top: 3.5rem;
