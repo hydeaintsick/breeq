@@ -144,6 +144,7 @@ export function StoryShelf({
   title,
   body,
   tutorial = null,
+  arriveFromTutorial = false,
 }: {
   episodes: StoryEpisodeCard[];
   initialSlug?: string;
@@ -152,6 +153,8 @@ export function StoryShelf({
   body?: string;
   /** Show the how-to-play slide first; episodes stay locked until it is done. */
   tutorial?: ShelfTutorial | null;
+  /** The player just finished the tutorial: open on its card, then swipe to episode one. */
+  arriveFromTutorial?: boolean;
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -162,7 +165,9 @@ export function StoryShelf({
   /** The story waits for the tutorial. */
   const gate = tutorial !== null && !tutorial.done;
   const [shelf, setShelf] = useState(episodes);
-  const [active, setActive] = useState(() => (gate ? 0 : continueIndex(episodes, initialSlug) + offset));
+  const [active, setActive] = useState(() =>
+    gate || (arriveFromTutorial && offset > 0) ? 0 : continueIndex(episodes, initialSlug) + offset,
+  );
   const [open, setOpen] = useState<StoryEpisodeCard | null>(() => {
     const episode = episodes.find((item) => item.slug === initialSlug);
     if (!episode || gate) {
@@ -540,6 +545,21 @@ export function StoryShelf({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     scrollRail(next, reduced ? "auto" : "smooth");
   }, [offset, scrollRail, shelf.length]);
+
+  // Fresh from the tutorial: let the card land, then carry the player on to
+  // the first episode, now unlocked. The query is dropped so a reload stays put.
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (!arriveFromTutorial || offset === 0 || arrived.current) {
+      return;
+    }
+    window.history.replaceState(window.history.state, "", STORY_PATH);
+    const id = window.setTimeout(() => {
+      arrived.current = true;
+      goTo(offset);
+    }, 700);
+    return () => window.clearTimeout(id);
+  }, [arriveFromTutorial, goTo, offset]);
 
   const goToChapter = useCallback((index: number) => {
     if (!open) {

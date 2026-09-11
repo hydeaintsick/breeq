@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StoryShelf } from "@/components/story-shelf";
-import { GAME_MENU_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { GAME_MENU_PATH, STORY_FROM_TUTORIAL, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { requireProgress } from "@/lib/auth/session";
 import { getStoryShelf } from "@/lib/story";
 import { getTutorialStatus } from "@/lib/tutorial";
@@ -11,9 +11,18 @@ export const metadata: Metadata = {
   description: "Play the Breeq campaign, episode by episode.",
 };
 
-export default async function StoryPage() {
+export default async function StoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
   const { user } = await requireProgress();
-  const [{ episodes }, tutorial] = await Promise.all([getStoryShelf(user.id), getTutorialStatus(user.id)]);
+  const [{ episodes }, tutorial, { from }] = await Promise.all([
+    getStoryShelf(user.id),
+    getTutorialStatus(user.id),
+    searchParams,
+  ]);
+  const fromTutorial = from === STORY_FROM_TUTORIAL && tutorial.enabled && tutorial.done;
 
   if (episodes.length === 0) {
     return (
@@ -43,6 +52,7 @@ export default async function StoryPage() {
     <StoryShelf
       episodes={episodes}
       tutorial={tutorial.enabled ? { done: tutorial.done } : null}
+      arriveFromTutorial={fromTutorial}
       kicker="Story"
       title={
         <>

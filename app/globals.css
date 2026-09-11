@@ -588,34 +588,100 @@ html[data-theme="dark"] {
     outline-offset: 3px;
   }
 
+  /* Level meter: badge, label + XP, bar. One chip, same height as the others. */
   .rank-chip {
     display: inline-flex;
-    min-height: 2.75rem;
+    height: 2.75rem;
     max-width: 100%;
     align-items: center;
     gap: 0.6rem;
-    padding: 0 0.8rem 0 0.9rem;
+    padding: 0 0.85rem 0 0.35rem;
     border-radius: 999px;
     border: 1px solid var(--hairline);
     background: var(--field);
     color: var(--ink);
-    /* Three header chips beside it on a 360px phone: the label never wraps, the bar gives. */
+    /* Three header chips beside it on a 360px phone: the text never wraps, the bar gives. */
     white-space: nowrap;
   }
 
+  .rank-badge {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-violet));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 4px 12px -4px var(--neon-violet);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .rank-meter {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3rem;
+  }
+
+  .rank-meter-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    line-height: 1;
+  }
+
+  .rank-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+
+  .rank-xp {
+    display: none;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.66rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+  }
+
+  .rank-xp-sep {
+    margin: 0 0.25em;
+    opacity: 0.6;
+  }
+
   .rank-bar {
-    flex: 0 1 4.25rem;
-    min-width: 2rem;
-    width: 4.25rem;
-    height: 0.28rem;
+    width: 100%;
+    min-width: 2.75rem;
+    height: 0.25rem;
     overflow: hidden;
     border-radius: 999px;
     background: var(--hairline);
   }
 
   @media (min-width: 640px) {
-    .rank-bar {
-      width: 5.75rem;
+    .rank-chip {
+      gap: 0.7rem;
+      padding-right: 1rem;
+    }
+
+    .rank-meter {
+      width: 8.5rem;
+    }
+
+    .rank-xp {
+      display: inline;
     }
   }
 
@@ -1957,12 +2023,22 @@ html[data-theme="dark"] .story-ambient-scrim {
   animation-name: clear-in;
 }
 
-.tutorial-done-note {
-  margin-top: 1.4rem;
+/* What comes next, under the level meter; lands with the buttons. */
+.story-clear-next {
+  margin-top: 1.5rem;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.75);
-  animation: clear-rise 520ms var(--ease) 420ms both;
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 360ms var(--ease),
+    transform 360ms var(--ease);
+}
+
+.story-clear-next[data-show="true"] {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (min-width: 640px) {
@@ -2129,7 +2205,6 @@ html[data-theme="dark"] .story-ambient-scrim {
   .story-clear-spark,
   .story-ambient-drift,
   .tutorial-card,
-  .tutorial-done-note,
   .mode-card-board {
     animation: none !important;
   }
@@ -2139,6 +2214,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   .thumb-rail-ball,
   .story-clear-level,
   .story-clear-actions,
+  .story-clear-next,
   .tutorial-veil {
     transition: none !important;
   }

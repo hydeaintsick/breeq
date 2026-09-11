@@ -2,15 +2,20 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import type { ChapterClearResult } from "@/app/actions/progress";
 import { completeTutorial } from "@/app/actions/tutorial";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
+import { StoryClear } from "@/components/story-clear";
 import { StoryLose } from "@/components/story-lose";
 import type { GameEvent } from "@/game/breakout/engine/types";
 import { TUTORIAL } from "@/game/breakout/levels";
 import type { BreakoutHandle, CssRect } from "@/game/breakout/preview";
-import { STORY_PATH } from "@/lib/auth/paths";
+import { STORY_AFTER_TUTORIAL_PATH, STORY_PATH } from "@/lib/auth/paths";
+
+const DONE_NOTE =
+  "Glass and hard bricks are just the start. Explosive, ghost, magnet, keys and locks, plus rings that speed the ball up, flip it, or split it in two, are all waiting in the story.";
 
 /**
  * The guided first run. A real game on the real board; the tutorial only
@@ -135,12 +140,15 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const seen = useRef<Set<StepId>>(new Set());
-  const saving = useRef<Promise<unknown> | null>(null);
   const actionRef = useRef<HTMLButtonElement>(null);
+  // Finishing refreshes the page with `done` flipped; the labels keep the
+  // state the player arrived with, so the button does not change under them.
+  const [firstVisit] = useState(() => !alreadyDone);
 
   const [step, setStep] = useState<Step | null>(WELCOME);
   const [menu, setMenu] = useState(false);
-  const [cleared, setCleared] = useState<{ score: number } | null>(null);
+  /** The wall came down: score is known at once, the payout arrives a beat later. */
+  const [cleared, setCleared] = useState<{ score: number; result: ChapterClearResult | null } | null>(null);
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
   const [runId, setRunId] = useState(0);
   const [hole, setHole] = useState<CssRect | null>(null);
@@ -193,8 +201,10 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
     endedRef.current = true;
     setStep(null);
     setMenu(false);
-    setCleared({ score });
-    saving.current = completeTutorial().catch(() => null);
+    setCleared({ score, result: null });
+    completeTutorial()
+      .then((result) => setCleared((current) => (current ? { ...current, result } : current)))
+      .catch(() => null);
   }, []);
 
   const onOver = useCallback(({ score, reason }: { human: boolean; score: number; reason: "lives" | "timeout" | "crushed" }) => {
@@ -323,9 +333,8 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   }, [cleared, lost]);
 
   const openStory = () => {
-    startOpening(async () => {
-      await saving.current;
-      router.push(STORY_PATH);
+    startOpening(() => {
+      router.push(firstVisit ? STORY_AFTER_TUTORIAL_PATH : STORY_PATH);
     });
   };
 
@@ -383,28 +392,20 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
       )}
 
       {cleared ? (
-        <div className="story-clear" role="dialog" aria-modal="true" aria-label="Tutorial complete">
-          <div className="story-clear-body">
-            <p className="story-clear-kicker">Tutorial complete</p>
-            <h2 className="story-clear-title">Nice work.</h2>
-            <div className="story-clear-score" data-done="true">
-              <span className="story-clear-label">Score</span>
-              <span className="story-clear-number">{cleared.score.toLocaleString("en-US")}</span>
-            </div>
-            <p className="tutorial-done-note">
-              Glass and hard bricks are just the start. Explosive, ghost, magnet, keys and locks, plus rings that
-              speed the ball up, flip it, or split it in two, are all waiting in the story.
-            </p>
-            <div className="story-clear-actions" data-show="true">
-              <button type="button" className="btn-play min-h-11 w-full" onClick={openStory} disabled={opening}>
-                {opening ? "Opening the story…" : alreadyDone ? "Back to the story" : "Start the story"}
-              </button>
-              <button type="button" className="btn-glass story-clear-glass min-h-11 w-full" onClick={() => restart(true)}>
-                Replay tutorial
-              </button>
-            </div>
-          </div>
-        </div>
+        <StoryClear
+          key={`cleared-${runId}`}
+          kicker="Tutorial complete"
+          title="Nice work."
+          score={cleared.score}
+          result={cleared.result}
+          hasNext
+          episodeDone={false}
+          note={DONE_NOTE}
+          nextLabel={opening ? "Opening the story…" : firstVisit ? "Start the story" : "Back to the story"}
+          closeLabel="Replay tutorial"
+          onNext={openStory}
+          onClose={() => restart(true)}
+        />
       ) : null}
 
       {lost ? (

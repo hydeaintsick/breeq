@@ -3,6 +3,9 @@ import type { Role } from "@/lib/auth/paths";
 /** XP granted each time the player clears a Story wall. */
 export const XP_PER_STORY_CLEAR = 100;
 
+/** XP granted once for finishing the how-to-play run. */
+export const XP_TUTORIAL_CLEAR = 50;
+
 /** Earn unlocks at this player level (admins bypass). */
 export const EARN_UNLOCK_LEVEL = 5;
 

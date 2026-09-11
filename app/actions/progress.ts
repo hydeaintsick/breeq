@@ -1,9 +1,12 @@
 "use server";
 
 import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
-import { progressFromXp, storyPercent, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
+import { GAME_ROOT_PATH } from "@/lib/auth/paths";
+import { campaignPercent } from "@/lib/campaign";
+import { progressFromXp, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
 
 /** What the clear screen animates: XP before → after, and the campaign bar. */
 export type ChapterClearResult = {
@@ -17,14 +20,6 @@ export type ChapterClearResult = {
   progress: Progress;
   storyPercent: number;
 };
-
-async function campaignPercent(userId: string) {
-  const [cleared, total] = await Promise.all([
-    prisma.chapterClear.count({ where: { userId } }),
-    prisma.chapter.count(),
-  ]);
-  return storyPercent(cleared, total);
-}
 
 async function replayResult(userId: string): Promise<ChapterClearResult> {
   const row = await prisma.user.findUnique({
@@ -92,6 +87,9 @@ export async function awardChapterClear(
         select: { xp: true },
       }),
     ]);
+
+    // The level meter lives in the game layout: refresh it with the payout.
+    revalidatePath(GAME_ROOT_PATH, "layout");
 
     return {
       firstClear: true,

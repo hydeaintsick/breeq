@@ -37,6 +37,10 @@ export function StoryClear({
   result,
   hasNext,
   episodeDone,
+  kicker: kickerOverride,
+  note,
+  nextLabel = "Next chapter",
+  closeLabel = "Close",
   onNext,
   onClose,
 }: {
@@ -47,6 +51,12 @@ export function StoryClear({
   hasNext: boolean;
   /** Every chapter of the episode is now cleared. */
   episodeDone: boolean;
+  /** Replaces the "Chapter cleared" line. */
+  kicker?: string;
+  /** A line under the level meter, for what comes next. */
+  note?: string;
+  nextLabel?: string;
+  closeLabel?: string;
   onNext: () => void;
   onClose: () => void;
 }) {
@@ -162,7 +172,7 @@ export function StoryClear({
   }, [result]);
 
   const level = shown?.level ?? null;
-  const kicker = episodeDone ? "Episode complete" : "Chapter cleared";
+  const kicker = kickerOverride ?? (episodeDone ? "Episode complete" : "Chapter cleared");
 
   return (
     <div
@@ -207,6 +217,12 @@ export function StoryClear({
           </div>
         </div>
 
+        {note ? (
+          <p className="story-clear-next" data-show={buttons}>
+            {note}
+          </p>
+        ) : null}
+
         <div className="story-clear-actions" data-show={buttons}>
           {hasNext ? (
             <button
@@ -217,7 +233,7 @@ export function StoryClear({
                 onNext();
               }}
             >
-              Next chapter
+              {nextLabel}
             </button>
           ) : null}
           <button
@@ -228,7 +244,7 @@ export function StoryClear({
               onClose();
             }}
           >
-            Close
+            {closeLabel}
           </button>
         </div>
       </div>
