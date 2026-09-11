@@ -46,6 +46,8 @@ export function BreakoutPreview({
   haptics = false,
   onCleared,
   onOver,
+  onEvent,
+  onHandle,
 }: {
   levels?: readonly Level[];
   start?: number;
@@ -69,6 +71,10 @@ export function BreakoutPreview({
   haptics?: boolean;
   onCleared?: MountOptions["onCleared"];
   onOver?: MountOptions["onOver"];
+  /** Every game event, for guided runs. Keep the identity stable (a ref) or the game remounts. */
+  onEvent?: MountOptions["onEvent"];
+  /** The mount handle once the board is live, `null` when it goes away. */
+  onHandle?: (handle: BreakoutHandle | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
@@ -76,6 +82,11 @@ export function BreakoutPreview({
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
   const first = levels[0] ?? DEFAULT_LEVELS[0];
+  // A board that (re)mounts while the surface is paused must start paused too.
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -89,6 +100,7 @@ export function BreakoutPreview({
       onHud: setHud,
       onCleared,
       onOver,
+      onEvent,
       start: queryStart,
       seed,
       controls,
@@ -100,11 +112,14 @@ export function BreakoutPreview({
       fit: contain ? fitRef.current : null,
     });
     handleRef.current = handle;
+    if (pausedRef.current) handle.pause();
+    onHandle?.(handle);
     return () => {
       handle.destroy();
       handleRef.current = null;
+      onHandle?.(null);
     };
-  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, onCleared, onOver]);
+  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, onCleared, onOver, onEvent, onHandle]);
 
   useEffect(() => {
     if (paused) {

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StoryShelf } from "@/components/story-shelf";
-import { GAME_MENU_PATH } from "@/lib/auth/paths";
+import { GAME_MENU_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { requireProgress } from "@/lib/auth/session";
 import { getStoryShelf } from "@/lib/story";
+import { getTutorialStatus } from "@/lib/tutorial";
 
 export const metadata: Metadata = {
   title: "Story",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function StoryPage() {
   const { user } = await requireProgress();
-  const { episodes } = await getStoryShelf(user.id);
+  const [{ episodes }, tutorial] = await Promise.all([getStoryShelf(user.id), getTutorialStatus(user.id)]);
 
   if (episodes.length === 0) {
     return (
@@ -24,9 +25,16 @@ export default async function StoryPage() {
         <p className="mt-4 max-w-xl text-lg leading-8 text-ink-muted">
           No episodes yet. Check back once the campaign is published.
         </p>
-        <Link href={GAME_MENU_PATH} className="nav-link mt-10 inline-flex min-h-11 items-center">
-          Back to modes
-        </Link>
+        <div className="mt-10 flex flex-wrap items-center gap-6">
+          {tutorial.enabled ? (
+            <Link href={TUTORIAL_PATH} className="btn-play min-h-11">
+              {tutorial.done ? "Replay the tutorial" : "Learn to play"}
+            </Link>
+          ) : null}
+          <Link href={GAME_MENU_PATH} className="nav-link inline-flex min-h-11 items-center">
+            Back to modes
+          </Link>
+        </div>
       </section>
     );
   }
@@ -34,13 +42,18 @@ export default async function StoryPage() {
   return (
     <StoryShelf
       episodes={episodes}
+      tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       kicker="Story"
       title={
         <>
           Choose an <span className="text-neon">episode</span>.
         </>
       }
-      body="Each episode is a run of walls. Finish one to unlock the next."
+      body={
+        tutorial.required
+          ? "Start with a two-minute tutorial. Then each episode is a run of walls: finish one to unlock the next."
+          : "Each episode is a run of walls. Finish one to unlock the next."
+      }
     />
   );
 }

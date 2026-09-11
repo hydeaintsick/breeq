@@ -8,15 +8,22 @@ import { EARN_UNLOCK_LEVEL } from "@/lib/progress";
 const STORY_LEVELS = [QUIET_START];
 const EARN_LEVELS = [LOCKDOWN];
 
-export function GameModePicker({ earnLocked }: { earnLocked: boolean }) {
+export function GameModePicker({
+  earnLocked,
+  tutorialRequired = false,
+}: {
+  earnLocked: boolean;
+  /** The tutorial is on and this player has not finished it: Story opens on it. */
+  tutorialRequired?: boolean;
+}) {
   return (
     <div className="grid w-full justify-items-stretch gap-6 md:grid-cols-2 md:justify-items-start">
       <PlayCard
         href={STORY_PATH}
         kicker="01"
         title="Story"
-        body="The campaign. One wall, then the next."
-        action="Play Story"
+        body={tutorialRequired ? "Starts with a two-minute tutorial, then the campaign." : "The campaign. One wall, then the next."}
+        action={tutorialRequired ? "Learn to play" : "Play Story"}
         levels={STORY_LEVELS}
         seed={11}
       />

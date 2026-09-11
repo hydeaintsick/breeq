@@ -3,6 +3,7 @@ export type Role = "PLAYER" | "ADMIN";
 export const AFTER_AUTH_PATH = "/auth/continue";
 export const GAME_MENU_PATH = "/game/menu";
 export const STORY_PATH = "/game/story";
+export const TUTORIAL_PATH = "/game/tutorial";
 export const EARN_PATH = "/game/earn";
 export const ACCOUNT_PATH = "/game/account";
 export const ADMIN_DASHBOARD_PATH = "/admin/dashboard";

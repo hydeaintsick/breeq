@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TutorialSetting } from "@/components/tutorial-setting";
 import { requireAdmin } from "@/lib/auth/session";
-import { ADMIN_EDITOR_PATH } from "@/lib/auth/paths";
+import { ADMIN_EDITOR_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { getSiteSettings } from "@/lib/tutorial";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 export default async function AdminDashboardPage() {
   const user = await requireAdmin();
   const label = user.username ?? user.name ?? "Admin";
+  const settings = await getSiteSettings();
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-4xl flex-col justify-center px-6 pb-20 pt-28">
@@ -39,6 +42,21 @@ export default async function AdminDashboardPage() {
         </li>
         <li className="glass p-6">
           <p className="font-mono text-xs tracking-[0.16em] text-accent">02</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
+            Tutorial
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            A guided first wall ahead of the story: the paddle, glass and hard bricks, a slow zone.
+            Players clear it once; you can{" "}
+            <Link href={TUTORIAL_PATH} className="underline underline-offset-4">
+              play it
+            </Link>{" "}
+            any time.
+          </p>
+          <TutorialSetting enabled={settings.tutorialEnabled} />
+        </li>
+        <li className="glass p-6">
+          <p className="font-mono text-xs tracking-[0.16em] text-accent">03</p>
           <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
             Players
           </h2>

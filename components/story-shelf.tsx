@@ -14,8 +14,8 @@ import { StoryPlay } from "@/components/story-play";
 import { useStoryTheme } from "@/components/use-story-theme";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
-import { QUIET_START } from "@/game/breakout/levels";
-import { GAME_MENU_PATH, STORY_PATH } from "@/lib/auth/paths";
+import { QUIET_START, TUTORIAL } from "@/game/breakout/levels";
+import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { ambientPhoto, boardPhoto, screenPhoto } from "@/lib/photo";
 import {
   chapterIsLocked,
@@ -30,6 +30,11 @@ import {
 } from "@/lib/story";
 
 const FALLBACK_LEVELS = [QUIET_START];
+const TUTORIAL_LEVELS = [TUTORIAL];
+const TUTORIAL_HINT = "Finish the tutorial first.";
+
+/** The how-to-play slide that sits ahead of the episodes while the tutorial is on. */
+export type ShelfTutorial = { done: boolean };
 
 function chapterLabel(cleared: number, total: number) {
   if (total <= 0) {
@@ -72,6 +77,7 @@ function previewLevels(episode: StoryEpisodeCard) {
     : FALLBACK_LEVELS;
 }
 
+/** Episode index → rail slide index (the tutorial, when shown, is slide 0). */
 function continueIndex(episodes: readonly StoryEpisodeCard[], slug?: string) {
   if (slug) {
     const match = episodes.findIndex((episode) => episode.slug === slug);
@@ -108,11 +114,12 @@ function cardRect(
   episodes: readonly StoryEpisodeCard[],
   episode: StoryEpisodeCard,
   card: HTMLElement | null,
+  offset: number,
 ): DOMRect | null {
   if (card?.isConnected) {
     return card.getBoundingClientRect();
   }
-  const index = episodes.findIndex((item) => item.id === episode.id);
+  const index = episodes.findIndex((item) => item.id === episode.id) + offset;
   const slide = rail?.querySelector<HTMLElement>(`[data-story-slide="${index}"]`);
   const target = slide?.querySelector<HTMLElement>(".story-rail-frame") ?? slide ?? null;
   if (!target || target.offsetWidth < 8) {
@@ -136,22 +143,29 @@ export function StoryShelf({
   kicker,
   title,
   body,
+  tutorial = null,
 }: {
   episodes: StoryEpisodeCard[];
   initialSlug?: string;
   kicker?: string;
   title?: ReactNode;
   body?: string;
+  /** Show the how-to-play slide first; episodes stay locked until it is done. */
+  tutorial?: ShelfTutorial | null;
 }) {
   const router = useRouter();
   const titleId = useId();
   const railRef = useRef<HTMLDivElement>(null);
   const aligned = useRef(false);
+  /** Slides ahead of the first episode. */
+  const offset = tutorial ? 1 : 0;
+  /** The story waits for the tutorial. */
+  const gate = tutorial !== null && !tutorial.done;
   const [shelf, setShelf] = useState(episodes);
-  const [active, setActive] = useState(() => continueIndex(episodes, initialSlug));
+  const [active, setActive] = useState(() => (gate ? 0 : continueIndex(episodes, initialSlug) + offset));
   const [open, setOpen] = useState<StoryEpisodeCard | null>(() => {
     const episode = episodes.find((item) => item.slug === initialSlug);
-    if (!episode) {
+    if (!episode || gate) {
       return null;
     }
     const index = episodes.findIndex((item) => item.id === episode.id);
@@ -435,7 +449,7 @@ export function StoryShelf({
       return;
     }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const target = open ? cardRect(railRef.current, shelf, open, originCardRef.current) : null;
+    const target = open ? cardRect(railRef.current, shelf, open, originCardRef.current, offset) : null;
     if (!target || reduced) {
       finishClose();
       return;
@@ -449,7 +463,7 @@ export function StoryShelf({
     setOrigin(target);
     setGrown(false);
     setClosing(true);
-  }, [closing, finishClose, open, shelf]);
+  }, [closing, finishClose, offset, open, shelf]);
 
   useEffect(() => {
     if (!closing) {
@@ -522,10 +536,10 @@ export function StoryShelf({
   }, [cleared, closeSheet, lost, open, playing]);
 
   const goTo = useCallback((index: number) => {
-    const next = Math.max(0, Math.min(shelf.length - 1, index));
+    const next = Math.max(0, Math.min(shelf.length - 1 + offset, index));
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     scrollRail(next, reduced ? "auto" : "smooth");
-  }, [scrollRail, shelf.length]);
+  }, [offset, scrollRail, shelf.length]);
 
   const goToChapter = useCallback((index: number) => {
     if (!open) {
@@ -563,7 +577,7 @@ export function StoryShelf({
 
   function openEpisode(episode: StoryEpisodeCard, card: HTMLElement) {
     const index = shelf.findIndex((item) => item.id === episode.id);
-    if (episodeIsLocked(shelf, index)) {
+    if (gate || episodeIsLocked(shelf, index)) {
       return;
     }
     const current = shelf[index] ?? episode;
@@ -650,7 +664,7 @@ export function StoryShelf({
 
   return (
     <div className="story-page" data-covered={covered ? "true" : undefined}>
-      <StoryAmbient episodes={shelf} platesRef={platesRef} />
+      <StoryAmbient episodes={shelf} offset={offset} platesRef={platesRef} />
       {kicker || title || body ? (
         <header className="story-page-copy">
           {kicker ? (
@@ -668,16 +682,43 @@ export function StoryShelf({
         aria-roledescription="carousel"
         aria-label="Episodes"
       >
+        {tutorial ? (
+          <div
+            className="story-rail-item"
+            data-story-slide={0}
+            aria-current={active === 0 ? "true" : undefined}
+          >
+            <div className="story-rail-frame">
+              <PlayCard
+                href={TUTORIAL_PATH}
+                kicker="00"
+                title="How to Play"
+                body={
+                  tutorial.done
+                    ? "Done. Replay it any time."
+                    : "The paddle, the first two bricks, a zone. About two minutes."
+                }
+                action={tutorial.done ? "Replay" : "Start"}
+                levels={TUTORIAL_LEVELS}
+                seed={7}
+                fill
+                aura={false}
+                paused={covered}
+              />
+            </div>
+          </div>
+        ) : null}
         {shelf.map((episode, index) => {
-          const locked = episodeIsLocked(shelf, index);
-          const hint = episodeLockHint(shelf, index);
+          const locked = gate || episodeIsLocked(shelf, index);
+          const hint = gate ? TUTORIAL_HINT : episodeLockHint(shelf, index);
           const progress = episodeProgress(episode);
+          const slide = index + offset;
           return (
             <div
               key={episode.id}
               className="story-rail-item"
-              data-story-slide={index}
-              aria-current={index === active ? "true" : undefined}
+              data-story-slide={slide}
+              aria-current={slide === active ? "true" : undefined}
             >
               <div className="story-rail-frame">
                 <PlayCard
@@ -703,17 +744,27 @@ export function StoryShelf({
       </div>
 
       <div className="story-page-foot">
-        {shelf.length > 1 ? (
+        {shelf.length + offset > 1 ? (
           <div className="story-dots" role="tablist" aria-label="Episode position">
+            {tutorial ? (
+              <button
+                type="button"
+                className="story-dot"
+                role="tab"
+                aria-selected={active === 0}
+                aria-label="Tutorial, How to Play"
+                onClick={() => goTo(0)}
+              />
+            ) : null}
             {shelf.map((episode, index) => (
               <button
                 key={episode.id}
                 type="button"
                 className="story-dot"
                 role="tab"
-                aria-selected={index === active}
+                aria-selected={index + offset === active}
                 aria-label={`Episode ${index + 1}, ${episode.title}`}
-                onClick={() => goTo(index)}
+                onClick={() => goTo(index + offset)}
               />
             ))}
           </div>
@@ -922,18 +973,34 @@ export function StoryShelf({
 
 function StoryAmbient({
   episodes,
+  offset,
   platesRef,
 }: {
   episodes: readonly StoryEpisodeCard[];
+  /** Slides ahead of the first episode (the tutorial); each gets a plain plate. */
+  offset: number;
   platesRef: { current: (HTMLDivElement | null)[] };
 }) {
   return (
     <div className="story-ambient" aria-hidden="true">
+      {Array.from({ length: offset }, (_, index) => (
+        <div
+          key={`lead-${index}`}
+          ref={(node) => {
+            platesRef.current[index] = node;
+          }}
+          className="story-ambient-plate"
+        >
+          <div className="story-ambient-drift" data-layer="wash" style={{ animationDelay: `${-index * 7}s` }}>
+            <div className="story-ambient-fallback" />
+          </div>
+        </div>
+      ))}
       {episodes.map((episode, index) => (
         <div
           key={episode.id}
           ref={(node) => {
-            platesRef.current[index] = node;
+            platesRef.current[index + offset] = node;
           }}
           className="story-ambient-plate"
         >

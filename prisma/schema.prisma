@@ -13,22 +13,24 @@ enum Role {
 }
 
 model User {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  username      String?        @unique
-  email         String?        @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  passwordSetAt DateTime?
-  walletAddress String?
-  role          Role           @default(PLAYER)
-  xp            Int            @default(0)
-  accounts      Account[]
-  sessions      Session[]
-  chapterClears ChapterClear[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  name           String?
+  username       String?        @unique
+  email          String?        @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  passwordSetAt  DateTime?
+  walletAddress  String?
+  role           Role           @default(PLAYER)
+  xp             Int            @default(0)
+  /// When the player finished the how-to-play run. Null until then.
+  tutorialDoneAt DateTime?
+  accounts       Account[]
+  sessions       Session[]
+  chapterClears  ChapterClear[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model Account {
@@ -98,6 +100,14 @@ model Chapter {
   updatedAt DateTime       @updatedAt
 
   @@unique([episodeId, slug])
+}
+
+/// One row, id "site": switches an admin flips for everyone.
+model SiteSettings {
+  id              String   @id @map("_id")
+  /// Players go through the how-to-play run before the story opens.
+  tutorialEnabled Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
 }
 
 model ChapterClear {

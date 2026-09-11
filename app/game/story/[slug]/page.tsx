@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { StoryShelf } from "@/components/story-shelf";
 import { requireProgress } from "@/lib/auth/session";
 import { getStoryShelf } from "@/lib/story";
+import { getTutorialStatus } from "@/lib/tutorial";
 
 export async function generateMetadata({
   params,
@@ -26,7 +27,7 @@ export default async function StoryEpisodePage({
 }) {
   const { slug } = await params;
   const { user } = await requireProgress();
-  const { episodes } = await getStoryShelf(user.id);
+  const [{ episodes }, tutorial] = await Promise.all([getStoryShelf(user.id), getTutorialStatus(user.id)]);
   const episode = episodes.find((item) => item.slug === slug);
 
   if (!episode) {
@@ -36,6 +37,7 @@ export default async function StoryEpisodePage({
   return (
     <StoryShelf
       episodes={episodes}
+      tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       initialSlug={slug}
       kicker="Story"
       title={

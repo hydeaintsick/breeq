@@ -1902,6 +1902,75 @@ html[data-theme="dark"] .story-ambient-scrim {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* --- Tutorial (guided first run) ------------------------------------------ */
+
+/* One rectangle stays lit; its shadow is the dark veil over everything else.
+   With no target it shrinks to a dot in the middle, so the veil is even. */
+.tutorial-veil {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 14px;
+  opacity: 0;
+  box-shadow: 0 0 0 200vmax rgba(5, 6, 12, 0.72);
+  transition:
+    left 320ms var(--ease),
+    top 320ms var(--ease),
+    width 320ms var(--ease),
+    height 320ms var(--ease),
+    opacity 240ms var(--ease);
+}
+
+.tutorial-veil[data-show="true"] {
+  opacity: 1;
+}
+
+.tutorial-veil[data-hole="true"] {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 0 28px 4px rgba(255, 255, 255, 0.16),
+    0 0 0 200vmax rgba(5, 6, 12, 0.72);
+}
+
+.tutorial-card {
+  position: absolute;
+  z-index: 3;
+  left: max(1rem, env(safe-area-inset-left));
+  right: max(1rem, env(safe-area-inset-right));
+  width: min(100% - 2rem, 24rem);
+  margin-inline: auto;
+  padding: 1.25rem;
+  animation: clear-rise 320ms var(--ease) both;
+}
+
+.tutorial-card[data-place="bottom"] {
+  bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.tutorial-card[data-place="top"] {
+  top: calc(max(0.75rem, env(safe-area-inset-top)) + 3.6rem);
+}
+
+.tutorial-card[data-place="center"] {
+  top: 50%;
+  transform: translateY(-50%);
+  animation-name: clear-in;
+}
+
+.tutorial-done-note {
+  margin-top: 1.4rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+  animation: clear-rise 520ms var(--ease) 420ms both;
+}
+
+@media (min-width: 640px) {
+  .tutorial-card {
+    padding: 1.5rem;
+  }
+}
+
 @keyframes clear-in {
   from {
     opacity: 0;
@@ -2059,6 +2128,8 @@ html[data-theme="dark"] .story-ambient-scrim {
   .story-clear-badge-number,
   .story-clear-spark,
   .story-ambient-drift,
+  .tutorial-card,
+  .tutorial-done-note,
   .mode-card-board {
     animation: none !important;
   }
@@ -2067,7 +2138,8 @@ html[data-theme="dark"] .story-ambient-scrim {
   .thumb-rail-puck,
   .thumb-rail-ball,
   .story-clear-level,
-  .story-clear-actions {
+  .story-clear-actions,
+  .tutorial-veil {
     transition: none !important;
   }
 

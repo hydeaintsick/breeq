@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GameModePicker } from "@/components/game-mode-picker";
 import { requireProgress } from "@/lib/auth/session";
 import { canPlayEarn } from "@/lib/progress";
+import { getTutorialStatus } from "@/lib/tutorial";
 
 export const metadata: Metadata = {
   title: "Play",
@@ -12,6 +13,7 @@ export default async function GameMenuPage() {
   const { user, progress } = await requireProgress();
   const label = user.username ?? user.name ?? "Player";
   const earnLocked = !canPlayEarn(user.role, progress.level);
+  const tutorial = await getTutorialStatus(user.id);
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
@@ -25,7 +27,7 @@ export default async function GameMenuPage() {
         Two ways in. Story is the campaign. Earn opens at level 5.
       </p>
       <div className="mt-10">
-        <GameModePicker earnLocked={earnLocked} />
+        <GameModePicker earnLocked={earnLocked} tutorialRequired={tutorial.required} />
       </div>
     </section>
   );

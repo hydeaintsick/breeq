@@ -118,6 +118,21 @@ export class BreakoutRenderer {
     return (cssX * this.dpr - this.ox) / this.scale;
   }
 
+  /**
+   * A world rectangle in CSS pixels, relative to the canvas's top-left. The
+   * inverse of `worldX` for both axes: DOM overlays (a tutorial spotlight, an
+   * editor handle) can sit on a brick, a zone, or the paddle.
+   */
+  cssRect(x: number, y: number, w: number, h: number): CssRect {
+    const k = this.scale / this.dpr;
+    return {
+      x: (x * this.scale + this.ox) / this.dpr,
+      y: (y * this.scale + this.oy) / this.dpr,
+      width: w * k,
+      height: h * k,
+    };
+  }
+
   /** Swap the author's photo at runtime (editor use). */
   setBackground(src: string): void {
     this.loadPhoto(src);

@@ -11,9 +11,9 @@ import { BreakoutSfx } from "../audio";
 import { Autopilot } from "../engine/autopilot";
 import { Game, RULES } from "../engine/game";
 import { BreakoutHaptics } from "../haptics";
-import type { GameEvent, GameInput, GamePhase, Level, PaddleModKind, SpeedZoneKind } from "../engine/types";
+import type { GameEvent, GameInput, GamePhase, GameState, Level, PaddleModKind, SpeedZoneKind } from "../engine/types";
 import { readNeonPalette } from "../render/palette";
-import { BreakoutRenderer } from "../render/renderer";
+import { BreakoutRenderer, type CssRect } from "../render/renderer";
 import { SceneFx, createScene } from "../render/scene";
 
 export interface HudState {
@@ -42,6 +42,13 @@ export interface MountOptions {
   onCleared?: (info: { human: boolean; score: number }) => void;
   /** Fired once when the run ends in a loss. `human` is true if the visitor held the paddle this run. */
   onOver?: (info: { human: boolean; score: number; reason: "lives" | "timeout" | "crushed" }) => void;
+  /**
+   * Every game event as it happens, with the state right after it. Read-only
+   * observation for guided runs (the tutorial pauses on the first glass brick,
+   * the first crack, the first zone). Calling `pause()` from inside freezes the
+   * game on this exact step.
+   */
+  onEvent?: (event: GameEvent, state: Readonly<GameState>) => void;
   seed?: number;
   /** "auto": demo only. "pointer": human only. "hybrid": demo until the visitor moves. */
   controls?: "auto" | "pointer" | "hybrid";
@@ -114,6 +121,13 @@ export interface BreakoutHandle {
   resume(): void;
   /** Editor: run the autopilot, or freeze back to the authored serve frame. */
   setSimulating(on: boolean): void;
+  /**
+   * A world rectangle in CSS pixels relative to the canvas's top-left, so a DOM
+   * overlay can sit on a brick, a zone, or the paddle.
+   */
+  project(x: number, y: number, w: number, h: number): CssRect;
+  /** The live game state, read-only. */
+  state(): Readonly<GameState>;
 }
 
 const CAPTIONS = {
@@ -229,6 +243,7 @@ export function mountBreakout(
       fx.apply(e);
       sfx?.apply(e, game.state);
       haptics?.apply(e);
+      options.onEvent?.(e, game.state);
       if (e.type === "cleared") {
         options.onCleared?.({ human: humanTouched, score: e.score });
       }
@@ -320,7 +335,9 @@ export function mountBreakout(
     accumulator += dt;
     const maxSteps = RULES.stepsPerSecond * 0.1;
     let steps = 0;
-    while (accumulator >= game.dt && steps < maxSteps) {
+    // `paused` is checked per step: an event callback may pause mid-tick and
+    // expects the world frozen right there, not a few steps later.
+    while (!paused && accumulator >= game.dt && steps < maxSteps) {
       applyEvents(game.step(input()));
       accumulator -= game.dt;
       steps += 1;
@@ -674,6 +691,12 @@ export function mountBreakout(
       }
       sfx?.setActive(false);
       haptics?.setActive(false);
+    },
+    project(x, y, w, h) {
+      return renderer.cssRect(x, y, w, h);
+    },
+    state() {
+      return game.state;
     },
   };
 }
