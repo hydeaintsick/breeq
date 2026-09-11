@@ -39,7 +39,13 @@ export interface HudState {
 export interface MountOptions {
   onHud?: (hud: HudState) => void;
   /** Fired once when a wall is cleared. `human` is true if the visitor held the paddle this run. */
-  onCleared?: (info: { human: boolean; score: number }) => void;
+  onCleared?: (info: {
+    human: boolean;
+    score: number;
+    paddleHits: number;
+    livesLeft: number;
+    time: number;
+  }) => void;
   /** Fired once when the run ends in a loss. `human` is true if the visitor held the paddle this run. */
   onOver?: (info: { human: boolean; score: number; reason: "lives" | "timeout" | "crushed" }) => void;
   /**
@@ -245,7 +251,13 @@ export function mountBreakout(
       haptics?.apply(e);
       options.onEvent?.(e, game.state);
       if (e.type === "cleared") {
-        options.onCleared?.({ human: humanTouched, score: e.score });
+        options.onCleared?.({
+          human: humanTouched,
+          score: e.score,
+          paddleHits: game.state.totalPaddleHits,
+          livesLeft: game.state.lives,
+          time: game.state.time,
+        });
       }
       if (e.type === "over") {
         options.onOver?.({ human: humanTouched, score: e.score, reason: e.reason });

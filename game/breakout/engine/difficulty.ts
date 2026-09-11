@@ -84,7 +84,13 @@ export function sampleRun(level: Level, skill: number, index: number, maxSeconds
     if (game.state.phase === "cleared" || game.state.phase === "over") break;
   }
   const s = game.state;
-  return { cleared: s.phase === "cleared", seconds: s.time, livesLeft: s.lives, ending: s.ending };
+  return {
+    cleared: s.phase === "cleared",
+    seconds: s.time,
+    livesLeft: s.lives,
+    paddleHits: s.totalPaddleHits,
+    ending: s.ending,
+  };
 }
 
 export function sampleSkill(level: Level, skill: number, runs: number, maxSeconds: number): SkillSample {

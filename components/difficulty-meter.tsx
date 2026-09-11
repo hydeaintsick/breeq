@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Difficulty, Level } from "@/game/breakout/engine";
+import { starBands, type Difficulty, type Level } from "@/game/breakout/engine";
 import { createDifficultyRater, EDITOR_DIFFICULTY_OPTIONS, type DifficultyRater } from "@/game/breakout/preview";
 
 const DEBOUNCE_MS = 500;
@@ -65,6 +65,7 @@ export function DifficultyMeter({ level, blocked }: { level: Level; blocked: boo
   const state = useDifficulty(level, blocked);
   const shown = state.status === "ready" ? state.result : state.status === "rating" ? state.last : null;
   const rating = state.status === "rating";
+  const bands = starBands(level);
 
   return (
     <div className="difficulty" data-tier={shown?.tier ?? 0} aria-live="polite">
@@ -107,6 +108,14 @@ export function DifficultyMeter({ level, blocked }: { level: Level; blocked: boo
             ))}
             {shown.meanSeconds != null ? ` · about ${formatSeconds(shown.meanSeconds)} a run` : null}
             {rating ? " · updating…" : null}
+            {shown.clearable ? (
+              <>
+                {" "}
+                · 3 stars at ≤{bands.three} hits
+                {" "}
+                · 2 stars at ≤{bands.two} hits
+              </>
+            ) : null}
           </>
         )}
       </p>

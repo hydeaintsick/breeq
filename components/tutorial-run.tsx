@@ -197,7 +197,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
     setReady(handle !== null);
   }, []);
 
-  const onCleared = useCallback(({ score }: { human: boolean; score: number }) => {
+  const onCleared = useCallback(({ score }: { human: boolean; score: number; paddleHits?: number; livesLeft?: number }) => {
     endedRef.current = true;
     setStep(null);
     setMenu(false);

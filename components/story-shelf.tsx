@@ -14,6 +14,7 @@ import { StoryPlay } from "@/components/story-play";
 import { useStoryTheme } from "@/components/use-story-theme";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
+import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START, TUTORIAL } from "@/game/breakout/levels";
 import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { ambientPhoto, boardPhoto, screenPhoto } from "@/lib/photo";
@@ -32,6 +33,7 @@ import {
 const FALLBACK_LEVELS = [QUIET_START];
 const TUTORIAL_LEVELS = [TUTORIAL];
 const TUTORIAL_HINT = "Finish the tutorial first.";
+const EMPTY_DISCOVERIES: readonly string[] = [];
 
 /** The how-to-play slide that sits ahead of the episodes while the tutorial is on. */
 export type ShelfTutorial = { done: boolean };
@@ -145,6 +147,7 @@ export function StoryShelf({
   body,
   tutorial = null,
   arriveFromTutorial = false,
+  discovered = EMPTY_DISCOVERIES,
 }: {
   episodes: StoryEpisodeCard[];
   initialSlug?: string;
@@ -155,6 +158,8 @@ export function StoryShelf({
   tutorial?: ShelfTutorial | null;
   /** The player just finished the tutorial: open on its card, then swipe to episode one. */
   arriveFromTutorial?: boolean;
+  /** Piece ids already explained to this player; a run stops on the first touch of anything else. */
+  discovered?: readonly string[];
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -185,10 +190,19 @@ export function StoryShelf({
   const originCardRef = useRef<HTMLElement | null>(null);
   const [playing, setPlaying] = useState<StoryChapterCard | null>(null);
   const [paused, setPaused] = useState(false);
+  /** Pieces explained so far, this session included: the next chapter must not repeat them. */
+  const [known, setKnown] = useState<ReadonlySet<string>>(() => new Set(discovered));
+  const onDiscovered = useCallback((id: string) => {
+    setKnown((current) => (current.has(id) ? current : new Set(current).add(id)));
+  }, []);
   /** The chapter's story beat is up; the board waits underneath until it is tapped away. */
   const [intro, setIntro] = useState(false);
   /** The wall came down: score is known at once, the payout arrives a beat later. */
-  const [cleared, setCleared] = useState<{ score: number; result: ChapterClearResult | null } | null>(null);
+  const [cleared, setCleared] = useState<{
+    score: number;
+    stars: 0 | 1 | 2 | 3;
+    result: ChapterClearResult | null;
+  } | null>(null);
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
   const [runId, setRunId] = useState(0);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
@@ -624,11 +638,13 @@ export function StoryShelf({
     setLost(null);
   }
 
-  function markCleared(chapterId: string) {
+  function markCleared(chapterId: string, stars: 0 | 1 | 2 | 3) {
     const patch = (episode: StoryEpisodeCard) => ({
       ...episode,
       chapters: episode.chapters.map((chapter) =>
-        chapter.id === chapterId ? { ...chapter, cleared: true } : chapter,
+        chapter.id === chapterId
+          ? { ...chapter, cleared: true, stars: Math.max(chapter.stars, stars) as 0 | 1 | 2 | 3 }
+          : chapter,
       ),
     });
     setShelf((current) => current.map(patch));
@@ -695,11 +711,13 @@ export function StoryShelf({
       <StoryAmbient episodes={shelf} offset={offset} platesRef={platesRef} />
       {kicker || title || body ? (
         <header className="story-page-copy">
-          {kicker ? (
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">{kicker}</p>
-          ) : null}
-          {title ? <h1 className="max-w-2xl font-semibold tracking-tight text-ink">{title}</h1> : null}
-          {body ? <p className="story-page-lede max-w-xl text-ink-muted">{body}</p> : null}
+          <div className="story-page-copy-inner">
+            {kicker ? (
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">{kicker}</p>
+            ) : null}
+            {title ? <h1 className="max-w-2xl font-semibold tracking-tight text-ink">{title}</h1> : null}
+            {body ? <p className="story-page-lede max-w-xl text-ink-muted">{body}</p> : null}
+          </div>
         </header>
       ) : null}
 
@@ -763,6 +781,7 @@ export function StoryShelf({
                   fill
                   aura={false}
                   progress={progress}
+                  stars={progress.starValue}
                   paused={covered}
                   onSelect={locked ? undefined : (card) => openEpisode(episode, card)}
                 />
@@ -923,15 +942,28 @@ export function StoryShelf({
                     backgroundUrl={open.backgroundUrl}
                     seed={17 + runId}
                     paused={paused || intro}
-                    onCleared={({ score }) => {
+                    discovered={known}
+                    onDiscovered={onDiscovered}
+                    onCleared={({ score, paddleHits, livesLeft }) => {
+                      const level = parseStoredLevel(playing.level, {
+                        id: playing.id,
+                        name: playing.title,
+                        author: "Breeq",
+                      });
+                      const nextStars = starsForClear(level, { paddleHits, livesLeft });
                       setPaused(false);
                       setLost(null);
-                      setCleared({ score, result: null });
-                      markCleared(playing.id);
+                      setCleared({ score, stars: nextStars, result: null });
+                      markCleared(playing.id, nextStars);
                     }}
                     onAwarded={(result) => {
-                      setCleared((current) => (current ? { ...current, result } : { score: 0, result }));
-                      markCleared(playing.id);
+                      const best = result.bestStars ?? result.stars ?? 1;
+                      setCleared((current) =>
+                        current
+                          ? { ...current, result, stars: result.stars ?? current.stars }
+                          : { score: 0, stars: best, result },
+                      );
+                      markCleared(playing.id, best);
                     }}
                     onOver={({ score, reason }) => {
                       setPaused(false);
@@ -969,6 +1001,7 @@ export function StoryShelf({
                       key={playing.id}
                       title={playing.title}
                       score={cleared.score}
+                      stars={cleared.stars}
                       result={cleared.result}
                       hasNext={nextChapter !== null}
                       episodeDone={episodeDone}
@@ -1146,6 +1179,7 @@ function ChapterPlayCard({
           fill
           aura={false}
           preview={live}
+          stars={chapter.stars}
           onSelect={locked ? undefined : () => onPlay(chapter)}
         />
       </div>

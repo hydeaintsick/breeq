@@ -91,3 +91,15 @@ export function storyPercent(cleared: number, total: number) {
   }
   return Math.min(100, Math.round((cleared / total) * 100));
 }
+
+export type StarTally = {
+  earned: number;
+  possible: number;
+};
+
+export function starTally(earned: number, chapterCount: number): StarTally {
+  return {
+    earned: Math.max(0, Math.floor(earned)),
+    possible: Math.max(0, Math.floor(chapterCount)) * 3,
+  };
+}

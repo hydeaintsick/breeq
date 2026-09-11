@@ -607,6 +607,23 @@ html[data-theme="dark"] {
     transition: width var(--duration) var(--ease);
   }
 
+  .mode-card-cta {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1.15rem;
+  }
+
+  .mode-card-cta .btn-play {
+    margin-top: 0;
+  }
+
+  .mode-card-cta .star-rating {
+    margin-left: auto;
+  }
+
   .mode-card:hover {
     transform: translateY(-2px);
   }
@@ -737,6 +754,25 @@ html[data-theme="dark"] {
     border-radius: inherit;
     background: linear-gradient(90deg, var(--neon-blue), var(--neon-violet));
     transition: width var(--duration) var(--ease);
+  }
+
+  .rank-stars {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.2rem;
+    color: var(--neon-blue);
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .rank-stars svg {
+    display: block;
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--neon-blue) 60%, transparent));
   }
 
   .mode-card[aria-disabled="true"] {
@@ -1121,7 +1157,15 @@ html[data-theme="dark"] {
 
 .story-page-copy {
   flex: none;
+  /* Same outer gutter as .site-header so the title sits under the pill. */
   padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+}
+
+.story-page-copy-inner {
+  /* Same column as .site-nav (max-w-6xl + px-4 / sm:px-5): kicker and logo share an edge. */
+  margin-inline: auto;
+  max-width: 72rem;
+  padding-inline: 1rem;
 }
 
 .story-page-copy h1 {
@@ -1139,6 +1183,14 @@ html[data-theme="dark"] {
 @media (min-width: 640px) {
   .story-page {
     padding-top: max(6.5rem, calc(env(safe-area-inset-top) + 5rem));
+  }
+
+  .story-page-copy {
+    padding-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right));
+  }
+
+  .story-page-copy-inner {
+    padding-inline: 1.25rem;
   }
 
   .story-page-copy h1 {
@@ -1811,7 +1863,71 @@ html[data-theme="dark"] .story-ambient-scrim {
   }
 }
 
-/* --- Story clear screen ---------------------------------------------------- */
+/* Three-star grade: empty outline, brilliant blue fill, optional clip for episode fill. */
+.star-rating {
+  --star: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 0;
+}
+
+.star-rating[data-size="sm"] {
+  --star: 1.08rem;
+  gap: 0.14rem;
+}
+
+.star-rating[data-size="lg"] {
+  --star: 2.55rem;
+  gap: 0.55rem;
+}
+
+.star {
+  position: relative;
+  display: inline-block;
+  width: var(--star);
+  height: var(--star);
+  flex: none;
+}
+
+.star-ghost {
+  display: block;
+  width: var(--star);
+  height: var(--star);
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: currentColor;
+  stroke-width: 1.35;
+}
+
+.star-lit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.star-lit svg {
+  display: block;
+  width: var(--star);
+  height: var(--star);
+  max-width: none;
+  fill: var(--neon-blue);
+  stroke: color-mix(in srgb, var(--neon-cyan) 40%, var(--neon-blue));
+  stroke-width: 0.6;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--neon-blue) 80%, transparent));
+}
+
+.story-clear-stars .star-lit svg {
+  filter:
+    drop-shadow(0 0 10px var(--neon-blue))
+    drop-shadow(0 0 22px color-mix(in srgb, var(--neon-cyan) 50%, transparent));
+}
+
+.mode-card[aria-disabled="true"] .star-ghost {
+  opacity: 0.55;
+}
 
 .story-clear {
   position: absolute;
@@ -1857,6 +1973,52 @@ html[data-theme="dark"] .story-ambient-scrim {
   letter-spacing: -0.02em;
   line-height: 1.05;
   animation: clear-rise 520ms var(--ease) 180ms both;
+}
+
+.story-clear-epilogue {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.62);
+  animation: clear-rise 480ms var(--ease) 240ms both;
+}
+
+.story-clear-stars {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.55rem;
+  min-height: 2.7rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 380ms var(--ease),
+    transform 380ms var(--ease);
+}
+
+.story-clear-stars[data-ready="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.story-clear-stars .star[data-on="true"] {
+  animation: star-pop 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.story-clear-scoreline {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 1.15rem;
+  animation: clear-rise 480ms var(--ease) 280ms both;
+}
+
+.story-clear-scoreline-n {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .story-clear-label {
@@ -2177,6 +2339,20 @@ html[data-theme="dark"] .story-ambient-scrim {
   }
 }
 
+@keyframes star-pop {
+  0% {
+    transform: scale(0.72);
+    filter: brightness(1.4);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
 @keyframes clear-lock {
   0% {
     transform: scale(1);
@@ -2299,6 +2475,314 @@ html[data-theme="dark"] .story-ambient-scrim {
   }
 }
 
+/*
+ * The lore deck (home page, Story section): the eight episode covers in a
+ * rack, the open one facing the reader, the others leaning behind it. The
+ * open cover's photo blooms behind the whole section.
+ */
+.lore-section {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+.lore-halo {
+  position: absolute;
+  inset: -6rem 0 -4rem;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+}
+
+.lore-halo-plate {
+  position: absolute;
+  inset: -12%;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 520ms var(--ease),
+    visibility 0s linear 520ms;
+}
+
+.lore-halo-plate[data-on="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* A 64px thumbnail stretched over the section: the browser's upscale does most
+   of the blur, the filter only smooths the blocks. Cheap on a phone GPU. */
+.lore-halo-photo,
+.lore-halo-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.lore-halo-photo {
+  object-fit: cover;
+  filter: blur(34px) saturate(2.2) brightness(2) contrast(1.04);
+  opacity: 0.42;
+}
+
+/* The bloom is brightest behind the rack and thins out toward the copy. */
+.lore-halo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 78% 70% at 50% 42%,
+    transparent 0%,
+    color-mix(in srgb, var(--bg) 45%, transparent) 55%,
+    color-mix(in srgb, var(--bg) 80%, transparent) 100%
+  );
+}
+
+.lore-halo-fallback {
+  background:
+    radial-gradient(60% 55% at 30% 30%, rgba(139, 92, 246, 0.42), transparent 70%),
+    radial-gradient(55% 50% at 75% 65%, rgba(34, 211, 238, 0.36), transparent 70%),
+    radial-gradient(50% 45% at 55% 20%, rgba(255, 79, 163, 0.28), transparent 70%);
+}
+
+html[data-theme="dark"] .lore-halo-photo {
+  filter: blur(34px) saturate(1.9) brightness(1.15) contrast(1.1);
+  opacity: 0.5;
+}
+
+.lore-grid {
+  --lore-card: min(20rem, 64vw);
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+.lore-stage {
+  position: relative;
+  height: calc(var(--lore-card) * 4 / 3 + 2.5rem);
+  perspective: 1400px;
+  touch-action: pan-y;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.lore-stage[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.lore-stage:focus-visible {
+  outline: none;
+}
+
+.lore-cover {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: var(--lore-card);
+  aspect-ratio: 3 / 4;
+  margin: calc(var(--lore-card) * -2 / 3) 0 0 calc(var(--lore-card) / -2);
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+  border-radius: 1.6rem;
+  background: #0b0d1a;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.75),
+    0 0 0 2px rgba(15, 17, 23, 0.06),
+    0 28px 70px rgba(15, 17, 23, 0.24);
+  transition:
+    transform 360ms var(--ease),
+    opacity 360ms var(--ease);
+}
+
+.lore-stage[data-dragging="true"] .lore-cover {
+  transition: none;
+}
+
+.lore-cover img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Covers behind the open one sit in its shade. */
+.lore-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #0b0d1a;
+  opacity: var(--lore-dim, 0);
+  pointer-events: none;
+  transition: opacity 360ms var(--ease);
+}
+
+.lore-stage[data-dragging="true"] .lore-cover::after {
+  transition: none;
+}
+
+.lore-cover:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.lore-cover-fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(70% 60% at 30% 25%, rgba(79, 124, 255, 0.55), transparent 70%),
+    radial-gradient(60% 55% at 80% 70%, rgba(255, 79, 163, 0.45), transparent 70%),
+    radial-gradient(50% 45% at 60% 15%, rgba(34, 211, 238, 0.4), transparent 70%),
+    #0b0d1a;
+}
+
+.lore-cover-copy {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding: 4.25rem 1.35rem 1.4rem;
+  background: linear-gradient(180deg, transparent 0%, rgba(11, 13, 26, 0.55) 30%, rgba(11, 13, 26, 0.94) 100%);
+  text-shadow: 0 1px 16px rgba(11, 13, 26, 0.85);
+  /* The title only reads on the cover facing the reader; it fades as the cover leans away. */
+  opacity: calc(1 - var(--lore-dim, 0) * 2.6);
+  transition: opacity 360ms var(--ease);
+}
+
+.lore-stage[data-dragging="true"] .lore-cover-copy {
+  transition: none;
+}
+
+.lore-page {
+  /* Above the rack: a far cover may lean under the copy's edge on wide screens. */
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.lore-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.lore-arrow {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-fill);
+  box-shadow: 0 0 0 1px var(--hairline);
+  color: var(--ink);
+  transition:
+    background var(--duration) var(--ease),
+    opacity var(--duration) var(--ease);
+}
+
+.lore-arrow:hover {
+  background: var(--field);
+}
+
+.lore-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.lore-arrow:disabled:hover {
+  background: var(--glass-fill);
+}
+
+.lore-arrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lore-page-text {
+  /* Room for the longest lore so the button below does not jump between episodes. */
+  min-height: 9.5rem;
+}
+
+.lore-page-leaf {
+  animation: lore-leaf 320ms var(--ease) both;
+}
+
+@keyframes lore-leaf {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lore-page-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+@media (min-width: 640px) {
+  .lore-grid {
+    --lore-card: 18rem;
+  }
+
+  .lore-page-nav {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lore-grid {
+    --lore-card: 20rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+    align-items: center;
+    gap: 3rem;
+    margin-top: 3.5rem;
+  }
+
+  .lore-stage {
+    height: calc(var(--lore-card) * 4 / 3 + 3.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lore-cover,
+  .lore-cover::after,
+  .lore-cover-copy,
+  .lore-halo-plate,
+  .lore-arrow {
+    transition: none !important;
+  }
+
+  .lore-page-leaf {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .play-shimmer::after,
   .board-caption,
@@ -2307,12 +2791,16 @@ html[data-theme="dark"] .story-ambient-scrim {
   .story-clear,
   .story-clear-kicker,
   .story-clear-title,
+  .story-clear-epilogue,
   .story-clear-score,
+  .story-clear-scoreline,
+  .story-clear-stars,
   .story-clear-number,
   .story-clear-stamp,
   .story-clear-badge,
   .story-clear-badge-number,
   .story-clear-spark,
+  .story-clear-stars .star,
   .story-ambient-drift,
   .tutorial-card,
   .mode-card-board {
@@ -2325,6 +2813,7 @@ html[data-theme="dark"] .story-ambient-scrim {
   .story-clear-level,
   .story-clear-actions,
   .story-clear-next,
+  .story-clear-stars,
   .tutorial-veil {
     transition: none !important;
   }

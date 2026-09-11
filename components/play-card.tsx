@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { StarRating } from "@/components/star-rating";
 import type { Level } from "@/game/breakout/engine/types";
 
 const LOCK_MARK = (
@@ -36,6 +37,7 @@ export function PlayCard({
   fill = false,
   aura = true,
   progress,
+  stars,
   paused = false,
   preview = true,
 }: {
@@ -57,15 +59,17 @@ export function PlayCard({
   fill?: boolean;
   aura?: boolean;
   progress?: { cleared: number; total: number; percent: number };
+  /** 0..3 fill of the three-star mark, bottom right of the card. */
+  stars?: number;
   /** Hold the live board still (the card is hidden behind another surface). */
   paused?: boolean;
   /** Mount the live board at all. Off while the card's surface is still animating in. */
   preview?: boolean;
 }) {
   const hasProgress = Boolean(progress && progress.total > 0);
+  const showStars = typeof stars === "number";
   const playClass = [
     "btn-play pointer-events-none min-h-11",
-    hasProgress ? "mt-4" : "mt-5",
     locked ? "" : "play-shimmer",
   ]
     .filter(Boolean)
@@ -109,8 +113,9 @@ export function PlayCard({
             <span className="mode-card-progress-fill" style={{ width: `${progress.percent}%` }} />
           </div>
         ) : null}
-        <span className={playClass}>
-          {locked ? "Locked" : action}
+        <span className="mode-card-cta">
+          <span className={playClass}>{locked ? "Locked" : action}</span>
+          {showStars ? <StarRating value={stars} size="sm" /> : null}
         </span>
       </div>
     </>
@@ -120,9 +125,10 @@ export function PlayCard({
     progress && progress.total > 0
       ? `${progress.cleared} of ${progress.total} chapters cleared.`
       : null;
+  const starsLabel = showStars ? `${Math.round(stars * 10) / 10} of 3 stars.` : null;
   const label = locked
     ? `Locked. ${title}. ${lockedHint ?? body}`
-    : `${action}. ${title}. ${body}${meta ? ` ${meta}.` : ""}${progressLabel ? ` ${progressLabel}` : ""}`;
+    : `${action}. ${title}. ${body}${meta ? ` ${meta}.` : ""}${progressLabel ? ` ${progressLabel}` : ""}${starsLabel ? ` ${starsLabel}` : ""}`;
   const cardClass = [
     "mode-card",
     fill ? "mode-card-fill" : "",

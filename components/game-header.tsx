@@ -13,13 +13,15 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { SoundToggle } from "@/components/sound-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ACCOUNT_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
-import type { Progress } from "@/lib/progress";
+import type { Progress, StarTally } from "@/lib/progress";
 
 export function GameHeader({
   progress,
+  stars,
   isAdmin = false,
 }: {
   progress: Progress;
+  stars: StarTally;
   isAdmin?: boolean;
 }) {
   const pathname = usePathname();
@@ -60,7 +62,7 @@ export function GameHeader({
         </Link>
 
         <div className="relative z-10 mx-2 flex min-w-0 flex-1 justify-start sm:mx-3">
-          <RankMeter progress={progress} />
+          <RankMeter progress={progress} stars={stars} />
         </div>
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">

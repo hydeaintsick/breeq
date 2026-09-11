@@ -233,8 +233,19 @@ export interface GameState {
   ending: "cleared" | "lives" | "timeout" | "crushed" | null;
 }
 
+/** What a ball just entered: a piece that acts at a distance rather than on contact. */
+export type FieldSource =
+  /** A gravity, anti-gravity, or fog zone. */
+  | { family: "zone"; zone: Zone }
+  /** A fan's wind or a black hole's pull. */
+  | { family: "obstacle"; obstacle: Obstacle }
+  /** A magnet's reach. */
+  | { family: "brick"; brick: Brick };
+
 export type GameEvent =
   | { t: number; type: "launch" }
+  /** A ball entered a continuous field. Once per visit, per ball. */
+  | { t: number; type: "field"; source: FieldSource; x: number; y: number }
   | { t: number; type: "wall"; side: "left" | "right" | "top"; x: number; y: number }
   | { t: number; type: "paddle"; x: number; y: number; offset: number; caught: boolean }
   | { t: number; type: "brick"; brick: Brick; broken: boolean; x: number; y: number }

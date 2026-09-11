@@ -42,3 +42,15 @@ export {
   type EditorTool,
   type Hit,
 } from "./draft";
+export {
+  brickWork,
+  starBands,
+  starsForClear,
+  clampStar,
+  starFill,
+  starsPossible,
+  STARS_PER_CLEAR,
+  type StarCount,
+  type StarBands,
+  type ClearRun,
+} from "./stars";

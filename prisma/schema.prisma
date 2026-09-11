@@ -26,6 +26,8 @@ model User {
   xp             Int            @default(0)
   /// When the player finished the how-to-play run. Null until then.
   tutorialDoneAt DateTime?
+  /// Piece ids ("brick:explosive", "zone:portal", "rule:timer") the story has already explained once.
+  discoveries    String[]       @default([])
   accounts       Account[]
   sessions       Session[]
   chapterClears  ChapterClear[]
@@ -120,7 +122,14 @@ model ChapterClear {
   chapterId String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  /// Best star grade for this wall, 1–3. Replays keep the high water mark.
+  stars     Int      @default(1)
+  /// Paddle hits of the run that earned `stars`.
+  hits      Int      @default(0)
+  /// Board score of that run.
+  score     Int      @default(0)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, chapterId])
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StoryShelf } from "@/components/story-shelf";
 import { requireProgress } from "@/lib/auth/session";
+import { getDiscoveries } from "@/lib/discoveries-server";
 import { getStoryShelf } from "@/lib/story";
 import { getTutorialStatus } from "@/lib/tutorial";
 
@@ -27,7 +28,11 @@ export default async function StoryEpisodePage({
 }) {
   const { slug } = await params;
   const { user } = await requireProgress();
-  const [{ episodes }, tutorial] = await Promise.all([getStoryShelf(user.id), getTutorialStatus(user.id)]);
+  const [{ episodes }, tutorial, discovered] = await Promise.all([
+    getStoryShelf(user.id),
+    getTutorialStatus(user.id),
+    getDiscoveries(user.id),
+  ]);
   const episode = episodes.find((item) => item.slug === slug);
 
   if (!episode) {
@@ -39,6 +44,7 @@ export default async function StoryEpisodePage({
       episodes={episodes}
       tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       initialSlug={slug}
+      discovered={discovered}
       kicker="Story"
       title={
         <>

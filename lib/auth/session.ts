@@ -6,7 +6,7 @@ import {
   GAME_MENU_PATH,
   LOGIN_PATH,
 } from "@/lib/auth/paths";
-import { canPlayEarn, progressFromXp } from "@/lib/progress";
+import { canPlayEarn, progressFromXp, starTally, type StarTally } from "@/lib/progress";
 
 export const getSession = cache(async () => auth());
 
@@ -22,12 +22,20 @@ export async function requireUser() {
 
 export const requireProgress = cache(async () => {
   const user = await requireUser();
-  const row = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { xp: true },
-  });
+  const [row, starSum, chapterCount] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { xp: true },
+    }),
+    prisma.chapterClear.aggregate({
+      where: { userId: user.id },
+      _sum: { stars: true },
+    }),
+    prisma.chapter.count(),
+  ]);
   const progress = progressFromXp(row?.xp ?? 0);
-  return { user, progress };
+  const stars: StarTally = starTally(starSum._sum.stars ?? 0, chapterCount);
+  return { user, progress, stars };
 });
 
 export async function requireAdmin() {

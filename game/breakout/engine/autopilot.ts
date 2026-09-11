@@ -120,6 +120,7 @@ export interface Proof {
   seconds: number;
   score: number;
   livesLeft: number;
+  paddleHits: number;
 }
 
 /**
@@ -135,7 +136,13 @@ export function proveClearable(level: Level, options: ProofOptions = {}): Proof 
     for (let i = 0; i < maxSteps; i++) {
       game.step(pilot.input(game.state, game.bricks));
       if (game.state.phase === "cleared") {
-        return { seed, seconds: game.state.time, score: game.state.score, livesLeft: game.state.lives };
+        return {
+          seed,
+          seconds: game.state.time,
+          score: game.state.score,
+          livesLeft: game.state.lives,
+          paddleHits: game.state.totalPaddleHits,
+        };
       }
       if (game.state.phase === "over") break;
     }

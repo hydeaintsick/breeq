@@ -18,6 +18,7 @@ import { BRICK_HP, ROW_STEP } from "./level";
 import type {
   Ball,
   Brick,
+  FieldSource,
   GameEvent,
   GameInput,
   GameState,
@@ -107,6 +108,8 @@ export class Game {
   private events: GameEvent[] = [];
   private zoneCooldown = new Map<number, number>();
   private brickHitAt = new Map<number, number>();
+  /** Per ball id: the continuous fields it is inside right now (for the `field` event). */
+  private fieldsIn = new Map<number, Set<string>>();
   private lastBounceT = -10;
   private nextBallId = 1;
 
@@ -128,6 +131,7 @@ export class Game {
     this.pending = [];
     this.zoneCooldown.clear();
     this.brickHitAt.clear();
+    this.fieldsIn.clear();
     this.lastBounceT = -10;
     this.nextBallId = 1;
     this.state = this.initialState();
@@ -519,6 +523,7 @@ export class Game {
     }
 
     if (dead.length > 0) {
+      for (const ball of dead) this.fieldsIn.delete(ball.id);
       s.balls = s.balls.filter((b) => !dead.includes(b));
       if (s.balls.length === 0 && s.phase === "play") this.loseLife();
     }
@@ -574,21 +579,44 @@ export class Game {
     ball.dy /= len;
   }
 
+  /**
+   * A ball crossed into (or out of) a continuous field. Entry is announced once
+   * per visit so a guided run can name the piece on first contact.
+   */
+  private trackField(ball: Ball, key: string, inside: boolean, source: FieldSource): void {
+    let set = this.fieldsIn.get(ball.id);
+    if (!inside) {
+      set?.delete(key);
+      return;
+    }
+    if (!set) {
+      set = new Set();
+      this.fieldsIn.set(ball.id, set);
+    }
+    if (set.has(key)) return;
+    set.add(key);
+    this.emit({ t: this.state.time, type: "field", source, x: ball.x, y: ball.y });
+  }
+
   /** Continuous influences: gravity zones, fans, magnets, black holes. */
   private applyForces(ball: Ball, sub: number): void {
     let fx = 0;
     let fy = 0;
 
     for (const z of this.zones) {
-      if (z.kind !== "gravity" && z.kind !== "antigrav") continue;
-      if ((ball.x - z.x) ** 2 + (ball.y - z.y) ** 2 > z.r * z.r) continue;
+      if (z.kind !== "gravity" && z.kind !== "antigrav" && z.kind !== "fog") continue;
+      const inside = (ball.x - z.x) ** 2 + (ball.y - z.y) ** 2 <= z.r * z.r;
+      this.trackField(ball, `z${z.id}`, inside, { family: "zone", zone: z });
+      if (!inside || z.kind === "fog") continue;
       fy += z.kind === "gravity" ? RULES.gravityPull : -RULES.gravityPull;
     }
 
     for (const o of this.obstacles) {
       if (o.kind === "fan") {
         const x0 = o.dir > 0 ? o.x : o.x - o.reach;
-        if (ball.x >= x0 && ball.x <= x0 + o.reach && Math.abs(ball.y - o.y) <= o.spread / 2) {
+        const inside = ball.x >= x0 && ball.x <= x0 + o.reach && Math.abs(ball.y - o.y) <= o.spread / 2;
+        this.trackField(ball, `o${o.id}`, inside, { family: "obstacle", obstacle: o });
+        if (inside) {
           fx += o.dir * o.force * RULES.fanForce;
         }
       } else if (o.kind === "blackhole") {
@@ -596,7 +624,9 @@ export class Game {
         const dy = o.y - ball.y;
         const d = Math.hypot(dx, dy);
         const reach = o.r * RULES.blackholeReach;
-        if (d < reach && d > 0) {
+        const inside = d < reach && d > 0;
+        this.trackField(ball, `o${o.id}`, inside, { family: "obstacle", obstacle: o });
+        if (inside) {
           const k = RULES.blackholePull * (1 - d / reach);
           fx += (dx / d) * k;
           fy += (dy / d) * k;
@@ -609,7 +639,9 @@ export class Game {
       const dx = b.x + b.w / 2 - ball.x;
       const dy = b.y + b.h / 2 - ball.y;
       const d = Math.hypot(dx, dy);
-      if (d < RULES.magnetRadius && d > 0) {
+      const inside = d < RULES.magnetRadius && d > 0;
+      this.trackField(ball, `b${b.id}`, inside, { family: "brick", brick: b });
+      if (inside) {
         const k = RULES.magnetPull * (1 - d / RULES.magnetRadius);
         fx += (dx / d) * k;
         fy += (dy / d) * k;

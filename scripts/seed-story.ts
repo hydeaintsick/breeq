@@ -19,7 +19,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Prisma, PrismaClient } from "@prisma/client";
-import { rateDifficulty, serializeLevel, validateLevel, type Level } from "../game/breakout/engine";
+import { rateDifficulty, serializeLevel, starBands, starsForClear, validateLevel, type Level } from "../game/breakout/engine";
 import { GECKO_LEGACY_COPY, STORY_EPISODES, type StoryEpisodeDef } from "../game/breakout/levels/story";
 import { cloudinaryConfigured, uploadStoryBackground } from "../lib/cloudinary";
 
@@ -47,9 +47,17 @@ function proveEpisode(episode: StoryEpisodeDef) {
     if (!rating.clearable) {
       fail(`${chapter.title}: the flawless autopilot could not clear it.`);
     }
+    const bands = starBands(chapter.level);
+    const grade = rating.proof
+      ? starsForClear(chapter.level, {
+          paddleHits: rating.proof.paddleHits,
+          livesLeft: rating.proof.livesLeft,
+        })
+      : 1;
+    const marks = `${"★".repeat(grade)}${"☆".repeat(3 - grade)}`;
     const rates = rating.samples.map((s) => `${Math.round(s.winRate * 100)}%`).join("/");
     console.log(
-      `  ${String(index + 1).padStart(2, "0")} ${chapter.title.padEnd(20)} ${String(rating.score).padStart(3)} ${rating.label.padEnd(7)} clears ${rates}  ~${Math.round(rating.meanSeconds ?? 0)}s  ${chapter.xp} XP`,
+      `  ${String(index + 1).padStart(2, "0")} ${chapter.title.padEnd(20)} ${String(rating.score).padStart(3)} ${rating.label.padEnd(7)} clears ${rates}  ~${Math.round(rating.meanSeconds ?? 0)}s  ${chapter.xp} XP  3★≤${bands.three}  2★≤${bands.two}  flawless ${rating.proof?.paddleHits ?? "–"}h → ${marks}`,
     );
   }
 }
@@ -172,7 +180,20 @@ async function fillGeckoLegacyCopy() {
   console.log(`\n${episode.title}: ${written === 0 ? "story lines already set" : `wrote ${written} story line(s)`}.`);
 }
 
-/** Hand-made episodes keep their place unless they collide with a seeded order. */
+async function backfillClearStars() {
+  const rows = await prisma.chapterClear.findMany({ select: { id: true, stars: true, hits: true } });
+  let count = 0;
+  for (const row of rows) {
+    if (row.hits === 0 && row.stars <= 1) {
+      await prisma.chapterClear.update({ where: { id: row.id }, data: { stars: 2 } });
+      count += 1;
+    }
+  }
+  if (count > 0) {
+    console.log(`\nBackfilled ${count} existing clear(s) to 2 stars.`);
+  }
+}
+
 async function settleOrder() {
   const seeded = new Map(STORY_EPISODES.map((e) => [e.slug, e.order]));
   const taken = new Set(seeded.values());
@@ -208,6 +229,7 @@ async function main() {
   }
   await fillGeckoLegacyCopy();
   await settleOrder();
+  await backfillClearStars();
 
   const shelf = await prisma.episode.findMany({
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],

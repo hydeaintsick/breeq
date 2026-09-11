@@ -1,5 +1,6 @@
 export { isSoundEnabled, isSoundSupported, setSoundEnabled, unlockSound } from "./bus";
 export { BreakoutSfx } from "./sfx";
+export { createPayoutSfx, type PayoutSfx } from "./payout";
 export { acquireStoryTheme, type StoryThemeHandle } from "./theme";
 
 import { unlockSound } from "./bus";
