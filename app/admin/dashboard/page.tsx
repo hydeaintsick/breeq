@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EarnSetting } from "@/components/earn-setting";
 import { TutorialSetting } from "@/components/tutorial-setting";
 import { requireAdmin } from "@/lib/auth/session";
-import { ADMIN_EDITOR_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { ADMIN_EDITOR_PATH, EARN_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { EARN_UNLOCK_LEVEL } from "@/lib/progress";
 import { getSiteSettings } from "@/lib/tutorial";
 
 export const metadata: Metadata = {
@@ -57,6 +59,28 @@ export default async function AdminDashboardPage() {
         </li>
         <li className="glass p-6">
           <p className="font-mono text-xs tracking-[0.16em] text-accent">03</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
+            Earn
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            Publish or play levels for real money. Unlocks at level {EARN_UNLOCK_LEVEL} in Story.
+            {settings.earnEnabled ? (
+              <>
+                {" "}
+                You can{" "}
+                <Link href={EARN_PATH} className="underline underline-offset-4">
+                  open it
+                </Link>{" "}
+                while it is on.
+              </>
+            ) : (
+              <> Players will not see it until you turn it on.</>
+            )}
+          </p>
+          <EarnSetting enabled={settings.earnEnabled} />
+        </li>
+        <li className="glass p-6">
+          <p className="font-mono text-xs tracking-[0.16em] text-accent">04</p>
           <h2 className="mt-3 text-xl font-semibold tracking-tight text-ink">
             Players
           </h2>

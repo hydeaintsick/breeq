@@ -113,6 +113,8 @@ model SiteSettings {
   id              String   @id @map("_id")
   /// Players go through the how-to-play run before the story opens.
   tutorialEnabled Boolean  @default(true)
+  /// Earn is on the play menu and open to players who reach the unlock level.
+  earnEnabled     Boolean  @default(true)
   updatedAt       DateTime @updatedAt
 }
 

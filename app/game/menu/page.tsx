@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { GameModePicker } from "@/components/game-mode-picker";
 import { requireProgress } from "@/lib/auth/session";
-import { canPlayEarn } from "@/lib/progress";
-import { getTutorialStatus } from "@/lib/tutorial";
+import { canPlayEarn, EARN_UNLOCK_LEVEL } from "@/lib/progress";
+import { getSiteSettings, getTutorialStatus } from "@/lib/tutorial";
 
 export const metadata: Metadata = {
   title: "Play",
@@ -11,9 +11,15 @@ export const metadata: Metadata = {
 
 export default async function GameMenuPage() {
   const { user, progress } = await requireProgress();
+  const [settings, tutorial] = await Promise.all([
+    getSiteSettings(),
+    getTutorialStatus(user.id),
+  ]);
   const label = user.username ?? user.name ?? "Player";
-  const earnLocked = !canPlayEarn(user.role, progress.level);
-  const tutorial = await getTutorialStatus(user.id);
+  const earnLocked = !canPlayEarn(user.role, progress.level, settings.earnEnabled);
+  const earnLockedHint = settings.earnEnabled
+    ? `Reach level ${EARN_UNLOCK_LEVEL} in Story to unlock.`
+    : "Earn is closed for now.";
 
   return (
     <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
@@ -24,10 +30,16 @@ export default async function GameMenuPage() {
         Welcome back, {label}.
       </h1>
       <p className="mt-4 max-w-xl text-lg leading-8 text-ink-muted">
-        Two ways in. Story is the campaign. Earn opens at level 5.
+        {settings.earnEnabled
+          ? `Two ways in. Story is the campaign. Earn opens at level ${EARN_UNLOCK_LEVEL}.`
+          : "Story is the campaign. Earn is closed for now."}
       </p>
       <div className="mt-10">
-        <GameModePicker earnLocked={earnLocked} tutorialRequired={tutorial.required} />
+        <GameModePicker
+          earnLocked={earnLocked}
+          earnLockedHint={earnLockedHint}
+          tutorialRequired={tutorial.required}
+        />
       </div>
     </section>
   );

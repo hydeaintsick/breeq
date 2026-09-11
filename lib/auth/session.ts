@@ -7,6 +7,7 @@ import {
   LOGIN_PATH,
 } from "@/lib/auth/paths";
 import { canPlayEarn, progressFromXp, starTally, type StarTally } from "@/lib/progress";
+import { getSiteSettings } from "@/lib/tutorial";
 
 export const getSession = cache(async () => auth());
 
@@ -49,9 +50,12 @@ export async function requireAdmin() {
 }
 
 export async function requireEarn() {
-  const { user, progress } = await requireProgress();
+  const [{ user, progress }, settings] = await Promise.all([
+    requireProgress(),
+    getSiteSettings(),
+  ]);
 
-  if (!canPlayEarn(user.role, progress.level)) {
+  if (!canPlayEarn(user.role, progress.level, settings.earnEnabled)) {
     redirect(GAME_MENU_PATH);
   }
 

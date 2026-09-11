@@ -15,9 +15,12 @@ export type TutorialStatus = {
 export const getSiteSettings = cache(async function getSiteSettings() {
   const row = await prisma.siteSettings.findUnique({
     where: { id: SITE_SETTINGS_ID },
-    select: { tutorialEnabled: true },
+    select: { tutorialEnabled: true, earnEnabled: true },
   });
-  return { tutorialEnabled: row?.tutorialEnabled ?? true };
+  return {
+    tutorialEnabled: row?.tutorialEnabled ?? true,
+    earnEnabled: row?.earnEnabled ?? true,
+  };
 });
 
 export const getTutorialStatus = cache(async function getTutorialStatus(userId: string): Promise<TutorialStatus> {

@@ -80,7 +80,14 @@ export function progressFromXp(xp: number): Progress {
   return { xp: safe, level: cap, into: need, next: need, ratio: 1 };
 }
 
-export function canPlayEarn(role: Role | string | undefined, level: number) {
+export function canPlayEarn(
+  role: Role | string | undefined,
+  level: number,
+  enabled = true,
+) {
+  if (!enabled) {
+    return false;
+  }
   return role === "ADMIN" || level >= EARN_UNLOCK_LEVEL;
 }
 

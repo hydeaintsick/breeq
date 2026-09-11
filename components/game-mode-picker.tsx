@@ -10,9 +10,11 @@ const EARN_LEVELS = [LOCKDOWN];
 
 export function GameModePicker({
   earnLocked,
+  earnLockedHint = `Reach level ${EARN_UNLOCK_LEVEL} in Story to unlock.`,
   tutorialRequired = false,
 }: {
   earnLocked: boolean;
+  earnLockedHint?: string;
   /** The tutorial is on and this player has not finished it: Story opens on it. */
   tutorialRequired?: boolean;
 }) {
@@ -36,7 +38,7 @@ export function GameModePicker({
         levels={EARN_LEVELS}
         seed={23}
         locked={earnLocked}
-        lockedHint={`Reach level ${EARN_UNLOCK_LEVEL} in Story to unlock.`}
+        lockedHint={earnLockedHint}
       />
     </div>
   );
