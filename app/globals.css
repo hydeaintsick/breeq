@@ -2621,7 +2621,7 @@ html[data-theme="dark"] .lore-halo-photo {
 }
 
 .lore-grid {
-  --lore-card: min(20rem, 64vw);
+  --deck-card: min(20rem, 64vw);
   display: grid;
   gap: 1.5rem;
   margin-top: 2.5rem;
@@ -2629,7 +2629,7 @@ html[data-theme="dark"] .lore-halo-photo {
 
 .lore-stage {
   position: relative;
-  height: calc(var(--lore-card) * 4 / 3 + 2.5rem);
+  height: calc(var(--deck-card) * 4 / 3 + 2.5rem);
   perspective: 1400px;
   touch-action: pan-y;
   cursor: grab;
@@ -2650,9 +2650,9 @@ html[data-theme="dark"] .lore-halo-photo {
   top: 50%;
   left: 50%;
   display: flex;
-  width: var(--lore-card);
+  width: var(--deck-card);
   aspect-ratio: 3 / 4;
-  margin: calc(var(--lore-card) * -2 / 3) 0 0 calc(var(--lore-card) / -2);
+  margin: calc(var(--deck-card) * -2 / 3) 0 0 calc(var(--deck-card) / -2);
   padding: 0;
   overflow: hidden;
   isolation: isolate;
@@ -2691,7 +2691,7 @@ html[data-theme="dark"] .lore-halo-photo {
   inset: 0;
   z-index: 10;
   background: #0b0d1a;
-  opacity: var(--lore-dim, 0);
+  opacity: var(--deck-dim, 0);
   pointer-events: none;
   will-change: opacity;
   transition: opacity 360ms var(--ease);
@@ -2729,7 +2729,7 @@ html[data-theme="dark"] .lore-halo-photo {
   background: linear-gradient(180deg, transparent 0%, rgba(11, 13, 26, 0.55) 30%, rgba(11, 13, 26, 0.94) 100%);
   text-shadow: 0 1px 16px rgba(11, 13, 26, 0.85);
   /* The title only reads on the cover facing the reader; it fades as the cover leans away. */
-  opacity: calc(1 - var(--lore-dim, 0) * 2.4);
+  opacity: calc(1 - var(--deck-dim, 0) * 2.4);
   will-change: opacity;
   transition: opacity 360ms var(--ease);
 }
@@ -2817,7 +2817,7 @@ html[data-theme="dark"] .lore-halo-photo {
 
 @media (min-width: 640px) {
   .lore-grid {
-    --lore-card: 18rem;
+    --deck-card: 18rem;
   }
 
   .lore-page-nav {
@@ -2827,9 +2827,9 @@ html[data-theme="dark"] .lore-halo-photo {
 
 @media (min-width: 1024px) {
   .lore-grid {
-    --lore-card: 18rem;
+    --deck-card: 18rem;
     /* A tighter fan: the far covers stay inside the rack's column, clear of the copy. */
-    --lore-spread: 0.82;
+    --deck-spread: 0.82;
     grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
     align-items: center;
     gap: 3rem;
@@ -2837,7 +2837,7 @@ html[data-theme="dark"] .lore-halo-photo {
   }
 
   .lore-stage {
-    height: calc(var(--lore-card) * 4 / 3 + 3.5rem);
+    height: calc(var(--deck-card) * 4 / 3 + 3.5rem);
   }
 }
 
