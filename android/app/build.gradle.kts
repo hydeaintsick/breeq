@@ -23,11 +23,11 @@ val startUrl = project.findProperty("breeq.startUrl") as String? ?: "https://bre
 val appHosts = project.findProperty("breeq.appHosts") as String? ?: "breeq.space"
 
 android {
-    namespace = "space.breeq.app"
+    namespace = "com.breeq.breeq"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "space.breeq.app"
+        applicationId = "com.breeq.breeq"
         // Android 6.0 (2015) and up: every device that still gets WebView updates.
         minSdk = 23
         targetSdk = 36

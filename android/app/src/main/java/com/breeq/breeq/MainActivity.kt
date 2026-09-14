@@ -1,4 +1,4 @@
-package space.breeq.app
+package com.breeq.breeq
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException

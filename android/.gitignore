@@ -4,9 +4,8 @@ build/
 .kotlin/
 local.properties
 
-# Signing: the upload key and its passwords never leave this machine (back them up).
-keystore.properties
-keystore/
+# Signing: keystore/ and keystore.properties ARE committed on purpose (private repo, archived
+# with the code). Never make this repository public without rotating the upload key.
 
 # Release outputs
 dist/

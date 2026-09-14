@@ -2,7 +2,7 @@
 
 A native shell around one WebView on `https://breeq.space/game/menu`. Portrait only,
 Android 6.0 (API 23) and up, ~270 KB. The page is the product; the shell does what a
-browser tab cannot (see `app/src/main/java/space/breeq/app/MainActivity.kt`).
+browser tab cannot (see `app/src/main/java/com/breeq/breeq/MainActivity.kt`).
 
 ## Release in one command
 
@@ -11,8 +11,9 @@ pnpm android:release          # → android/dist/breeq-<versionName>-<versionCod
 pnpm android:release 1.1.0    # same, sets versionName
 ```
 
-The first run mints the upload key into `android/keystore/breeq-upload.jks` and writes
-`android/keystore.properties` (both git-ignored — **back them up**). Every run bumps
+The upload key lives in `android/keystore/breeq-upload.jks` with its passwords in
+`android/keystore.properties`; both are **committed** so they are archived with the code
+(private repo — rotate the key before ever making it public). Every run bumps
 `versionCode` in `android/version.properties` (commit it), builds, signs, and prints the
 certificate SHA-256. Upload the `.aab` in Play Console; `adb install -r` the `.apk` on a
 test device.
@@ -28,7 +29,7 @@ pnpm android:debug                                           # build + install t
 cd android && ./gradlew installDebug -Pbreeq.startUrl=http://10.0.2.2:3333/game/menu   # against `pnpm dev` from the emulator
 ```
 
-The debug build has the id `space.breeq.app.debug`, allows cleartext HTTP, and enables
+The debug build has the id `com.breeq.breeq.debug`, allows cleartext HTTP, and enables
 `chrome://inspect` remote debugging of the WebView.
 
 ## What the shell does
@@ -56,9 +57,10 @@ The debug build has the id `space.breeq.app.debug`, allows cleartext HTTP, and e
 
 ## Play Console
 
-Listing copy and assets are in `store/`: `listing.md` (name, descriptions, category),
-`icon-512.png`, `feature-1024x500.png`. Enable Play App Signing on the first upload; the key
-minted here is the *upload* key.
+App: **Breeq: Brick Breaker & Earn**, package `com.breeq.breeq`. Listing copy and assets are
+in `store/`: `listing.md` (name, descriptions, category), `icon-512.png`,
+`feature-1024x500.png`. Enable Play App Signing on the first upload; the key committed here
+is the *upload* key.
 
 Gem packs are bought through Stripe Checkout inside the WebView. Play's payments policy
 expects Google Play Billing for digital goods sold inside an app: review this before the

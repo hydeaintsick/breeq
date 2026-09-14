@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 /** The Android app's id (android/app/build.gradle.kts → applicationId). */
-const ANDROID_PACKAGE = "space.breeq.app";
+const ANDROID_PACKAGE = "com.breeq.breeq";
 
 /**
  * Digital Asset Links: tells Android the Breeq app may open https://breeq.space
