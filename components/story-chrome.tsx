@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { StoryDive, type StoryDiveStart } from "@/components/story-dive";
 import type { JourneyHue, JourneyNodeState } from "@/game/journey";
 
 /** One zone of the route, as the chrome needs it: the book unseals by slug, the map lights by state. */
@@ -32,6 +33,11 @@ interface StoryChromeValue {
   /** The sheet the story pill opened, if any. */
   panel: StoryChromePanel;
   setPanel(panel: StoryChromePanel): void;
+  /** The way in from the Story card: the galaxy opens from the card and dives toward Kal's zone. */
+  dive: StoryDiveStart | null;
+  startDive(start: StoryDiveStart): void;
+  /** The story surface has drawn its first frame: the dive can lift and show it. */
+  arrive(): void;
 }
 
 const StoryChromeContext = createContext<StoryChromeValue | null>(null);
@@ -46,7 +52,19 @@ export function StoryChromeProvider({ children }: { children: ReactNode }) {
   const [surface, setSurface] = useState<StorySurface | null>(null);
   const [focus, setFocus] = useState<StoryChromeFocus>("story");
   const [panel, setPanel] = useState<StoryChromePanel>(null);
+  const [dive, setDive] = useState<StoryDiveStart | null>(null);
+  const [arrived, setArrived] = useState(false);
   const token = useRef<object | null>(null);
+
+  const startDive = useCallback((start: StoryDiveStart) => {
+    setArrived(false);
+    setDive(start);
+  }, []);
+  const arrive = useCallback(() => setArrived(true), []);
+  const endDive = useCallback(() => {
+    setDive(null);
+    setArrived(false);
+  }, []);
 
   const register = useCallback((next: StorySurface) => {
     const mine = {};
@@ -66,21 +84,20 @@ export function StoryChromeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!panel) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPanel(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [panel]);
+  // Escape closes a panel from inside the panel itself (`StoryPanel`), so it
+  // can slide down before it goes.
 
   const value = useMemo<StoryChromeValue>(
-    () => ({ surface, register, focus, setFocus, panel, setPanel }),
-    [focus, panel, register, surface],
+    () => ({ surface, register, focus, setFocus, panel, setPanel, dive, startDive, arrive }),
+    [arrive, dive, focus, panel, register, startDive, surface],
   );
 
-  return <StoryChromeContext.Provider value={value}>{children}</StoryChromeContext.Provider>;
+  return (
+    <StoryChromeContext.Provider value={value}>
+      {children}
+      {dive ? <StoryDive start={dive} arrived={arrived} onDone={endDive} /> : null}
+    </StoryChromeContext.Provider>
+  );
 }
 
 export function useStoryChrome(): StoryChromeValue {

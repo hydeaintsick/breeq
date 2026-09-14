@@ -1,5 +1,6 @@
 export { mountJourney, type JourneyHandle, type JourneyMountOptions, type JourneyPlacement } from "./mount";
-export { mountGalaxy, type GalaxyHandle, type GalaxyMountOptions, type GalaxyZone } from "./galaxy";
+export { mountGalaxy, type GalaxyFrame, type GalaxyHandle, type GalaxyMountOptions, type GalaxyZone } from "./galaxy";
+export { layoutTrail, type TrailLayout, type TrailNode } from "./trail";
 export {
   frontierIndex,
   hueForEpisode,

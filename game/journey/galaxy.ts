@@ -38,24 +38,43 @@ export interface GalaxyZone {
   hue: JourneyHue;
 }
 
+/** Where the disc sits on its stage, CSS px. */
+export interface GalaxyFrame {
+  cx: number;
+  cy: number;
+  R: number;
+}
+
 export interface GalaxyMountOptions {
   maxDpr?: number;
   /** A tap on a reachable zone. */
   onTap?: (index: number) => void;
+  /** A card-sized galaxy: no zone numerals, no "you are here" plate. The disc alone carries it. */
+  compact?: boolean;
+  /** Frame the disc yourself (a second mount continuing a first one's picture at another size). */
+  frame?: (width: number, height: number) => GalaxyFrame;
+  /** Seconds of turn to start from, so a second mount picks up where the first one's disc was. */
+  startTime?: number;
 }
 
 export interface GalaxyHandle {
   destroy(): void;
   setZones(zones: readonly GalaxyZone[]): void;
+  /** The disc's place on the stage, or null before the first size. */
+  frame(): GalaxyFrame | null;
+  /** Seconds the disc has turned. */
+  time(): number;
+  /**
+   * Dive toward zone `index`: the whole picture scales about it, `scale` × over
+   * `seconds`, eased in, a cool bloom rising as it goes. The dive keeps
+   * running when the caller's own motion preference is off — callers skip it then.
+   */
+  zoomTo(index: number, scale: number, seconds: number): void;
 }
 
-interface Frame {
+interface Frame extends GalaxyFrame {
   width: number;
   height: number;
-  /** Galaxy centre and radius, CSS px. */
-  cx: number;
-  cy: number;
-  R: number;
   /** Side of the square layers the disc and its veil are painted on (they turn). */
   S: number;
 }
@@ -123,9 +142,13 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
   let veil: HTMLCanvasElement | null = null;
   let raf = 0;
   let last = 0;
-  let time = 0;
+  let time = options.startTime ?? 0;
   let destroyed = false;
   let hidden = document.visibilityState === "hidden";
+  const compact = options.compact === true;
+  /** The dive: scale about a zone, eased from `from` to `to` over `seconds`. */
+  let zoom: { index: number; from: number; to: number; t: number; seconds: number } | null = null;
+  let zoomScale = 1;
 
   const hueOf = (hue: JourneyHue) => (hue === "steel" ? palette.steel : palette.neon[hue]);
 
@@ -431,7 +454,14 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
     const f = frame;
     if (!f || !sky || !disc || !veil) return;
     const { width: w, height: h } = f;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Diving: the whole picture scales about the zone being dived into.
+    const z = zoomScale;
+    const focus = zoom && z !== 1 ? nodeAt(zoom.index) : null;
+    if (focus) {
+      ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (focus.x - focus.x * z), dpr * (focus.y - focus.y * z));
+    } else {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
     // Sky stays put; the disc turns.
     ctx.drawImage(sky, 0, 0, w, h);
     const a = rotation();
@@ -538,6 +568,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
       ctx.beginPath();
       ctx.arc(p.x, p.y, 6, 0, TAU);
       ctx.stroke();
+      if (compact) return;
       ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
       ctx.fillText(zone.kicker, p.x, p.y - 13);
     });
@@ -551,6 +582,21 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
       ctx.beginPath();
       ctx.arc(p.x, p.y, 8 + 12 * k, 0, TAU);
       ctx.stroke();
+    }
+
+    // The dive's light: a cool bloom over the zone, rising with the scale.
+    if (focus && zoom) {
+      const span = Math.max(0.001, Math.abs(zoom.to - zoom.from));
+      const k = Math.min(1, Math.abs(z - Math.min(zoom.from, zoom.to)) / span);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      bloom(ctx, focus.x, focus.y, Math.max(w, h) * (0.35 + 0.65 * k), "#dfe8ff", 0.95 * k * k, 0.3);
+      ctx.restore();
+    }
+
+    if (current >= 0 && !compact) {
+      const p = pts[current];
       const above = p.y > h * 0.5;
       const caption = `${zones[current].kicker} · ${zones[current].title}`.toUpperCase();
       ctx.font = `500 10px ${MONO}`;
@@ -589,8 +635,20 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
     const dt = last === 0 ? 0 : Math.min(0.05, (now - last) / 1000);
     last = now;
     if (!reducedMotion.matches) time += dt;
+    if (zoom) {
+      zoom.t = Math.min(zoom.seconds, zoom.t + dt);
+      const p = zoom.seconds > 0 ? zoom.t / zoom.seconds : 1;
+      // Ease in: the dive gathers speed, the way falling does.
+      const e = zoom.to > zoom.from ? p * p * (3 - 2 * p) * (0.4 + 0.6 * p) : 1 - (1 - p) * (1 - p);
+      zoomScale = zoom.from + (zoom.to - zoom.from) * e;
+      if (p >= 1) {
+        zoomScale = zoom.to;
+        if (zoom.to === 1) zoom = null;
+      }
+    }
     draw();
-    if (!reducedMotion.matches) raf = requestAnimationFrame(tick);
+    const diving = zoom !== null && zoom.t < zoom.seconds;
+    if (!reducedMotion.matches || diving) raf = requestAnimationFrame(tick);
   };
   const schedule = () => {
     if (!raf && live()) {
@@ -611,8 +669,12 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     // The disc may run past a phone's sides; the route hangs at the bottom, on screen.
-    const R = Math.min(width * 0.62, height * 0.5) * 0.92;
-    frame = { width, height, cx: width / 2, cy: height * 0.46, R, S: Math.ceil(R * 2.5) };
+    const own = options.frame?.(width, height) ?? {
+      cx: width / 2,
+      cy: height * 0.46,
+      R: Math.min(width * 0.62, height * 0.5) * 0.92,
+    };
+    frame = { width, height, ...own, S: Math.ceil(own.R * 2.5) };
     sky = paintSky(frame);
     disc = paintDisc(frame);
     veil = paintVeil(frame);
@@ -645,7 +707,7 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
   reducedMotion.addEventListener("change", onMotion);
 
   const onClick = (e: MouseEvent) => {
-    if (!options.onTap || !frame) return;
+    if (!options.onTap || !frame || zoom) return;
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
@@ -679,6 +741,18 @@ export function mountGalaxy(canvas: HTMLCanvasElement, inputs: readonly GalaxyZo
       if (frame) {
         veil = paintVeil(frame);
         draw();
+      }
+      schedule();
+    },
+    frame: () => (frame ? { cx: frame.cx, cy: frame.cy, R: frame.R } : null),
+    time: () => time,
+    zoomTo(index, scale, seconds) {
+      const i = Math.max(0, Math.min(zones.length - 1, index));
+      zoom = { index: i, from: zoomScale, to: Math.max(1, scale), t: 0, seconds: Math.max(0, seconds) };
+      if (zoom.seconds === 0) {
+        zoomScale = zoom.to;
+        zoom.t = 0;
+        if (zoom.to === 1) zoom = null;
       }
       schedule();
     },

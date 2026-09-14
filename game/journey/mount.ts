@@ -60,6 +60,12 @@ export interface JourneyHandle {
   playOpen(): void;
   /** Cue the locked knock. */
   playLocked(): void;
+  /**
+   * Lean into a zone: the sky scales about its medallion while the episode
+   * opens over it, and eases back when `null` is passed as the sheet comes
+   * down. Instant under reduced motion.
+   */
+  zoom(index: number | null): void;
 }
 
 /** Past this travel a press is a drag, not a tap. */
@@ -72,6 +78,9 @@ const FLING = 0.22;
 const MAX_FLING = 3;
 /** Wheel idle before the map settles, ms. */
 const WHEEL_SETTLE = 140;
+/** How far the sky leans into a zone as its episode opens, and how long it takes. */
+const ZOOM_IN = 2.6;
+const ZOOM_SECONDS = 0.44;
 
 export function mountJourney(
   canvas: HTMLCanvasElement,
@@ -103,6 +112,11 @@ export function mountJourney(
   const reveal: number[] = nodes.map((n) => (n.state === "locked" ? 0 : 1));
   const revealing = new Set<number>();
 
+  // The lean into a zone: the node the sky scales about, the scale it is at, and the eased move under way.
+  let zoomIndex = -1;
+  let zoomScale = 1;
+  let zoomAnim: { from: number; to: number; t: number } | null = null;
+
   let layout = layoutJourney(nodes, { width: 1, height: 1 });
   const renderer = new JourneyRenderer(canvas, layout, () => schedule());
   const sfx = options.sound ? new JourneySfx() : null;
@@ -126,7 +140,7 @@ export function mountJourney(
   };
 
   const draw = () => {
-    renderer.render(cam, time, reveal);
+    renderer.render(cam, time, reveal, zoomIndex >= 0 ? { index: zoomIndex, scale: zoomScale } : undefined);
     emitFrame();
   };
 
@@ -177,6 +191,19 @@ export function mountJourney(
     for (const i of revealing) {
       reveal[i] = Math.min(1, reveal[i] + dt / REVEAL_SECONDS);
       if (reveal[i] >= 1) revealing.delete(i);
+      moving = true;
+    }
+    if (zoomAnim) {
+      zoomAnim.t += dt;
+      const p = reducedMotion.matches ? 1 : Math.min(1, zoomAnim.t / ZOOM_SECONDS);
+      // Ease out: quick to start, soft to land.
+      const e = 1 - (1 - p) * (1 - p) * (1 - p);
+      zoomScale = zoomAnim.from + (zoomAnim.to - zoomAnim.from) * e;
+      if (p >= 1) {
+        zoomScale = zoomAnim.to;
+        zoomAnim = null;
+        if (zoomScale === 1) zoomIndex = -1;
+      }
       moving = true;
     }
     if (!reducedMotion.matches) time += dt;
@@ -266,7 +293,8 @@ export function mountJourney(
     drag = null;
     if (stage.hasPointerCapture?.(e.pointerId)) stage.releasePointerCapture(e.pointerId);
     if (!d.moved) {
-      // A tap: on a medallion, or on a label that names its node.
+      // A tap: on a medallion, or on a label that names its node. Not while leaning into one.
+      if (zoomIndex >= 0) return;
       let hit = nodeFromTarget(d.target);
       if (hit < 0) {
         const rect = canvas.getBoundingClientRect();
@@ -461,6 +489,23 @@ export function mountJourney(
     },
     playOpen: () => sfx?.open(),
     playLocked: () => sfx?.locked(),
+    zoom(index) {
+      if (index === null) {
+        if (zoomIndex < 0) return;
+        zoomAnim = { from: zoomScale, to: 1, t: 0 };
+      } else {
+        zoomIndex = clampIndex(index);
+        zoomAnim = { from: zoomScale, to: ZOOM_IN, t: 0 };
+      }
+      if (reducedMotion.matches) {
+        zoomScale = zoomAnim.to;
+        zoomAnim = null;
+        if (zoomScale === 1) zoomIndex = -1;
+        if (width > 0 && !destroyed) draw();
+        return;
+      }
+      schedule();
+    },
   };
 }
 

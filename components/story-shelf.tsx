@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { HapticsToggle } from "@/components/haptics-toggle";
-import { PlayCard } from "@/components/play-card";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useStorySurface, type StoryZone } from "@/components/story-chrome";
 import { StoryClear } from "@/components/story-clear";
 import { StoryJourney, type JourneyCard, type StoryJourneyHandle } from "@/components/story-journey";
 import { StoryLose } from "@/components/story-lose";
 import { StoryPlay } from "@/components/story-play";
+import { HUE_VAR, StoryTrail } from "@/components/story-trail";
 import { SwipeToggle } from "@/components/swipe-toggle";
 import { useImmersive } from "@/components/use-immersive";
 import { useStoryTheme } from "@/components/use-story-theme";
@@ -21,10 +21,9 @@ import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
 import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
 import { STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
-import { boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
+import { ambientPhoto, boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import {
   chapterIsLocked,
-  chapterLockHint,
   continueChapterIndex,
   episodeIsComplete,
   episodeIsLocked,
@@ -37,6 +36,8 @@ import {
 const FALLBACK_LEVELS = [QUIET_START];
 const TUTORIAL_HINT = "Finish the tutorial first.";
 const EMPTY_DISCOVERIES: readonly string[] = [];
+/** The iris takes this long to open or close, matched by `.story-sheet` in the stylesheet. */
+const IRIS_MS = 440;
 
 /** The how-to-play slide that sits ahead of the episodes while the tutorial is on. */
 export type ShelfTutorial = { done: boolean };
@@ -52,19 +53,6 @@ function chapterLabel(cleared: number, total: number) {
     return "1 of 1 chapter";
   }
   return `${cleared} of ${total} chapters`;
-}
-
-function chapterLevels(chapter: StoryChapterCard, backgroundUrl: string | null) {
-  return [
-    applyBackgroundPhoto(
-      parseStoredLevel(chapter.level, {
-        id: chapter.id,
-        name: chapter.title,
-        author: "Breeq",
-      }),
-      backgroundUrl ? boardPhoto(backgroundUrl) : backgroundUrl,
-    ),
-  ];
 }
 
 /** Episode index → journey node index (the tutorial, when shown, is node 0). */
@@ -84,18 +72,8 @@ function continueIndex(episodes: readonly StoryEpisodeCard[], slug?: string) {
   return Math.max(0, episodes.length - 1);
 }
 
-function scrollToSlide(root: HTMLElement, index: number, behavior: ScrollBehavior) {
-  const slide = root.querySelector<HTMLElement>(`[data-story-slide="${index}"]`);
-  if (!slide || slide.offsetWidth < 8) {
-    return false;
-  }
-  const left = slide.offsetLeft - (root.clientWidth - slide.offsetWidth) / 2;
-  root.scrollTo({ left: Math.max(0, left), behavior });
-  return true;
-}
-
 /**
- * Where the sheet shrinks back to: the medallion the episode was opened from
+ * Where the iris closes back to: the medallion the episode was opened from
  * when it is still on the page, otherwise the episode's node on the map
  * (direct `/story/[slug]` visits never tapped one).
  */
@@ -122,6 +100,21 @@ function openingChapterIndex(episodes: readonly StoryEpisodeCard[], slug?: strin
   }
   const index = episodes.findIndex((item) => item.id === episode.id);
   return episodeIsLocked(episodes, index) ? 0 : continueChapterIndex(episode.chapters);
+}
+
+/** The iris: a circle on the medallion, or one wide enough to cover the whole screen from there. */
+function irisStyle(origin: DOMRect | null, grown: boolean): CSSProperties | undefined {
+  if (!origin) return undefined;
+  const cx = origin.left + origin.width / 2;
+  const cy = origin.top + origin.height / 2;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const far = Math.hypot(Math.max(cx, vw - cx), Math.max(cy, vh - cy)) + 12;
+  return {
+    "--iris-x": `${cx.toFixed(1)}px`,
+    "--iris-y": `${cy.toFixed(1)}px`,
+    "--iris-r": `${(grown ? far : origin.width * 0.5).toFixed(1)}px`,
+  } as CSSProperties;
 }
 
 export function StoryShelf({
@@ -162,9 +155,9 @@ export function StoryShelf({
   });
   const [origin, setOrigin] = useState<DOMRect | null>(null);
   const [grown, setGrown] = useState(Boolean(initialSlug));
-  /** The sheet is shrinking back onto its card; unmounts when the morph ends. */
+  /** The iris is closing back onto its medallion; unmounts when it lands. */
   const [closing, setClosing] = useState(false);
-  /** The grown sheet hides the whole page: the shelf behind it can rest. */
+  /** The open sheet hides the whole page: the map behind it can rest. */
   const [covered, setCovered] = useState(false);
   const originCardRef = useRef<HTMLElement | null>(null);
   const [playing, setPlaying] = useState<StoryChapterCard | null>(null);
@@ -186,12 +179,10 @@ export function StoryShelf({
   const [runId, setRunId] = useState(0);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const chapterRailRef = useRef<HTMLDivElement>(null);
-  const chapterAligned = useRef(false);
+  /** The wall the trail's dock shows. */
   const [chapterActive, setChapterActive] = useState(() => openingChapterIndex(episodes, initialSlug));
-  const chapterTargetRef = useRef(chapterActive);
-  const [chapterSnap, setChapterSnap] = useState(0);
-  const [chapterReady, setChapterReady] = useState(false);
+  /** Bumps when the road should stand on `chapterActive` at once. */
+  const [trailSnap, setTrailSnap] = useState(0);
 
   // The theme plays under the map and the episode sheet, and steps aside for a run.
   useStoryTheme(playing !== null);
@@ -252,6 +243,20 @@ export function StoryShelf({
   /** The book or the galaxy map is over the route: it neither draws nor sounds. */
   const sheeted = chrome?.panel != null;
 
+  // The dive from the Story card lifts once the map has drawn: two frames after mount.
+  const arrive = chrome?.arrive;
+  useEffect(() => {
+    if (!arrive) return;
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => arrive());
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+    };
+  }, [arrive]);
+
   const cards = useMemo<JourneyCard[]>(() => {
     const list: JourneyCard[] = [];
     if (tutorial) {
@@ -282,41 +287,6 @@ export function StoryShelf({
     return list;
   }, [gate, shelf, tutorial]);
 
-  const syncFromChapterRail = useCallback(() => {
-    if (!chapterAligned.current) {
-      return;
-    }
-    const root = chapterRailRef.current;
-    if (!root) {
-      return;
-    }
-    const slides = [...root.querySelectorAll<HTMLElement>("[data-story-slide]")];
-    if (slides.length === 0) {
-      return;
-    }
-    const mid = root.scrollLeft + root.clientWidth / 2;
-    let best = 0;
-    let bestDist = Number.POSITIVE_INFINITY;
-    for (const slide of slides) {
-      const index = Number(slide.dataset.storySlide);
-      const center = slide.offsetLeft + slide.offsetWidth / 2;
-      const dist = Math.abs(center - mid);
-      if (Number.isInteger(index) && dist < bestDist) {
-        bestDist = dist;
-        best = index;
-      }
-    }
-    setChapterActive((current) => (current === best ? current : best));
-  }, []);
-
-  const scrollChapterRail = useCallback((index: number, behavior: ScrollBehavior) => {
-    const root = chapterRailRef.current;
-    if (!root) {
-      return;
-    }
-    scrollToSlide(root, index, behavior);
-  }, []);
-
   useEffect(() => {
     setPortal(document.body);
   }, []);
@@ -325,102 +295,27 @@ export function StoryShelf({
     setShelf(episodes);
   }, [episodes]);
 
+  // The iris has opened: the page under it is fully hidden, and its map and
+  // sound can rest until the sheet comes down.
   useEffect(() => {
-    if (!open) {
+    if (!open || !grown || closing) {
       return;
     }
-    const onResize = () => {
-      scrollChapterRail(chapterTargetRef.current, "auto");
-      syncFromChapterRail();
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [open, scrollChapterRail, syncFromChapterRail]);
-
-  useLayoutEffect(() => {
-    if (!open || !grown) {
-      if (!open) {
-        chapterAligned.current = false;
-      }
-      return;
-    }
-
-    const target = chapterTargetRef.current;
-    setChapterActive(target);
-
-    const snap = (done: boolean) => {
-      const root = chapterRailRef.current;
-      if (!root) {
-        return false;
-      }
-      const ok = scrollToSlide(root, target, "auto");
-      if (ok && done) {
-        chapterAligned.current = true;
-        setChapterReady(true);
-      }
-      return ok;
-    };
-
-    // The sheet body is laid out at screen size from the first frame, so the
-    // rail can be aligned and shown while the frame is still growing.
-    snap(false);
-    let raf2 = 0;
-    const raf1 = window.requestAnimationFrame(() => {
-      snap(false);
-      raf2 = window.requestAnimationFrame(() => snap(true));
-    });
-
-    // Once the frame has grown, the page under it is fully hidden: its bloom
-    // and live boards can stop working until the sheet comes down.
     const sheet = sheetRef.current;
+    const done = () => setCovered(true);
     const onEnd = (event: TransitionEvent) => {
-      if (event.target !== sheet) {
+      if (event.target !== sheet || event.propertyName !== "clip-path") {
         return;
       }
-      if (event.propertyName !== "width" && event.propertyName !== "height" && event.propertyName !== "top") {
-        return;
-      }
-      snap(true);
-      setCovered(true);
+      done();
     };
     sheet?.addEventListener("transitionend", onEnd);
-    const fallback = window.setTimeout(() => {
-      snap(true);
-      setCovered(true);
-    }, origin ? 320 : 0);
-
+    const fallback = window.setTimeout(done, origin ? IRIS_MS + 60 : 0);
     return () => {
-      window.cancelAnimationFrame(raf1);
-      window.cancelAnimationFrame(raf2);
       sheet?.removeEventListener("transitionend", onEnd);
       window.clearTimeout(fallback);
     };
-  }, [chapterSnap, grown, open, origin]);
-
-  useEffect(() => {
-    const root = chapterRailRef.current;
-    if (!root || !open) {
-      return;
-    }
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) {
-        return;
-      }
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        syncFromChapterRail();
-      });
-    };
-    root.addEventListener("scroll", onScroll, { passive: true });
-    syncFromChapterRail();
-    return () => {
-      root.removeEventListener("scroll", onScroll);
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [open, open?.chapters.length, syncFromChapterRail]);
+  }, [closing, grown, open, origin]);
 
   useEffect(() => {
     if (!open || closing) {
@@ -444,15 +339,16 @@ export function StoryShelf({
     setOrigin(null);
     setClosing(false);
     setCovered(false);
+    journeyRef.current?.zoom(null);
     if (initialSlug) {
       router.push(STORY_PATH);
     }
   }, [initialSlug, router]);
 
   /**
-   * Close is the opening morph played backwards: the sheet shrinks onto the
-   * episode card it grew from (re-measured, the shelf may have moved), then
-   * unmounts once the size transition ends.
+   * Close is the opening played backwards: the map eases back out while the
+   * iris closes onto the medallion the episode grew from (re-measured, the map
+   * may have moved), then the sheet unmounts once the circle lands.
    */
   const closeSheet = useCallback(() => {
     if (closing) {
@@ -468,11 +364,11 @@ export function StoryShelf({
     setPaused(false);
     setCleared(null);
     setLost(null);
-    setChapterReady(false);
     setCovered(false);
     setOrigin(target);
     setGrown(false);
     setClosing(true);
+    journeyRef.current?.zoom(null);
   }, [closing, finishClose, offset, open, shelf]);
 
   useEffect(() => {
@@ -489,16 +385,13 @@ export function StoryShelf({
       finishClose();
     };
     const onEnd = (event: TransitionEvent) => {
-      if (event.target !== sheet) {
-        return;
-      }
-      if (event.propertyName !== "width" && event.propertyName !== "height" && event.propertyName !== "top") {
+      if (event.target !== sheet || event.propertyName !== "clip-path") {
         return;
       }
       finish();
     };
     sheet?.addEventListener("transitionend", onEnd);
-    const fallback = window.setTimeout(finish, 360);
+    const fallback = window.setTimeout(finish, IRIS_MS + 80);
     return () => {
       sheet?.removeEventListener("transitionend", onEnd);
       window.clearTimeout(fallback);
@@ -564,41 +457,12 @@ export function StoryShelf({
     return () => window.clearTimeout(id);
   }, [arriveFromTutorial, offset]);
 
-  const goToChapter = useCallback((index: number) => {
-    if (!open) {
-      return;
-    }
-    const next = Math.max(0, Math.min(open.chapters.length - 1, index));
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scrollChapterRail(next, reduced ? "auto" : "smooth");
-  }, [open, scrollChapterRail]);
-
-  useEffect(() => {
-    if (playing || !open) {
-      return;
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) {
-        return;
-      }
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        goToChapter(chapterActive + 1);
-      } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        goToChapter(chapterActive - 1);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [chapterActive, goToChapter, open, playing]);
-
   function openNode(node: number, anchor: HTMLElement) {
     const episode = shelf[node - offset];
-    if (episode) openEpisode(episode, anchor);
+    if (episode) openEpisode(episode, anchor, node);
   }
 
-  function openEpisode(episode: StoryEpisodeCard, card: HTMLElement) {
+  function openEpisode(episode: StoryEpisodeCard, card: HTMLElement, node: number) {
     const index = shelf.findIndex((item) => item.id === episode.id);
     if (gate || episodeIsLocked(shelf, index)) {
       return;
@@ -609,16 +473,14 @@ export function StoryShelf({
     setGrown(false);
     setClosing(false);
     setOpen(current);
-    const start = continueChapterIndex(current.chapters);
-    chapterTargetRef.current = start;
-    setChapterActive(start);
-    chapterAligned.current = false;
-    setChapterReady(false);
-    setChapterSnap((n) => n + 1);
+    setChapterActive(continueChapterIndex(current.chapters));
+    setTrailSnap((n) => n + 1);
     setPlaying(null);
     setPaused(false);
     setCleared(null);
     setLost(null);
+    // The sky leans into the zone as the iris opens over it.
+    journeyRef.current?.zoom(node);
   }
 
   function markCleared(chapterId: string, stars: 0 | 1 | 2 | 3) {
@@ -638,10 +500,8 @@ export function StoryShelf({
     if (playing && open) {
       const index = open.chapters.findIndex((chapter) => chapter.id === playing.id);
       const next = cleared && index >= 0 && index < open.chapters.length - 1 ? index + 1 : Math.max(0, index);
-      chapterTargetRef.current = next;
       setChapterActive(next);
-      chapterAligned.current = false;
-      setChapterSnap((n) => n + 1);
+      setTrailSnap((n) => n + 1);
     }
     setPaused(false);
     setCleared(null);
@@ -678,16 +538,8 @@ export function StoryShelf({
   const nextChapter = playingIndex >= 0 ? (open?.chapters[playingIndex + 1] ?? null) : null;
   const episodeDone = Boolean(open && open.chapters.every((chapter) => chapter.cleared));
   const openProgress = open ? episodeProgress(open) : null;
-
-  const sheetStyle =
-    open && origin && !grown
-      ? {
-          top: origin.top,
-          left: origin.left,
-          width: origin.width,
-          height: origin.height,
-        }
-      : { top: 0, left: 0, width: "100vw", height: "100svh" };
+  const openIndex = open ? shelf.findIndex((item) => item.id === open.id) : -1;
+  const openHue = open ? hueForEpisode(open.slug, Math.max(0, openIndex)) : "blue";
 
   return (
     <div className="story-page story-page-journey" data-covered={covered ? "true" : undefined}>
@@ -707,109 +559,73 @@ export function StoryShelf({
               <div
                 ref={sheetRef}
                 className="story-sheet"
+                data-iris={origin ? "true" : undefined}
                 data-grown={grown}
                 data-closing={closing ? "true" : undefined}
-                style={sheetStyle}
+                style={irisStyle(origin, grown)}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
               >
-                <div className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none" inert>
+                <div
+                  className="story-sheet-sky pointer-events-none [&_*]:pointer-events-none"
+                  data-resting={playing ? "true" : undefined}
+                  style={{ "--sky-hue": HUE_VAR[openHue] } as CSSProperties}
+                  inert
+                >
                   {open.backgroundUrl ? (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url("${screenPhoto(open.backgroundUrl).replace(/"/g, "")}")` }}
-                    />
+                    <>
+                      {/* The zone's sky as a halo: the photo blurred on the server, drifting; a
+                          zoomed detail of the photo over it, faint; the zone's neon breathing on
+                          top. The place is felt more than shown. */}
+                      <div
+                        className="story-sheet-halo"
+                        style={{ backgroundImage: `url("${ambientPhoto(open.backgroundUrl).replace(/"/g, "")}")` }}
+                      />
+                      <div
+                        className="story-sheet-photo"
+                        style={{ backgroundImage: `url("${screenPhoto(open.backgroundUrl).replace(/"/g, "")}")` }}
+                      />
+                      <div className="story-sheet-bloom" />
+                    </>
                   ) : (
                     <div className="story-sheet-body">
                       <BreakoutFill episode={open} />
                     </div>
                   )}
+                  <div className="story-sheet-scrim" aria-hidden="true" />
                 </div>
-                <div className="story-sheet-scrim" aria-hidden="true" />
                 <div className="story-sheet-body">
                   <div className="story-sheet-bar">
-                    <p className="min-w-0 text-sm font-medium text-white/80">
-                      {openProgress
-                        ? `${openProgress.cleared} / ${openProgress.total} chapters`
-                        : "Episode"}
-                    </p>
-                    <button type="button" className="story-close" aria-label="Close episode" onClick={closeSheet}>
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs tracking-[0.16em] text-[#a7b4ff]">
+                        Episode {String(openIndex + 1).padStart(2, "0")}
+                      </p>
+                      <p id={titleId} className="truncate text-sm text-white/80">
+                        {open.title}
+                        {openProgress && openProgress.total > 0 ? (
+                          <span className="text-white/55">
+                            {" · "}
+                            {openProgress.cleared} / {openProgress.total}
+                          </span>
+                        ) : null}
+                      </p>
+                    </div>
+                    <button type="button" className="story-close" aria-label="Back to the route" onClick={closeSheet}>
                       <CloseGlyph />
                     </button>
                   </div>
-                  <header className="story-sheet-copy">
-                    <p className="font-mono text-xs tracking-[0.16em] text-accent">Episode</p>
-                    <h2 id={titleId} className="font-semibold tracking-tight text-white">
-                      {open.title}
-                    </h2>
-                    {open.tagline ? <p className="story-page-lede mt-2">{open.tagline}</p> : null}
-                    <div
-                      className="story-campaign mt-3"
-                      aria-label={
-                        openProgress
-                          ? `${openProgress.cleared} of ${openProgress.total} chapters cleared`
-                          : undefined
-                      }
-                    >
-                      <div
-                        className="rank-bar story-campaign-bar"
-                        role="progressbar"
-                        aria-valuemin={0}
-                        aria-valuemax={openProgress?.total ?? 0}
-                        aria-valuenow={openProgress?.cleared ?? 0}
-                      >
-                        <span
-                          className="rank-bar-fill"
-                          style={{ width: `${openProgress?.percent ?? 0}%` }}
-                        />
-                      </div>
-                      <p className="story-page-lede mt-2">
-                        {openProgress
-                          ? `${openProgress.cleared} of ${openProgress.total} chapters cleared`
-                          : null}
-                      </p>
-                    </div>
-                  </header>
-                  <div
-                    ref={chapterRailRef}
-                    className="story-rail"
-                    data-ready={chapterReady ? "true" : undefined}
-                    role="region"
-                    aria-roledescription="carousel"
-                    aria-label="Chapters"
-                  >
-                    {open.chapters.map((chapter, index) => (
-                      <ChapterPlayCard
-                        key={chapter.id}
-                        chapter={chapter}
-                        index={index}
-                        active={index === chapterActive}
-                        backgroundUrl={open.backgroundUrl}
-                      locked={chapterIsLocked(open.chapters, index)}
-                      hint={chapterLockHint(open.chapters, index)}
-                      live={covered}
-                      onPlay={startChapter}
-                      />
-                    ))}
-                  </div>
-                  <div className="story-page-foot">
-                    {open.chapters.length > 1 ? (
-                      <div className="story-dots" role="tablist" aria-label="Chapter position">
-                        {open.chapters.map((chapter, index) => (
-                          <button
-                            key={chapter.id}
-                            type="button"
-                            className="story-dot"
-                            role="tab"
-                            aria-selected={index === chapterActive}
-                            aria-label={`Chapter ${index + 1}, ${chapter.title}`}
-                            onClick={() => goToChapter(index)}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
+                  <StoryTrail
+                    chapters={open.chapters}
+                    backgroundUrl={open.backgroundUrl}
+                    hue={openHue}
+                    selected={chapterActive}
+                    onSelect={setChapterActive}
+                    onPlay={startChapter}
+                    live={covered}
+                    snap={trailSnap}
+                    keyboard={!playing && !closing}
+                  />
                 </div>
               </div>
               {playing ? (
@@ -954,60 +770,6 @@ function BreakoutFill({ episode }: { episode: StoryEpisodeCard }) {
       showCaption={false}
       showHud={false}
     />
-  );
-}
-
-function ChapterPlayCard({
-  chapter,
-  index,
-  active,
-  backgroundUrl,
-  locked,
-  hint,
-  live,
-  onPlay,
-}: {
-  chapter: StoryChapterCard;
-  index: number;
-  active: boolean;
-  backgroundUrl: string | null;
-  locked: boolean;
-  hint: string | null;
-  /** Boards mount only once the sheet has finished growing: the morph stays cheap. */
-  live: boolean;
-  onPlay: (chapter: StoryChapterCard) => void;
-}) {
-  const levels = useMemo(
-    () => chapterLevels(chapter, backgroundUrl),
-    [backgroundUrl, chapter],
-  );
-
-  return (
-    <div
-      className="story-rail-item"
-      data-story-slide={index}
-      aria-current={active ? "true" : undefined}
-    >
-      <div className="story-rail-frame">
-        <PlayCard
-          kicker={String(index + 1).padStart(2, "0")}
-          title={chapter.title}
-          body={chapter.intro ?? (chapter.cleared ? "Cleared" : `${chapter.xpReward} XP`)}
-          meta={chapter.intro ? (chapter.cleared ? `Cleared · ${chapter.xpReward} XP` : `${chapter.xpReward} XP`) : undefined}
-          action={chapter.cleared ? "Replay" : "Play"}
-          levels={levels}
-          seed={19 + index * 13}
-          locked={locked}
-          lockedHint={hint ?? undefined}
-          frozen={locked}
-          fill
-          aura={false}
-          preview={live}
-          stars={chapter.stars}
-          onSelect={locked ? undefined : () => onPlay(chapter)}
-        />
-      </div>
-    </div>
   );
 }
 

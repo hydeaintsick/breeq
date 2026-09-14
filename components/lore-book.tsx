@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Chevron } from "@/components/deck";
-import { CloseIcon } from "@/components/nav-icons";
 import type { StoryZone } from "@/components/story-chrome";
+import { StoryPanel } from "@/components/story-panel";
 import type { JourneyHue } from "@/game/journey";
 import { LORE_BOOK, LORE_EPISODES, type LoreChapter } from "@/lib/lore";
 
@@ -51,7 +51,6 @@ function leaves(zones: readonly StoryZone[]): Leaf[] {
  * book is read at the pace the road is walked.
  */
 export function LoreBook({ zones, onClose }: { zones: readonly StoryZone[]; onClose: () => void }) {
-  const titleId = useId();
   const pageId = useId();
   const pages = useMemo(() => leaves(zones), [zones]);
   const last = pages.length - 1;
@@ -86,21 +85,12 @@ export function LoreBook({ zones, onClose }: { zones: readonly StoryZone[]; onCl
   }, [last]);
 
   return (
-    <div className="story-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <div className="story-panel-bar">
-        <div className="min-w-0">
-          <p id={titleId} className="font-mono text-xs tracking-[0.16em] text-[#a7b4ff]">
-            The Book of Kal
-          </p>
-          <p className="mt-0.5 text-sm text-white/60">
-            {openCount - 1} of {last} chapters unsealed
-          </p>
-        </div>
-        <button type="button" className="story-close" aria-label="Close the book" onClick={onClose}>
-          <CloseIcon />
-        </button>
-      </div>
-
+    <StoryPanel
+      title="The Book of Kal"
+      subtitle={`${openCount - 1} of ${last} chapters unsealed`}
+      closeLabel="Put the book away"
+      onClose={onClose}
+    >
       <div className="lore-book">
         <div className="lore-book-toc" role="tablist" aria-label="Chapters">
           {pages.map((page, index) => (
@@ -185,7 +175,7 @@ export function LoreBook({ zones, onClose }: { zones: readonly StoryZone[]; onCl
           </button>
         </div>
       </div>
-    </div>
+    </StoryPanel>
   );
 }
 

@@ -214,13 +214,20 @@ export class JourneyRenderer {
    * @param cam camera, fractional node index
    * @param t seconds, frozen under reduced motion
    * @param reveal per node, 0 (shrouded) .. 1 (open), animating after an unlock
+   * @param zoom the sky scaled about a node's centre (a zone opening), 1 for none
    */
-  render(cam: number, t: number, reveal: readonly number[]): void {
+  render(cam: number, t: number, reveal: readonly number[], zoom?: { index: number; scale: number }): void {
     const { ctx, width: w, height: h, dpr } = this;
     if (!this.plate || w === 0) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.plate, 0, 0);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const z = zoom && zoom.scale !== 1 && this.layout.nodes[zoom.index] ? zoom.scale : 1;
+    if (z !== 1 && zoom) {
+      const c = this.nodeCenter(zoom.index, cam);
+      ctx.setTransform(dpr * z, 0, 0, dpr * z, dpr * (c.x - c.x * z), dpr * (c.y - c.y * z));
+    } else {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     const { nodes, spacing } = this.layout;
     const shift = -cam * spacing;
@@ -262,9 +269,11 @@ export class JourneyRenderer {
     this.nearDust(ctx, shift * PAR_NEAR, t);
 
     // Frame hairline: the map is the one dark object on the page.
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+    if (z === 1) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+    }
   }
 
   // ---------------------------------------------------------------------------

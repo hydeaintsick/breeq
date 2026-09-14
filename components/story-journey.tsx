@@ -14,7 +14,7 @@ export interface JourneyCard {
   action: string;
   locked: boolean;
   hint: string | null;
-  /** 0..3, shown once the episode has been started. */
+  /** 0..3, shown on unlocked episodes. Hidden while locked. */
   stars: number | null;
   /** A link instead of an opening sheet (the tutorial). */
   href?: string;
@@ -25,6 +25,8 @@ export interface StoryJourneyHandle {
   /** The medallion's box on screen, for the sheet to grow from and shrink back to. */
   anchorRect(index: number): DOMRect | null;
   current(): number;
+  /** Lean the sky into a zone as its episode opens over it; `null` eases back out. Labels step aside meanwhile. */
+  zoom(index: number | null): void;
 }
 
 export function StoryJourney({
@@ -51,6 +53,7 @@ export function StoryJourney({
   onSettle?: (index: number) => void;
 }) {
   const { enabled: soundOn } = useSound();
+  const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<JourneyHandle | null>(null);
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -180,20 +183,31 @@ export function StoryJourney({
       goTo: (index, options) => handleRef.current?.goTo(index, options),
       anchorRect: (index) => hitRefs.current[index]?.getBoundingClientRect() ?? null,
       current: () => handleRef.current?.current() ?? active,
+      zoom: (index) => {
+        handleRef.current?.zoom(index);
+        const root = rootRef.current;
+        if (!root) return;
+        if (index === null) delete root.dataset.zoom;
+        else root.dataset.zoom = "true";
+      },
     }),
     [active],
   );
 
   return (
-    <div className="journey" role="group" aria-roledescription="map" aria-label="Story Journey">
+    <div ref={rootRef} className="journey" role="group" aria-roledescription="map" aria-label="Story Journey">
       <div className="journey-stage">
         <canvas ref={canvasRef} className="journey-canvas" aria-hidden="true" />
         {nodes.map((node, index) => {
           const card = cards[index];
           if (!card) return null;
+          const starsLabel =
+            !card.locked && card.stars !== null
+              ? `${Math.round(card.stars * 10) / 10} of 3 stars.`
+              : null;
           const label = card.locked
             ? `Locked. ${card.title}. ${card.hint ?? card.meta}`
-            : `${card.action}. ${card.title}. ${card.meta}`;
+            : `${card.action}. ${card.title}. ${card.meta}${starsLabel ? ` ${starsLabel}` : ""}`;
           return (
             <div
               key={node.id}
@@ -230,10 +244,12 @@ export function StoryJourney({
                 <span className="journey-card-title">{card.title}</span>
                 <span className="journey-card-meta">{card.locked ? (card.hint ?? card.meta) : card.meta}</span>
                 <span className="journey-card-row">
+                  {!card.locked && card.stars !== null ? (
+                    <StarRating value={card.stars} size="sm" />
+                  ) : null}
                   <span className={card.locked ? "btn-glass journey-card-cta" : "btn-play journey-card-cta play-shimmer"}>
                     {card.locked ? "Locked" : card.action}
                   </span>
-                  {card.stars !== null ? <StarRating value={card.stars} size="sm" /> : null}
                 </span>
               </button>
             </div>

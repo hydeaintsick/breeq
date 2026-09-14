@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { GameModePicker } from "@/components/game-mode-picker";
 import { requireProgress } from "@/lib/auth/session";
 import { canPlayEarn, EARN_UNLOCK_LEVEL } from "@/lib/progress";
+import { getStoryShelf } from "@/lib/story";
+import { routeStand } from "@/lib/story-route";
 import { getSiteSettings, getTutorialStatus } from "@/lib/tutorial";
 
 export const metadata: Metadata = {
@@ -11,10 +13,12 @@ export const metadata: Metadata = {
 
 export default async function GameMenuPage() {
   const { user, progress } = await requireProgress();
-  const [settings, tutorial] = await Promise.all([
+  const [settings, tutorial, { episodes }] = await Promise.all([
     getSiteSettings(),
     getTutorialStatus(user.id),
+    getStoryShelf(user.id),
   ]);
+  const stand = routeStand(episodes, tutorial.enabled ? { done: tutorial.done } : null);
   const label = user.username ?? user.name ?? "Player";
   const earnLocked = !canPlayEarn(user.role, progress.level, settings.earnEnabled);
   const earnLockedHint = settings.earnEnabled
@@ -36,6 +40,7 @@ export default async function GameMenuPage() {
       </p>
       <div className="mt-10">
         <GameModePicker
+          stand={stand}
           earnLocked={earnLocked}
           earnLockedHint={earnLockedHint}
           tutorialRequired={tutorial.required}

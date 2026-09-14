@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
-import { CloseIcon } from "@/components/nav-icons";
+import { useEffect, useRef } from "react";
 import type { StoryZone } from "@/components/story-chrome";
+import { StoryPanel } from "@/components/story-panel";
 import { mountGalaxy, type GalaxyHandle } from "@/game/journey";
 
 /**
@@ -18,7 +18,6 @@ export function GalaxyMap({
   onClose: () => void;
   onTravel: (index: number) => void;
 }) {
-  const titleId = useId();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<GalaxyHandle | null>(null);
   const onTravelRef = useRef(onTravel);
@@ -48,20 +47,12 @@ export function GalaxyMap({
   const current = zones.find((zone) => zone.state === "current");
 
   return (
-    <div className="story-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <div className="story-panel-bar">
-        <div className="min-w-0">
-          <p id={titleId} className="font-mono text-xs tracking-[0.16em] text-[#a7b4ff]">
-            Galaxy map
-          </p>
-          <p className="mt-0.5 text-sm text-white/60">
-            {zones.length > 0 ? `${reached} of ${zones.length} zones reached · ${cleared} cleared` : "No route yet"}
-          </p>
-        </div>
-        <button type="button" className="story-close" aria-label="Close the map" onClick={onClose}>
-          <CloseIcon />
-        </button>
-      </div>
+    <StoryPanel
+      title="Galaxy map"
+      subtitle={zones.length > 0 ? `${reached} of ${zones.length} zones reached · ${cleared} cleared` : "No route yet"}
+      closeLabel="Put the map away"
+      onClose={onClose}
+    >
       <div className="galaxy-stage">
         <canvas
           ref={canvasRef}
@@ -80,6 +71,6 @@ export function GalaxyMap({
         </p>
         <p className="text-xs text-white/45">Tap a lit zone to travel there.</p>
       </div>
-    </div>
+    </StoryPanel>
   );
 }

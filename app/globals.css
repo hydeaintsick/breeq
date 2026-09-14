@@ -987,7 +987,9 @@ html[data-theme="dark"] {
 }
 
 /* --- Story panels: the book and the galaxy map ---------------------------
-   Full-screen dark sheets under the header pills, over the route. */
+   Full-screen dark sheets under the header pills, over the route. They rise
+   from the bottom of the screen and are sent back down with the chevron in
+   their bar; `transform` only, so a phone composites the whole slide. */
 .story-panel {
   position: fixed;
   inset: 0;
@@ -999,18 +1001,41 @@ html[data-theme="dark"] {
   background: #05060c;
   color: #ffffff;
   padding-top: calc(max(1rem, env(safe-area-inset-top)) + 3.5rem);
-  animation: panel-in var(--duration) var(--ease);
+  will-change: transform;
+  animation: panel-up 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes panel-in {
+.story-panel[data-closing="true"] {
+  pointer-events: none;
+  animation: panel-down 340ms cubic-bezier(0.4, 0, 0.8, 0.4) both;
+}
+
+@keyframes panel-up {
   from {
-    opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(100%);
   }
   to {
-    opacity: 1;
     transform: none;
   }
+}
+
+@keyframes panel-down {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* The sheet's handle: a short bar under the pills, the way a drawer shows its lip. */
+.story-panel-grip {
+  flex: none;
+  width: 2.5rem;
+  height: 0.28rem;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .story-panel-bar {
@@ -1019,7 +1044,7 @@ html[data-theme="dark"] {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem max(1rem, env(safe-area-inset-right)) 0.25rem max(1.25rem, env(safe-area-inset-left));
+  padding: 0.5rem max(1rem, env(safe-area-inset-right)) 0.25rem max(1.25rem, env(safe-area-inset-left));
 }
 
 .story-panel .story-close {
@@ -1588,7 +1613,6 @@ html[data-theme="dark"] {
 }
 
 .story-page-copy,
-.story-rail,
 .story-deck,
 .story-page-foot {
   position: relative;
@@ -1642,58 +1666,6 @@ html[data-theme="dark"] {
     margin-top: 0.75rem;
     font-size: 1rem;
     line-height: 1.75;
-  }
-}
-
-.story-rail {
-  --story-card: min(22rem, calc(100% - 3.75rem));
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  align-items: stretch;
-  gap: 1rem;
-  margin-top: 0.7rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: max(1rem, calc(50% - var(--story-card) / 2));
-  padding-inline: max(1rem, calc(50% - var(--story-card) / 2));
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
-  touch-action: pan-x;
-  -webkit-overflow-scrolling: touch;
-}
-
-.story-rail::-webkit-scrollbar {
-  display: none;
-}
-
-.story-rail-item {
-  container-type: size;
-  display: grid;
-  flex: 0 0 var(--story-card);
-  height: 100%;
-  min-height: 0;
-  place-items: center;
-  scroll-snap-align: center;
-}
-
-.story-rail-frame {
-  aspect-ratio: 3 / 4;
-  width: min(100cqw, calc(100cqh * 3 / 4));
-  max-width: 22rem;
-}
-
-@media (min-width: 640px) {
-  .story-rail {
-    --story-card: 100%;
-    gap: 0;
-    scroll-padding-inline: 0;
-    padding-inline: 0;
-  }
-
-  .story-rail-item {
-    flex-basis: 100%;
   }
 }
 
@@ -1758,6 +1730,14 @@ html[data-theme="dark"] {
   width: 0;
   height: 0;
   will-change: transform, opacity;
+}
+
+/* Leaning into a zone: the labels step aside while the sky scales about its
+   medallion (the map writes their opacity inline every frame; this outranks it). */
+.journey[data-zoom="true"] .journey-node {
+  opacity: 0 !important;
+  transition: opacity 180ms var(--ease);
+  pointer-events: none;
 }
 
 .journey-hit {
@@ -1855,9 +1835,10 @@ html[data-theme="dark"] {
 
 .journey-card-row {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.45rem;
   margin-top: 0.5rem;
   min-height: 2.25rem;
 }
@@ -1953,43 +1934,120 @@ html[data-theme="dark"] {
   opacity: 0.9;
 }
 
+/* --- The episode sheet: an iris on the medallion -----------------------------
+   The sheet is always screen-sized; what moves is a circular clip that opens
+   from the zone's medallion to the corners (the map leans into the same point
+   underneath), and the sky inside settles from a slight magnification. Both
+   are composited, so the four hundred milliseconds cost a phone nothing in
+   layout. Closing is the same played backwards. */
 .story-sheet {
+  --iris-ms: 440ms;
+  --iris-ease: cubic-bezier(0.3, 0.8, 0.3, 1);
   position: fixed;
+  inset: 0;
   z-index: 70;
   overflow: hidden;
   background: #0b0d1a;
-  border-radius: 1.6rem;
   contain: layout paint;
-  transition:
-    top var(--duration) var(--ease),
-    left var(--duration) var(--ease),
-    width var(--duration) var(--ease),
-    height var(--duration) var(--ease),
-    border-radius var(--duration) var(--ease);
 }
 
-.story-sheet[data-grown="true"] {
+.story-sheet[data-iris="true"] {
+  clip-path: circle(var(--iris-r) at var(--iris-x) var(--iris-y));
+  transition: clip-path var(--iris-ms) var(--iris-ease);
+}
+
+.story-sheet-sky {
+  position: absolute;
   inset: 0;
-  width: 100vw;
-  height: 100svh;
-  max-width: none;
-  border-radius: 0;
+  transform-origin: var(--iris-x, 50%) var(--iris-y, 50%);
+  transition: transform var(--iris-ms) var(--iris-ease);
+}
+
+.story-sheet[data-iris="true"][data-grown="false"] .story-sheet-sky {
+  transform: scale(1.32);
+}
+
+/* The zone's sky, entered: a halo (the photo blurred on the server, upscaled,
+   drifting very slowly) with the photo itself zoomed in and faint over it.
+   Two transforms on the compositor; both hold still under a run and under
+   reduced motion. */
+.story-sheet-halo,
+.story-sheet-photo {
+  position: absolute;
+  inset: -6%;
+  background-position: center;
+  background-size: cover;
+  will-change: transform;
+}
+
+.story-sheet-halo {
+  transform: scale(1.1);
+  animation: sky-halo 34s ease-in-out infinite alternate;
+}
+
+.story-sheet-photo {
+  opacity: 0.3;
+  transform: scale(1.9);
+  animation: sky-photo 52s ease-in-out infinite alternate;
+}
+
+/* The zone's neon, breathing over the halo. */
+.story-sheet-bloom {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 45% at 30% 22%, color-mix(in srgb, var(--sky-hue) 30%, transparent), transparent 70%),
+    radial-gradient(55% 40% at 78% 58%, color-mix(in srgb, var(--sky-hue) 18%, transparent), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.8;
+  animation: sky-bloom 14s ease-in-out infinite alternate;
+}
+
+@keyframes sky-halo {
+  from {
+    transform: translate3d(-1.5%, 1%, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(1.5%, -1.5%, 0) scale(1.22);
+  }
+}
+
+@keyframes sky-photo {
+  from {
+    transform: translate3d(3%, -2%, 0) scale(1.9);
+  }
+  to {
+    transform: translate3d(-3%, 2%, 0) scale(2.1);
+  }
+}
+
+@keyframes sky-bloom {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.story-sheet-sky[data-resting="true"] .story-sheet-halo,
+.story-sheet-sky[data-resting="true"] .story-sheet-photo,
+.story-sheet-sky[data-resting="true"] .story-sheet-bloom {
+  animation-play-state: paused;
 }
 
 /* The sheet's content is laid out once, at screen size, and merely revealed
-   as the frame grows: nothing inside (four live boards, container queries)
-   is re-measured or re-rasterized per frame of the morph. Only the photo
-   layer above follows the frame, which is what makes it read as a zoom. */
+   as the iris opens: nothing inside is re-measured per frame. */
 .story-sheet-body {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
   flex-direction: column;
-  width: 100vw;
-  height: 100svh;
+  width: 100%;
+  height: 100%;
   opacity: 0;
-  transition: opacity var(--duration) var(--ease);
+  transition: opacity var(--iris-ms) var(--iris-ease);
 }
 
 .story-sheet[data-grown="true"] .story-sheet-body {
@@ -1998,7 +2056,7 @@ html[data-theme="dark"] {
 
 .story-sheet[data-closing="true"] .story-sheet-body {
   opacity: 0;
-  transition-duration: calc(var(--duration) / 2);
+  transition-duration: calc(var(--iris-ms) / 2);
 }
 
 .story-sheet-scrim {
@@ -2006,9 +2064,9 @@ html[data-theme="dark"] {
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(5, 6, 12, 0.28) 0%,
-    rgba(5, 6, 12, 0.72) 38%,
-    #05060c 100%
+    rgba(5, 6, 12, 0.4) 0%,
+    rgba(5, 6, 12, 0.5) 40%,
+    rgba(5, 6, 12, 0.86) 100%
   );
 }
 
@@ -2016,76 +2074,382 @@ html[data-theme="dark"] {
   position: relative;
   z-index: 2;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: max(0.85rem, env(safe-area-inset-top)) max(0.85rem, env(safe-area-inset-right)) 0
+  padding: max(0.85rem, env(safe-area-inset-top)) max(0.85rem, env(safe-area-inset-right)) 0.25rem
     max(1.25rem, env(safe-area-inset-left));
 }
 
-.story-sheet-copy {
-  position: relative;
-  z-index: 2;
-  flex: none;
-  padding: 0.2rem max(1.25rem, env(safe-area-inset-right)) 0
-    max(1.25rem, env(safe-area-inset-left));
-}
-
-.story-sheet-copy h2 {
-  margin-top: 0.35rem;
-  font-size: 1.7rem;
-  line-height: 1.15;
-}
-
-.story-sheet-copy .story-page-lede {
-  margin-top: 0.4rem;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.story-sheet .story-rail {
-  position: relative;
-  z-index: 2;
-  opacity: 0;
-  transition: opacity var(--duration) var(--ease);
-}
-
-.story-sheet .story-rail[data-ready="true"] {
-  opacity: 1;
-}
-
-/* Shrinking back onto its card: the morph in reverse, nothing tappable. */
+/* Closing back onto its medallion: nothing tappable. */
 .story-sheet[data-closing="true"] {
   pointer-events: none;
 }
 
-.story-sheet[data-closing="true"] .story-rail {
-  transition-duration: calc(var(--duration) / 2);
-}
-
-.story-sheet .story-page-foot {
+/* --- The chapter trail: an episode's walls as a road ----------------------- */
+.trail {
   position: relative;
   z-index: 2;
-  padding-bottom: max(0.45rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
 }
 
-.story-sheet .story-dot::after {
-  background: #ffffff;
+.trail-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  /* The road fades out under the bar and into the dock. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 2.75rem, #000 calc(100% - 1.5rem), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 2.75rem, #000 calc(100% - 1.5rem), transparent 100%);
 }
 
-.story-campaign-bar {
+.trail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.trail-road {
+  position: relative;
+  width: 100%;
+}
+
+.trail-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trail-path-dim {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+
+.trail-path-lit,
+.trail-path-glow {
+  fill: none;
+  stroke: var(--trail-hue);
+  stroke-linecap: round;
+  transition: stroke-dasharray 700ms var(--ease);
+}
+
+.trail-path-lit {
+  stroke: #ffffff;
+  stroke-width: 2;
+  opacity: 0.9;
+}
+
+.trail-path-glow {
+  stroke-width: 9;
+  opacity: 0.32;
+}
+
+/* One wall: a glass disc on the road, numbered. `transform` places it; the
+   stars hang under it, the pulsing ring around the next wall to clear. */
+.trail-node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 0;
+  height: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Everything hanging off a node is anchored at its zero-size origin (top/left
+   0) and centred with a transform: the node's own box is the road's point. */
+.trail-node::before {
+  /* The thumb's target: wider than the disc. */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.trail-node-disc {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+    rgba(12, 14, 30, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.22) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 10px 24px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%) scale(0.92);
+  transition:
+    transform 260ms var(--ease),
+    box-shadow 260ms var(--ease),
+    background 260ms var(--ease);
+}
+
+.trail-node-numeral {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.trail-node[data-state="cleared"] .trail-node-disc {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.02)),
+    color-mix(in srgb, var(--trail-hue) 42%, rgba(12, 14, 30, 0.7));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--trail-hue) 70%, #ffffff) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 0 22px color-mix(in srgb, var(--trail-hue) 45%, transparent),
+    0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.trail-node[data-state="current"] .trail-node-disc {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.72));
+  color: #0f1117;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 0 28px rgba(255, 255, 255, 0.35),
+    0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.trail-node[data-state="locked"] {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.trail-node[data-state="locked"] .trail-node-disc {
+  background: rgba(12, 14, 30, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.trail-node[data-selected="true"] .trail-node-disc {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.trail-node[data-selected="true"] .trail-node-disc::after {
+  content: "";
+  position: absolute;
+  inset: -0.42rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+
+.trail-node:focus-visible .trail-node-disc {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.trail-node-lock {
+  position: absolute;
+  right: -0.15rem;
+  bottom: -0.15rem;
+  width: 1rem;
+  height: 1rem;
+  padding: 0.14rem;
+  border-radius: 999px;
+  background: #0b0d1a;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+/* Stars sit beside the disc, on the side the road does not bend to. */
+.trail-node-stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  height: 0;
+  white-space: nowrap;
+}
+
+.trail-node-stars[data-side="right"] {
+  transform: translateX(1.9rem);
+}
+
+.trail-node-stars[data-side="left"] {
+  transform: translateX(-1.9rem) translateX(-100%);
+}
+
+/* Kal's ring: the next wall breathes. */
+.trail-node-halo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.trail-node[data-state="current"] .trail-node-halo {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+  animation: trail-halo 2.4s ease-out infinite;
+}
+
+@keyframes trail-halo {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* The dock: one wall at a time, a look at its board, its name and reward, and Play. */
+.trail-dock {
+  position: relative;
+  z-index: 3;
+  display: grid;
   flex: none;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: stretch;
+  column-gap: 1rem;
+  row-gap: 0.85rem;
+  /* A good third of the screen: room for the board, the chapter's line, and the one button. */
+  min-height: min(33svh, 21rem);
+  margin: 0 max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom))
+    max(0.75rem, env(safe-area-inset-left));
+  padding: 0.9rem;
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04) 60%, rgba(255, 255, 255, 0.02)),
+    rgba(12, 14, 30, 0.42);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16) inset,
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+.trail-dock-board {
+  position: relative;
+  grid-row: 1;
+  height: 100%;
+  min-height: 9rem;
+  width: auto;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #05060c;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.trail-dock[data-locked="true"] .trail-dock-board {
+  opacity: 0.55;
+}
+
+.trail-dock-copy {
+  display: flex;
   min-width: 0;
-  width: min(100%, 22rem);
-  height: 0.38rem;
-  background: rgba(255, 255, 255, 0.12);
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 0.15rem;
+}
+
+.trail-dock-title {
+  margin-top: 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.trail-dock-intro {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin-top: 0.5rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.trail-dock-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.trail-dock-cta {
+  grid-column: 1 / -1;
+  min-height: 3rem;
+  justify-self: stretch;
+  font-size: 1rem;
+}
+
+.trail-dock-cta.btn-glass {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: none;
 }
 
 @media (min-width: 640px) {
-  .story-sheet-copy h2 {
-    margin-top: 0.55rem;
-    font-size: 2.25rem;
+  .trail-dock {
+    width: min(100% - 1.5rem, 36rem);
+    min-height: min(30svh, 19rem);
+    margin-inline: auto;
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trail-node-halo,
+  .story-sheet-halo,
+  .story-sheet-photo,
+  .story-sheet-bloom {
+    animation: none;
+  }
+
+  .trail-node-disc,
+  .trail-path-lit,
+  .trail-path-glow {
+    transition: none;
   }
 }
 
@@ -3024,6 +3388,51 @@ html[data-theme="dark"] {
   animation: board-in 320ms var(--ease) both;
 }
 
+/* --- The Story card: Kal's galaxy under the copy ---------------------------
+   The card is the door into the story: the same disc the galaxy map draws,
+   turning slowly, the route a lit thread on one arm. Tapping it hands the
+   picture to `.story-dive`, which opens from the card to the whole screen and
+   falls toward Kal's zone while the route loads underneath. */
+.story-card-sky {
+  position: absolute;
+  inset: 0;
+  background: #05060c;
+  animation: board-in 320ms var(--ease) both;
+}
+
+.story-card-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.story-card .mode-card-copy {
+  padding-top: 5.5rem;
+}
+
+.story-dive {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #05060c;
+  pointer-events: auto;
+  will-change: clip-path, opacity;
+  transition:
+    clip-path var(--dive-open, 380ms) cubic-bezier(0.3, 0.8, 0.3, 1),
+    opacity var(--dive-out, 480ms) var(--ease);
+}
+
+.story-dive[data-out="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.story-dive-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 @keyframes board-in {
   from {
     opacity: 0;
@@ -3435,7 +3844,9 @@ html[data-theme="dark"] .lore-halo-photo {
   .mode-switch button,
   .mode-card,
   .story-sheet,
-  .story-sheet .story-rail,
+  .story-sheet-sky,
+  .story-sheet-body,
+  .story-dive,
   .rank-bar-fill,
   .mode-card-progress-fill,
   .editor-chip,
