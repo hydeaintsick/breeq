@@ -240,10 +240,15 @@ export function mountJourney(
       // Any direction of travel commits the drag: a thumb rarely moves level.
       if (Math.hypot(dx, e.clientY - drag.startY) < DRAG_START) return;
       drag.moved = true;
-      try {
-        stage.setPointerCapture(e.pointerId);
-      } catch {
-        // Best effort.
+      // A touch already holds the pointer (implicitly, on the element under the
+      // finger) and its events bubble here; only a mouse leaving the stage
+      // needs capturing.
+      if (e.pointerType !== "touch") {
+        try {
+          stage.setPointerCapture(e.pointerId);
+        } catch {
+          // Best effort.
+        }
       }
     }
     const dt = Math.max(1, e.timeStamp - drag.lastT);
@@ -287,6 +292,14 @@ export function mountJourney(
     schedule();
   };
 
+  // A touch gives the element under the finger (the canvas, a label) implicit
+  // capture; moving it to the stage makes that child fire `lostpointercapture`,
+  // which bubbles here. Only the stage itself losing the pointer is a cancel.
+  const onLostCapture = (e: PointerEvent) => {
+    if (e.target !== stage) return;
+    onPointerCancel(e);
+  };
+
   // Pointer taps are handled above; only keyboard "clicks" (detail 0) reach the labels.
   const onClickCapture = (e: MouseEvent) => {
     if (e.detail !== 0) {
@@ -320,7 +333,7 @@ export function mountJourney(
   stage.addEventListener("pointermove", onPointerMove);
   stage.addEventListener("pointerup", endDrag);
   stage.addEventListener("pointercancel", onPointerCancel);
-  stage.addEventListener("lostpointercapture", onPointerCancel);
+  stage.addEventListener("lostpointercapture", onLostCapture);
   stage.addEventListener("click", onClickCapture, true);
   stage.addEventListener("wheel", onWheel, { passive: false });
 
@@ -389,7 +402,7 @@ export function mountJourney(
       stage.removeEventListener("pointermove", onPointerMove);
       stage.removeEventListener("pointerup", endDrag);
       stage.removeEventListener("pointercancel", onPointerCancel);
-      stage.removeEventListener("lostpointercapture", onPointerCancel);
+      stage.removeEventListener("lostpointercapture", onLostCapture);
       stage.removeEventListener("click", onClickCapture, true);
       stage.removeEventListener("wheel", onWheel);
     },
