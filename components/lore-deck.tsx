@@ -5,18 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Chevron, coverStyle, place, useDeck } from "@/components/deck";
 import { STORY_PATH } from "@/lib/auth/paths";
+import type { LoreEpisode } from "@/lib/lore";
 import { ambientPhoto } from "@/lib/photo";
 
-export type LoreEpisode = {
-  /** "01" … "08", as printed on the cover. */
-  index: string;
-  slug: string;
-  title: string;
-  /** The episode's lore, shown on the open page beside the deck. */
-  body: string;
-  /** The photo behind every wall of the episode; `null` paints a neon plate. */
-  cover: string | null;
-};
+export type { LoreEpisode };
 
 export function LoreDeck({ episodes }: { episodes: readonly LoreEpisode[] }) {
   const pageId = useId();

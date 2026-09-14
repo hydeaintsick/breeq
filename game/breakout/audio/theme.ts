@@ -1,26 +1,23 @@
 /**
- * The story theme: the game's tune, looping under the episode shelf.
+ * The story theme player: loops a `ThemeScore` under the map and the episode
+ * sheet. The music itself lives in `themes/` — "Lanterns" (the first theme,
+ * glass bells over a sliding pad) and "Horizon" (calm synthwave, the default).
  *
- * Direction — low, slow, futuristic, and easy to leave on: a sub bass that
- * breathes, a dark analog pad that slides between four chords, a distant band
- * of air, and the tune itself struck on the same glass bells as the bricks, so
- * the menu and the board are one voice. Everything sits in the hall reverb.
- *
- * Key of D on the game's six-note scale (major without the fourth). Four
- * chords, eight seconds each — D · A · Bm · F#m — voice-led so no pad note ever
- * moves more than a fourth; the loop is 32 seconds and never cadences hard, so
- * it can circle for as long as the player browses.
+ * The player owns time and plumbing: a look-ahead scheduler that survives
+ * throttled hidden tabs, one fade for the whole theme, ducking during runs,
+ * and teardown. Harmony always moves, even silently, so a return lands on the
+ * right chord; notes are only struck while audible and on time.
  *
  * Procedural, seeded, no samples. One instance per page (`acquireStoryTheme`):
  * route changes inside story mode hand the same loop over without a restart.
+ * `storyThemeChord()` tells other sound layers what is sounding right now so
+ * their notes land inside it.
  */
 import { createRng } from "../../shared/random";
 import { unlockSound } from "./bus";
 import { Layer } from "./synth";
+import { activeTheme, type ThemeChord, type ThemeGraph, type ThemeHit, type ThemeScore } from "./themes";
 
-/** Seconds per chord and per loop. */
-const BAR = 8;
-const LOOP = 32;
 /** Scheduler cadence and look-ahead, seconds. Music tolerates latency; hidden tabs throttle timers. */
 const TICK = 0.3;
 const HORIZON = 1.2;
@@ -32,57 +29,27 @@ const FADE_OUT = 0.45;
 /** Grace after the last holder leaves before the graph is torn down, ms. */
 const DISPOSE_MS = 1600;
 
-/** Part levels, tuned to sit near -24 dBFS at the master: present, never in the way. */
-const SUB_LEVEL = 0.095;
-const SUB_TOP_LEVEL = 0.04;
-const PAD_LEVEL = 0.02;
-const AIR_LEVEL = 0.007;
-const BELL_LEVEL = 0.1;
-const PLUCK_LEVEL = 0.04;
+type Step = { t: number; kind: "chord"; index: number } | { t: number; kind: "hit"; hit: ThemeHit };
 
-const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
-
-/** Pad voicings (MIDI): D F# A · E A C# · D F# B · F# A C#. */
-const PAD_CHORDS: readonly (readonly [number, number, number])[] = [
-  [50, 54, 57],
-  [52, 57, 61],
-  [50, 54, 59],
-  [54, 57, 61],
-];
-/** Bass roots (MIDI): D2 A2 B2 F#2. */
-const BASS_NOTES = [38, 45, 47, 42] as const;
-
-/**
- * The tune, one figure per bar on the same rhythm so it reads as a theme:
- * [time in loop, MIDI]. Each note answers itself with a softer echo a beat later.
- */
-const TUNE: readonly (readonly [number, number])[] = [
-  [0, 74], [1.5, 81], [3, 78], [5.5, 76],
-  [8, 73], [9.5, 76], [11, 81], [13.5, 83],
-  [16, 74], [17.5, 78], [19, 71], [21.5, 69],
-  [24, 73], [25.5, 69], [27, 66], [29.5, 64],
-];
-const ECHO_AFTER = 0.75;
-const ECHO_LEVEL = 0.42;
-
-type Step = { t: number; kind: "chord"; index: number } | { t: number; kind: "note"; midi: number; slot: number };
-
-const STEPS: readonly Step[] = [
-  ...PAD_CHORDS.map((_, index): Step => ({ t: index * BAR, kind: "chord", index })),
-  ...TUNE.map(([t, midi], slot): Step => ({ t, kind: "note", midi, slot })),
-].sort((a, b) => a.t - b.t || (a.kind === "chord" ? -1 : 1));
+/** Chord changes first, then every hit, in loop order. */
+function stepsOf(score: ThemeScore): Step[] {
+  return [
+    ...score.chords.map((_, index): Step => ({ t: index * score.bar, kind: "chord", index })),
+    ...score.hits.map((hit): Step => ({ t: hit.t, kind: "hit", hit })),
+  ].sort((a, b) => a.t - b.t || (a.kind === "chord" ? -1 : b.kind === "chord" ? 1 : 0));
+}
 
 interface Graph {
   /** One per part; the whole theme fades through these. */
   ducks: GainNode[];
-  padOscs: OscillatorNode[];
-  padFilter: BiquadFilterNode;
-  bassOscs: OscillatorNode[];
+  voices: ThemeGraph;
   sources: AudioScheduledSourceNode[];
   closes: (() => void)[];
 }
 
 class StoryTheme {
+  readonly score: ThemeScore;
+  private readonly steps: readonly Step[];
   private layer: Layer | null = null;
   private graph: Graph | null = null;
   private timer = 0;
@@ -92,6 +59,11 @@ class StoryTheme {
   private active = true;
   private level = 0;
   private disposed = false;
+
+  constructor(score: ThemeScore) {
+    this.score = score;
+    this.steps = stepsOf(score);
+  }
 
   /**
    * Safe to call often and from any gesture: creates the graph once, then only
@@ -126,6 +98,15 @@ class StoryTheme {
   fadeOut(): void {
     this.level = 0;
     this.applyLevel(FADE_OUT);
+  }
+
+  /** The chord sounding at this moment, or the first chord before the loop has started. */
+  chord(): ThemeChord {
+    const { chords, loop, bar } = this.score;
+    const L = this.layer;
+    if (!L || this.loopStart < 0) return chords[0];
+    const into = (((L.now - this.loopStart) % loop) + loop) % loop;
+    return chords[Math.min(chords.length - 1, Math.floor(into / bar))];
   }
 
   dispose(): void {
@@ -181,14 +162,15 @@ class StoryTheme {
       this.lap = 0;
     }
     const horizon = now + HORIZON;
+    const steps = this.steps;
     // Bounded: a long-hidden tab catches up in one pass instead of spinning.
-    for (let guard = 0; guard < STEPS.length * 4; guard++) {
-      const step = STEPS[this.cursor];
-      const at = this.loopStart + this.lap * LOOP + step.t;
+    for (let guard = 0; guard < steps.length * 4; guard++) {
+      const step = steps[this.cursor];
+      const at = this.loopStart + this.lap * this.score.loop + step.t;
       if (at > horizon) break;
       this.schedule(step, at, now);
       this.cursor += 1;
-      if (this.cursor >= STEPS.length) {
+      if (this.cursor >= steps.length) {
         this.cursor = 0;
         this.lap += 1;
       }
@@ -196,32 +178,15 @@ class StoryTheme {
   }
 
   private schedule(step: Step, at: number, now: number): void {
-    const L = this.layer;
     const g = this.graph;
-    if (!L || !g) return;
+    if (!g) return;
     if (step.kind === "chord") {
       // Harmony always moves, even silently, so a return lands on the right chord.
-      const t = Math.max(at, now);
-      const chord = PAD_CHORDS[step.index];
-      g.padOscs.forEach((osc, i) => {
-        osc.frequency.setTargetAtTime(hz(chord[i >> 1]), t, 0.35);
-      });
-      const bass = hz(BASS_NOTES[step.index]);
-      g.bassOscs[0].frequency.setTargetAtTime(bass, t, 0.12);
-      g.bassOscs[1].frequency.setTargetAtTime(bass * 2, t, 0.12);
-      // The filter opens on the change and settles back over the bar.
-      g.padFilter.frequency.cancelScheduledValues(t);
-      g.padFilter.frequency.setTargetAtTime(760, t, 0.5);
-      g.padFilter.frequency.setTargetAtTime(340, t + 2.2, 2.4);
+      g.voices.chord(step.index, Math.max(at, now));
       return;
     }
     if (!this.audible || at < now - LATE) return;
-    const pan = step.slot % 2 === 0 ? -0.28 : 0.28;
-    const freq = hz(step.midi);
-    L.bell({ freq, gain: BELL_LEVEL, decay: 1.7, at, pan, send: 0.9 });
-    L.bell({ freq, gain: BELL_LEVEL * ECHO_LEVEL, decay: 1.4, at: at + ECHO_AFTER, pan: -pan, send: 0.95 });
-    // A soft body an octave under the bell, swelling in behind it.
-    L.tone({ freq: freq / 2, gain: PLUCK_LEVEL, attack: 0.22, decay: 1.3, lowpass: 900, at, pan: pan * 0.5, send: 0.85 });
+    g.voices.hit(step.hit, at);
   }
 
   private build(L: Layer): Graph {
@@ -229,122 +194,23 @@ class StoryTheme {
     const ducks: GainNode[] = [];
     const sources: AudioScheduledSourceNode[] = [];
     const closes: (() => void)[] = [];
-    const rng = createRng(0x7e11e);
-
-    const part = (pan: number, send: number): GainNode | null => {
-      const ch = L.channel({ pan, send });
-      if (!ch) return null;
-      const duck = ctx.createGain();
-      duck.gain.value = 0;
-      duck.connect(ch.input);
-      ducks.push(duck);
-      closes.push(ch.close);
-      return duck;
-    };
-
-    // Sub: a sine on the root that breathes, a filtered triangle an octave up
-    // so small speakers still feel where the bass is.
-    const bassOscs: OscillatorNode[] = [];
-    const subDuck = part(0, 0.15);
-    if (subDuck) {
-      const breath = ctx.createGain();
-      breath.gain.value = 0.82;
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 0.25;
-      const depth = ctx.createGain();
-      depth.gain.value = 0.18;
-      lfo.connect(depth).connect(breath.gain);
-      lfo.start();
-      sources.push(lfo);
-      breath.connect(subDuck);
-
-      const sub = ctx.createOscillator();
-      sub.type = "sine";
-      sub.frequency.value = hz(BASS_NOTES[0]);
-      const subGain = ctx.createGain();
-      subGain.gain.value = SUB_LEVEL;
-      sub.connect(subGain).connect(breath);
-      sub.start();
-
-      const top = ctx.createOscillator();
-      top.type = "triangle";
-      top.frequency.value = hz(BASS_NOTES[0]) * 2;
-      const topFilter = ctx.createBiquadFilter();
-      topFilter.type = "lowpass";
-      topFilter.frequency.value = 260;
-      topFilter.Q.value = 0.6;
-      const topGain = ctx.createGain();
-      topGain.gain.value = SUB_TOP_LEVEL;
-      top.connect(topFilter).connect(topGain).connect(breath);
-      top.start();
-
-      bassOscs.push(sub, top);
-      sources.push(sub, top);
-    }
-
-    // Pad: three notes, each two saws a few cents apart and split left/right,
-    // under a dark low-pass that drifts and opens on every chord.
-    const padOscs: OscillatorNode[] = [];
-    const padFilter = ctx.createBiquadFilter();
-    padFilter.type = "lowpass";
-    padFilter.frequency.value = 340;
-    padFilter.Q.value = 0.9;
-    const padDuck = part(0, 0.85);
-    if (padDuck) {
-      const padGain = ctx.createGain();
-      padGain.gain.value = PAD_LEVEL;
-      padFilter.connect(padGain).connect(padDuck);
-      PAD_CHORDS[0].forEach((midi, i) => {
-        for (let side = 0; side < 2; side++) {
-          const osc = ctx.createOscillator();
-          osc.type = "sawtooth";
-          osc.frequency.value = hz(midi);
-          osc.detune.value = (side === 0 ? -1 : 1) * (5 + i * 1.5) + rng.range(-1.5, 1.5);
-          const pan = ctx.createStereoPanner();
-          pan.pan.value = (side === 0 ? -1 : 1) * (0.35 + i * 0.12);
-          osc.connect(pan).connect(padFilter);
-          osc.start();
-          padOscs.push(osc);
-          sources.push(osc);
-        }
-      });
-      const drift = ctx.createOscillator();
-      drift.frequency.value = 0.05;
-      const driftDepth = ctx.createGain();
-      driftDepth.gain.value = 70;
-      drift.connect(driftDepth).connect(padFilter.frequency);
-      drift.start();
-      sources.push(drift);
-    }
-
-    // Air: a slow band of seeded noise, mostly heard through the hall.
-    const airDuck = part(0, 0.9);
-    if (airDuck) {
-      const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = rng.next() * 2 - 1;
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.loop = true;
-      const band = ctx.createBiquadFilter();
-      band.type = "bandpass";
-      band.frequency.value = 900;
-      band.Q.value = 0.7;
-      const airGain = ctx.createGain();
-      airGain.gain.value = AIR_LEVEL;
-      src.connect(band).connect(airGain).connect(airDuck);
-      src.start();
-      sources.push(src);
-      const sway = ctx.createOscillator();
-      sway.frequency.value = 0.037;
-      const swayDepth = ctx.createGain();
-      swayDepth.gain.value = 320;
-      sway.connect(swayDepth).connect(band.frequency);
-      sway.start();
-      sources.push(sway);
-    }
-
-    return { ducks, padOscs, padFilter, bassOscs, sources, closes };
+    const voices = this.score.build(L, {
+      rng: createRng(0x7e11e),
+      own: (...added) => {
+        sources.push(...added);
+      },
+      part: (pan, send) => {
+        const ch = L.channel({ pan, send });
+        if (!ch) return null;
+        const duck = ctx.createGain();
+        duck.gain.value = 0;
+        duck.connect(ch.input);
+        ducks.push(duck);
+        closes.push(ch.close);
+        return duck;
+      },
+    });
+    return { ducks, voices, sources, closes };
   }
 }
 
@@ -356,6 +222,16 @@ export interface StoryThemeHandle {
   /** Duck for a run or a hidden tab; the harmony keeps moving underneath. */
   setActive(on: boolean): void;
   release(): void;
+}
+
+/** What the theme is playing now, for other layers to tune to. */
+export interface StoryThemeChord {
+  /** MIDI pitch class of the key's root (D). */
+  root: number;
+  /** Semitones above the root that are in the chord, the triad. */
+  triad: readonly [number, number, number];
+  /** Semitones above the root that sit safely on top of it. */
+  extras: readonly number[];
 }
 
 let theme: StoryTheme | null = null;
@@ -370,7 +246,7 @@ let disposeTimer = 0;
 export function acquireStoryTheme(): StoryThemeHandle {
   holders += 1;
   window.clearTimeout(disposeTimer);
-  if (!theme) theme = new StoryTheme();
+  if (!theme) theme = new StoryTheme(activeTheme());
   const current = theme;
   current.fadeIn();
   current.start();
@@ -391,4 +267,14 @@ export function acquireStoryTheme(): StoryThemeHandle {
       }, DISPOSE_MS);
     },
   };
+}
+
+/**
+ * The chord sounding right now — the first chord of the active theme when it
+ * is not running, so a layer tuned to it is always in the key.
+ */
+export function storyThemeChord(): StoryThemeChord {
+  const score = theme ? theme.score : activeTheme();
+  const chord = theme ? theme.chord() : score.chords[0];
+  return { root: score.root, triad: chord.triad, extras: chord.extras };
 }

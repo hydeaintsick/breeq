@@ -45,13 +45,6 @@ export default async function StoryEpisodePage({
       tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       initialSlug={slug}
       discovered={discovered}
-      kicker="Story Journey"
-      title={
-        <>
-          The way <span className="text-neon">home</span>.
-        </>
-      }
-      body="Kal woke up on a world that is not his own. Each zone on the route is an episode: clear one and the debris lifts off the next."
     />
   );
 }

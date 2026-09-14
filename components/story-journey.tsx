@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
-import { Chevron } from "@/components/deck";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useSound } from "@/components/sound-provider";
 import { StarRating } from "@/components/star-rating";
 import { mountJourney, type JourneyHandle, type JourneyNodeInput, type JourneyPlacement } from "@/game/journey";
@@ -37,7 +36,6 @@ export function StoryJourney({
   keyboard = true,
   onOpen,
   onSettle,
-  footer,
 }: {
   ref?: Ref<StoryJourneyHandle>;
   nodes: readonly JourneyNodeInput[];
@@ -51,7 +49,6 @@ export function StoryJourney({
   /** The focused zone was activated. `anchor` is its medallion, for the morph. */
   onOpen: (index: number, anchor: HTMLElement) => void;
   onSettle?: (index: number) => void;
-  footer?: ReactNode;
 }) {
   const { enabled: soundOn } = useSound();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -187,8 +184,6 @@ export function StoryJourney({
     [active],
   );
 
-  const dots = useMemo(() => Array.from({ length: count }, (_, i) => i), [count]);
-
   return (
     <div className="journey" role="group" aria-roledescription="map" aria-label="Story Journey">
       <div className="journey-stage">
@@ -245,45 +240,6 @@ export function StoryJourney({
           );
         })}
         <div className="journey-scrim" aria-hidden="true" />
-      </div>
-
-      <div className="story-page-foot journey-foot">
-        {count > 1 ? (
-          <div className="story-deck-nav">
-            <button
-              type="button"
-              className="lore-arrow"
-              aria-label="Previous zone"
-              disabled={active === 0}
-              onClick={() => handleRef.current?.goTo(active - 1)}
-            >
-              <Chevron direction="left" />
-            </button>
-            <div className="story-dots" role="tablist" aria-label="Zone">
-              {dots.map((i) => (
-                <button
-                  key={nodes[i].id}
-                  type="button"
-                  className="story-dot"
-                  role="tab"
-                  aria-selected={i === active}
-                  aria-label={`${cards[i]?.kicker ?? ""} ${cards[i]?.title ?? ""}`.trim()}
-                  onClick={() => handleRef.current?.goTo(i)}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              className="lore-arrow"
-              aria-label="Next zone"
-              disabled={active === count - 1}
-              onClick={() => handleRef.current?.goTo(active + 1)}
-            >
-              <Chevron direction="right" />
-            </button>
-          </div>
-        ) : null}
-        {footer}
       </div>
     </div>
   );

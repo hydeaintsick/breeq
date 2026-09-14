@@ -134,7 +134,17 @@ export function mountJourney(
   // Loop
   // ---------------------------------------------------------------------------
 
-  let drag: { id: number; startX: number; startCam: number; lastX: number; lastT: number; speed: number; moved: boolean; target: EventTarget | null } | null = null;
+  let drag: {
+    id: number;
+    startX: number;
+    startY: number;
+    startCam: number;
+    lastX: number;
+    lastT: number;
+    speed: number;
+    moved: boolean;
+    target: EventTarget | null;
+  } | null = null;
 
   const step = (dt: number) => {
     let moving = false;
@@ -211,6 +221,7 @@ export function mountJourney(
     drag = {
       id: e.pointerId,
       startX: e.clientX,
+      startY: e.clientY,
       startCam: cam,
       lastX: e.clientX,
       lastT: e.timeStamp,
@@ -226,7 +237,8 @@ export function mountJourney(
     if (!drag || drag.id !== e.pointerId) return;
     const dx = e.clientX - drag.startX;
     if (!drag.moved) {
-      if (Math.abs(dx) < DRAG_START) return;
+      // Any direction of travel commits the drag: a thumb rarely moves level.
+      if (Math.hypot(dx, e.clientY - drag.startY) < DRAG_START) return;
       drag.moved = true;
       try {
         stage.setPointerCapture(e.pointerId);
@@ -301,7 +313,9 @@ export function mountJourney(
     schedule();
   };
 
-  stage.style.touchAction = "pan-y";
+  // The page under the map never scrolls: every touch is the map's, so a thumb
+  // can pull the route without the browser claiming a near-vertical swipe.
+  stage.style.touchAction = "none";
   stage.addEventListener("pointerdown", onPointerDown);
   stage.addEventListener("pointermove", onPointerMove);
   stage.addEventListener("pointerup", endDrag);

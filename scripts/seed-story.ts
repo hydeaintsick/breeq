@@ -20,7 +20,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { rateDifficulty, serializeLevel, starBands, starsForClear, validateLevel, type Level } from "../game/breakout/engine";
-import { GECKO_LEGACY_COPY, STORY_EPISODES, type StoryEpisodeDef } from "../game/breakout/levels/story";
+import { STORY_EPISODES, type StoryEpisodeDef } from "../game/breakout/levels/story";
 import { cloudinaryConfigured, uploadStoryBackground } from "../lib/cloudinary";
 
 const AUTHOR = "Breeq";
@@ -153,33 +153,6 @@ async function upsertEpisode(episode: StoryEpisodeDef) {
   console.log(`  ${existing ? "updated" : "created"} episode #${episode.order} with ${episode.chapters.length} chapters`);
 }
 
-/**
- * Gecko Legacy is hand-made: its walls are never touched. Its story lines are
- * filled in only where the editor left them empty, so an admin edit wins.
- */
-async function fillGeckoLegacyCopy() {
-  const episode = await prisma.episode.findUnique({
-    where: { slug: GECKO_LEGACY_COPY.slug },
-    select: { id: true, title: true, tagline: true, chapters: { select: { id: true, slug: true, intro: true } } },
-  });
-  if (!episode) {
-    console.log(`\n"${GECKO_LEGACY_COPY.slug}" is not in the database yet; its story lines wait.`);
-    return;
-  }
-  let written = 0;
-  if (!episode.tagline) {
-    await prisma.episode.update({ where: { id: episode.id }, data: { tagline: GECKO_LEGACY_COPY.tagline } });
-    written += 1;
-  }
-  for (const chapter of episode.chapters) {
-    const intro = (GECKO_LEGACY_COPY.chapters as Record<string, string | undefined>)[chapter.slug];
-    if (!intro || chapter.intro) continue;
-    await prisma.chapter.update({ where: { id: chapter.id }, data: { intro } });
-    written += 1;
-  }
-  console.log(`\n${episode.title}: ${written === 0 ? "story lines already set" : `wrote ${written} story line(s)`}.`);
-}
-
 async function backfillClearStars() {
   const rows = await prisma.chapterClear.findMany({ select: { id: true, stars: true, hits: true } });
   let count = 0;
@@ -227,7 +200,6 @@ async function main() {
     console.log(`\nWriting ${episode.title}…`);
     await upsertEpisode(episode);
   }
-  await fillGeckoLegacyCopy();
   await settleOrder();
   await backfillClearStars();
 

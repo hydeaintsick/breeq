@@ -56,17 +56,6 @@ export default async function StoryPage({
       tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       arriveFromTutorial={fromTutorial}
       discovered={discovered}
-      kicker="Story Journey"
-      title={
-        <>
-          The way <span className="text-neon">home</span>.
-        </>
-      }
-      body={
-        tutorial.required
-          ? "Start with a two-minute tutorial. Then follow Kal's route zone by zone: each is an episode, and clearing one lifts the debris off the next."
-          : "Kal woke up on a world that is not his own. Each zone on the route is an episode: clear one and the debris lifts off the next."
-      }
     />
   );
 }

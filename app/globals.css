@@ -898,6 +898,436 @@ html[data-theme="dark"] {
     0 14px 36px var(--nav-shadow);
 }
 
+/* --- Story chrome: two pills, one unrolled at a time ----------------------
+   In story mode the game's pill rolls up on the left (the logo) so the story's
+   (book, map, sound, vibration, leave) has the row; tapping either unrolls it
+   and rolls the other up. The story page is always dark, so both pills use the
+   night glass whatever the theme. */
+.site-header[data-story="true"] {
+  --nav-fill: rgba(11, 13, 26, 0.55);
+  --nav-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.04));
+  --nav-fill-scrolled: var(--nav-fill);
+  --nav-image-scrolled: var(--nav-image);
+  --nav-shadow: rgba(0, 0, 0, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --field: rgba(255, 255, 255, 0.07);
+  --ink: #f2f3f7;
+  --ink-muted: #9aa1b5;
+  --surface: #1c1f2b;
+  --cta: #f2f3f7;
+  --on-cta: #0f1117;
+}
+
+.story-pill {
+  display: flex;
+  height: 3.5rem;
+  min-width: 3.5rem;
+  align-items: center;
+  overflow: hidden;
+  transition:
+    flex-grow var(--duration) var(--ease),
+    flex-basis var(--duration) var(--ease),
+    padding var(--duration) var(--ease),
+    background var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.story-pill[data-open="false"] {
+  flex: 0 0 3.5rem;
+  justify-content: center;
+  padding: 0;
+}
+
+.story-pill-main[data-open="true"] {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  padding-inline: 1rem;
+}
+
+.story-pill-story[data-open="true"] {
+  flex: 1 1 auto;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding-inline: 0.4rem;
+}
+
+.story-pill-face {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--ink);
+}
+
+.story-pill-face:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
+@media (min-width: 640px) {
+  .story-pill-main[data-open="true"] {
+    padding-inline: 1.25rem;
+  }
+
+  .story-pill-story[data-open="true"] {
+    flex: 0 0 auto;
+    margin-left: auto;
+    gap: 0.5rem;
+    padding-inline: 0.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-pill {
+    transition: none;
+  }
+}
+
+/* --- Story panels: the book and the galaxy map ---------------------------
+   Full-screen dark sheets under the header pills, over the route. */
+.story-panel {
+  position: fixed;
+  inset: 0;
+  /* Inside the header's stacking context: over its backdrop, under its pills. */
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  background: #05060c;
+  color: #ffffff;
+  padding-top: calc(max(1rem, env(safe-area-inset-top)) + 3.5rem);
+  animation: panel-in var(--duration) var(--ease);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.story-panel-bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem max(1rem, env(safe-area-inset-right)) 0.25rem max(1.25rem, env(safe-area-inset-left));
+}
+
+.story-panel .story-close {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.lore-book {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.lore-book-toc {
+  display: flex;
+  flex: none;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.5rem max(1rem, env(safe-area-inset-right)) 0.75rem max(1.25rem, env(safe-area-inset-left));
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.lore-book-toc::-webkit-scrollbar {
+  display: none;
+}
+
+.lore-book-tab {
+  display: inline-flex;
+  flex: none;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.9rem 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background var(--duration) var(--ease),
+    color var(--duration) var(--ease);
+}
+
+.lore-book-tab[aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: transparent;
+  color: #0f1117;
+}
+
+.lore-book-tab[data-sealed="true"] {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.lore-book-tab[data-sealed="true"][aria-selected="true"] {
+  color: #0f1117;
+}
+
+.lore-book-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lore-book-tab-numeral {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+.lore-book-page {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.75rem max(1.25rem, env(safe-area-inset-right)) 1.5rem max(1.25rem, env(safe-area-inset-left));
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* The chapter's sky, blurred into a wash of colour behind the text. */
+.lore-book-wash {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  display: block;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lore-book-wash::before {
+  content: "";
+  position: absolute;
+  inset: -6rem -4rem auto;
+  height: 32rem;
+  background-color: color-mix(in srgb, var(--leaf-hue) 40%, transparent);
+  background-image: var(--leaf-cover), radial-gradient(60% 55% at 50% 30%, color-mix(in srgb, var(--leaf-hue) 55%, transparent), transparent 70%);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.32;
+  filter: blur(46px) saturate(1.5);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5) 55%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5) 55%, transparent);
+  animation: wash-in 600ms var(--ease);
+}
+
+.lore-book-wash[data-sealed="true"]::before {
+  opacity: 0.14;
+  filter: blur(46px) saturate(0.4);
+}
+
+@keyframes wash-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.lore-book-leaf {
+  position: relative;
+  z-index: 1;
+  margin-inline: auto;
+  max-width: 38rem;
+  animation: leaf-in 320ms var(--ease);
+}
+
+/* The plate: the episode's sky in a glass frame, its hue blooming underneath. */
+.lore-book-plate {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(80% 90% at 30% 20%, color-mix(in srgb, var(--leaf-hue) 45%, transparent), transparent 70%),
+    radial-gradient(60% 70% at 85% 85%, color-mix(in srgb, var(--leaf-hue) 25%, transparent), transparent 70%),
+    #0b0d1a;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 24px 60px -20px color-mix(in srgb, var(--leaf-hue) 55%, transparent),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.lore-book-plate-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.15) contrast(1.05);
+  mask-image: linear-gradient(180deg, #000 55%, rgba(0, 0, 0, 0.35));
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, rgba(0, 0, 0, 0.35));
+  transition: filter 600ms var(--ease);
+}
+
+.lore-book-plate[data-sealed="true"] .lore-book-plate-img {
+  filter: saturate(0.2) brightness(0.6) blur(8px);
+  transform: scale(1.06);
+}
+
+.lore-book-plate-bloom {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 6, 12, 0) 40%, rgba(5, 6, 12, 0.72)),
+    radial-gradient(50% 60% at 20% 100%, color-mix(in srgb, var(--leaf-hue) 40%, transparent), transparent 70%);
+  mix-blend-mode: normal;
+}
+
+.lore-book-plate-numeral {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.7rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 2.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--leaf-hue) 70%, transparent);
+}
+
+.lore-book-plate[data-sealed="true"] .lore-book-plate-numeral {
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: none;
+}
+
+@media (min-width: 640px) {
+  .lore-book-plate {
+    aspect-ratio: 21 / 9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lore-book-wash::before,
+  .lore-book-leaf {
+    animation: none;
+  }
+}
+
+@keyframes leaf-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lore-book-epigraph {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.lore-book-text {
+  margin-top: 1.1rem;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.lore-book-text[data-first="true"]::first-letter {
+  float: left;
+  margin: 0.1rem 0.5rem 0 0;
+  font-size: 3.2rem;
+  font-weight: 600;
+  line-height: 0.85;
+  color: #ffffff;
+}
+
+.lore-book-sealed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 2.5rem;
+  padding: 2rem 1.25rem;
+  border-radius: 1.25rem;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lore-book-sealed .lore-book-text {
+  margin-top: 0.75rem;
+}
+
+.lore-book-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.story-panel .lore-arrow {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.story-panel .lore-arrow:disabled {
+  opacity: 0.3;
+}
+
+.galaxy-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.galaxy-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.galaxy-foot {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-panel,
+  .lore-book-leaf {
+    animation: none;
+  }
+}
+
 .play-shimmer {
   position: relative;
   overflow: hidden;
@@ -1273,16 +1703,9 @@ html[data-theme="dark"] {
 .story-page-journey {
   background: #05060c;
   color: #ffffff;
-}
-
-.story-page-journey .story-page-copy {
-  position: relative;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.story-page-journey .story-page-copy .story-page-lede {
-  color: rgba(255, 255, 255, 0.68);
+  /* The map runs from the very top: the header pills float over the stars. */
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .journey {
@@ -1308,11 +1731,6 @@ html[data-theme="dark"] {
   cursor: grabbing;
 }
 
-/* On phones the space runs edge to edge and up under the title. */
-.story-page-journey .story-page-copy + .journey .journey-stage {
-  margin-top: -0.5rem;
-}
-
 .journey-canvas {
   position: absolute;
   inset: 0;
@@ -1321,12 +1739,12 @@ html[data-theme="dark"] {
   height: 100%;
 }
 
-/* Fades the map into the page top so the title floats over the stars. */
+/* Darkens the top band so the header pills read over the stars. */
 .journey-scrim {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, #05060c 0%, rgba(5, 6, 12, 0.6) 12%, transparent 30%);
+  background: linear-gradient(180deg, rgba(5, 6, 12, 0.7) 0%, rgba(5, 6, 12, 0.3) 9%, transparent 20%);
 }
 
 /* One label per zone: an invisible 64px hit disc on the medallion and a card
@@ -1369,21 +1787,35 @@ html[data-theme="dark"] {
   padding: 0.55rem 0.75rem 0.75rem;
   border: 0;
   border-radius: 1.1rem;
-  background: rgba(11, 13, 26, 0.55);
+  /* Glass over the route: the sky blurs through, a white hairline catches the edge. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04) 60%, rgba(255, 255, 255, 0.02)),
+    rgba(12, 14, 30, 0.28);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
-    0 14px 32px rgba(0, 0, 0, 0.35);
+    0 0 0 1px rgba(255, 255, 255, 0.16) inset,
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.35);
   color: #ffffff;
   font: inherit;
   text-align: center;
   transform: translateX(-50%) scale(0.92);
   cursor: pointer;
-  transition: transform 320ms var(--ease), background 320ms var(--ease);
+  transition: transform 320ms var(--ease), background 320ms var(--ease), box-shadow 320ms var(--ease);
 }
 
 .journey-node[data-focus="true"] .journey-card {
   transform: translateX(-50%) scale(1);
-  background: rgba(11, 13, 26, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.03)),
+    rgba(12, 14, 30, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.22) inset,
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 22px 48px rgba(0, 0, 0, 0.42);
 }
 
 .journey-card:focus-visible {
@@ -1456,32 +1888,6 @@ html[data-theme="dark"] {
 
 .journey-node[data-state="locked"] .journey-card-title {
   color: rgba(255, 255, 255, 0.72);
-}
-
-.journey-foot {
-  padding-bottom: max(0.35rem, env(safe-area-inset-bottom));
-}
-
-.journey-foot .story-dot::after {
-  background: #ffffff;
-}
-
-.journey-foot .lore-arrow {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.journey-foot .lore-arrow:disabled {
-  opacity: 0.3;
-}
-
-.journey-back {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.journey-back:hover {
-  color: #ffffff;
 }
 
 @media (min-width: 640px) {

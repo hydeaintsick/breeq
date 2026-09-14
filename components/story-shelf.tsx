@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { PlayCard } from "@/components/play-card";
 import { SoundToggle } from "@/components/sound-toggle";
+import { useStorySurface, type StoryZone } from "@/components/story-chrome";
 import { StoryClear } from "@/components/story-clear";
 import { StoryJourney, type JourneyCard, type StoryJourneyHandle } from "@/components/story-journey";
 import { StoryLose } from "@/components/story-lose";
@@ -19,8 +19,8 @@ import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
-import { hueForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
-import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
+import { STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import {
   chapterIsLocked,
@@ -127,18 +127,12 @@ function openingChapterIndex(episodes: readonly StoryEpisodeCard[], slug?: strin
 export function StoryShelf({
   episodes,
   initialSlug,
-  kicker,
-  title,
-  body,
   tutorial = null,
   arriveFromTutorial = false,
   discovered = EMPTY_DISCOVERIES,
 }: {
   episodes: StoryEpisodeCard[];
   initialSlug?: string;
-  kicker?: string;
-  title?: ReactNode;
-  body?: string;
   /** Show the how-to-play slide first; episodes stay locked until it is done. */
   tutorial?: ShelfTutorial | null;
   /** The player just finished the tutorial: open on its card, then swipe to episode one. */
@@ -217,6 +211,7 @@ export function StoryShelf({
         progress: tutorial.done ? 1 : 0,
         cover: null,
         hue: "steel",
+        scene: "drill",
       });
     }
     let frontier = gate;
@@ -234,10 +229,28 @@ export function StoryShelf({
         progress: progress.total > 0 ? progress.cleared / progress.total : 0,
         cover: episode.backgroundUrl ? nodePhoto(episode.backgroundUrl) : null,
         hue: hueForEpisode(episode.slug, index),
+        scene: sceneForEpisode(episode.slug, index),
       });
     });
     return list;
   }, [gate, shelf, tutorial]);
+
+  /** The route as the header chrome needs it: the book unseals by slug, the galaxy map lights by state. */
+  const zones = useMemo<StoryZone[]>(() => {
+    const list: StoryZone[] = [];
+    if (tutorial) list.push({ slug: "tutorial", title: "How to Play", kicker: "00", state: nodes[0].state, hue: "steel" });
+    shelf.forEach((episode, index) => {
+      const node = nodes[index + offset];
+      list.push({ slug: episode.slug, title: episode.title, kicker: node.kicker, state: node.state, hue: node.hue });
+    });
+    return list;
+  }, [nodes, offset, shelf, tutorial]);
+  const chrome = useStorySurface(
+    zones,
+    useCallback((index: number) => journeyRef.current?.goTo(index), []),
+  );
+  /** The book or the galaxy map is over the route: it neither draws nor sounds. */
+  const sheeted = chrome?.panel != null;
 
   const cards = useMemo<JourneyCard[]>(() => {
     const list: JourneyCard[] = [];
@@ -678,31 +691,14 @@ export function StoryShelf({
 
   return (
     <div className="story-page story-page-journey" data-covered={covered ? "true" : undefined}>
-      {kicker || title || body ? (
-        <header className="story-page-copy">
-          <div className="story-page-copy-inner">
-            {kicker ? (
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">{kicker}</p>
-            ) : null}
-            {title ? <h1 className="max-w-2xl font-semibold tracking-tight text-white">{title}</h1> : null}
-            {body ? <p className="story-page-lede max-w-xl">{body}</p> : null}
-          </div>
-        </header>
-      ) : null}
-
       <StoryJourney
         ref={journeyRef}
         nodes={nodes}
         cards={cards}
         start={start}
-        paused={covered}
-        keyboard={!open && !playing}
+        paused={covered || sheeted}
+        keyboard={!open && !playing && !sheeted}
         onOpen={openNode}
-        footer={
-          <Link href={GAME_MENU_PATH} className="nav-link journey-back inline-flex min-h-11 items-center">
-            Back to modes
-          </Link>
-        }
       />
 
       {portal && open

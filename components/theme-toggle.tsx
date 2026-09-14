@@ -2,9 +2,31 @@
 
 import { useTheme } from "@/components/theme-provider";
 
-export function ThemeToggle() {
+/**
+ * Day / night. `chip` is the 44px header button; `menu` is a text row for the
+ * header dropdown, used where the header pill has no room for another chip.
+ */
+export function ThemeToggle({ variant = "chip" }: { variant?: "chip" | "menu" }) {
   const { theme, toggle } = useTheme();
   const night = theme === "dark";
+
+  if (variant === "menu") {
+    return (
+      <button
+        type="button"
+        className="nav-link flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 text-left"
+        aria-pressed={night}
+        aria-label={night ? "Use day mode" : "Use night mode"}
+        onClick={toggle}
+      >
+        <span className="flex items-center gap-2.5">
+          {night ? <SunIcon /> : <MoonIcon />}
+          Appearance
+        </span>
+        <span className="text-xs font-medium uppercase tracking-[0.12em]">{night ? "Night" : "Day"}</span>
+      </button>
+    );
+  }
 
   return (
     <button

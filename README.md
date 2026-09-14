@@ -31,11 +31,30 @@ The pod holds the rest: a **star chart** etched on its inner shell with one star
 
 **The route.** First a world of light, the **Lumen Reef** — a shallow ocean lit from below whose reef is a people, the **Corallines**, who glow to speak and trade in light. They remember two fleets passing, a dark one and a hurried one, and keep a **pearl** the geckos left in thanks; Kal earns it by standing on the reef wall when **the Gnaw**, the Hush's scouts, come at dusk. Then a dark world: a burned-out star and the **Ashen Court** of the **Cindermoths**, who hoard what light is left under their queen, **the Candle**. The geckos paid for passage in light; Kal has only his glow, so the price is a cage, wardens, and a duel — one wall between him and the Candle. It falls, her hoard spills back into the ash, and she keeps her word. Then the battlefield: a sky of wrecks where the **Ember Fleet** — amber ships, his own kind — has held the line against the Hush for years. An old gecko with a scarred tail, **Sable**, reads the marks on his shell and goes very still; she knew the ship that launched his pod. Kal takes his place on the wall, faces the eye of the Hush, and turns his Lantern into a light it cannot swallow. And last, **Aurel**: one young sun, an unclaimed world the fleet chose before he was born, where a new glass sky is built pane by pane with the Corallines' light-seeds under it, and one shadow of the Hush to see off. Kal was never from Vitra. He is from the pod, the Grey Moon, and the road. Home is where they are.
 
+**Season 2 — The Borrowed Egg.** The dome over Aurel is almost closed when a signal cuts through it: Kal's own heartbeat, played back by someone who knows the code. A quiet green ship lands with a courteous envoy and a document carrying the marks from his shell — *Specimen K-L. On loan. Due.* Sable goes still again: the cradle was already aboard when the Migration began, and nobody asked what it was. Kal goes, for the *why*. The ship takes him to **Vireo**, a jungle world under a glass roof, where cages hold creatures from a dozen skies — **the Tally** — and the last door closes behind him.
+
+Under the jungle, a laboratory in cold light. **Marrow**, an old keeper with a grey tail, tells him what the twelfth pod was. The **Sowers of Meridian** grow living things between the stars and lend them out; Vireo was their vivarium. A generation ago, when Vitra's suns first flickered, they lent the Vitrans one egg, grown with one gift: *the Hush cannot see it*. Kal was the experiment. The twelfth pod was the Sowers' return cradle, launched in the panic of the Migration and lost. **The Curator** — Vireo's keeper, who never left when the Sowers did — has read the Ember Fleet's news and is growing copies in the vats. He is tall, thin, polite, and never raises his voice. The copies do not have the gift. One of them wakes anyway: **Nul**, hollow where Kal is lit, and the Hush, which could never see Kal, looks out of his own face.
+
+Kal brings the glasshouse down and follows the Sowers' seed-map into the **Rootway**, living tunnels between stars, with Nul's hollow fleet behind him. In the fifth tunnel he meets **Lys**: the other egg, grown in the same vat, kept by the Sowers as the control and raised on Meridian as a scout who walks on light the way Kal walks on glass. She was sent to bring the loan home. She climbs onto the wall beside him instead. From there the sky is a story — **the Wall-walker**, a gecko drawn in stars across the whole night whose tail points the way the first geckos came — and they walk it together while the Hush, through Nul, learns the shape and tells it back in the dark. At the tail's tip, a star with a circle around it, the pod's circle, and **Meridian** rising: seed-pods the size of moons, the **Council of Seeds** who wrote the loan and have never had one refused. Kal refuses. Lys chooses him over the Council that raised her. The Curator's fleet comes down with Nul at its head; the dark he thought he was selling an answer to takes him first. Two geckos hold the last wall over the garden. Nul is not in the wreckage. Somewhere above Meridian, something with Kal's face turns toward Aurel.
+
 ### The episodes
 
-Each episode is ten walls (Gecko Legacy, the hand-made opener, is shorter). One new idea per chapter, the ball a little faster each time, and XP that climbs with the stakes. Episodes 4 to 8 are where the kit stops arriving and starts combining: every wall after Glass Sky mixes pieces the player already knows, and the black hole, the guards, ice and the timer come back in harder company. The difficulty rating (below) peaks at each episode's boss and finale — about 50 in Empty Nest and Lumen Reef, 40 in Ashen Court, and close to 60 for the last walls of The Hush and Second Sun.
+Each episode is ten walls. One new idea per chapter, the ball a little faster each time, and XP that climbs with the stakes. Episodes 4 to 8 are where the kit stops arriving and starts combining: every wall after Glass Sky mixes pieces the player already knows, and the black hole, the guards, ice and the timer come back in harder company. The difficulty rating (below) peaks at each episode's boss and finale — about 50 in Empty Nest and Lumen Reef, 40 in Ashen Court, and close to 60 for the last walls of The Hush and Second Sun.
 
-**Episode 1 — Gecko Legacy** *(hand-made in the admin editor)* — A light behind the window, chasing the light, a lizard is born, a first party of bugs. Glass, then hard bricks, then steel. The basics.
+**Episode 1 — Gecko Legacy** — Kal wakes up on a world that is not his own. Ten gentle walls, one idea each, the ball never above 305.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | A light behind the window | a lit pane | glass, a slow zone | Something glows behind the glass of the pod. Kal does what every gecko does first: he climbs toward it. |
+| 2 | Chasing the light | a light's trail | the first hard bricks | The light moves along the wall. Kal follows it, and the wall gives way under his feet. |
+| 3 | A lizard is born | a cracked egg | steel | Grey dust, thin air, a sky he does not know. Kal is out of the shell, and he is alone. |
+| 4 | Crispy party | clusters of bugs | the first ×2 zone | Bugs crackle around the pod's beacon, drawn by the same light. Kal eats. Tomorrow, he leaves. |
+| 5 | First prints | a trail of prints | grow | Nobody has walked here before. Kal's prints in the dust are the first, and they wander. |
+| 6 | The beacon | a lamp on a mast | two slow zones | The pod's lamp pulses in a rhythm Kal knows from inside the egg. He climbs it to be closer. |
+| 7 | Grey dust | two dunes | the first bumper | Beyond the pod, dunes. Beyond the dunes, more dunes. The moon has nothing else to give him. |
+| 8 | The ringed giant | a planet and its ring | a hard core | A blue world fills half the sky, wearing a ring of ice. Kal watches it all night and does not know why he is sad. |
+| 9 | Cold night | scattered stars | a magnet | The stars come out sharp and close. One of them pulls at him, the way the light behind the window did. |
+| 10 | The circled star | a star in a ring | hard amber in glass | Inside the pod, a chart of stars, and one of them circled. Kal puts a claw on it. Tomorrow, he leaves. |
 
 **Episode 2 — Cold Orbit** — Kal leaves the Grey Moon and learns to read the sky.
 
@@ -142,9 +161,99 @@ Each episode is ten walls (Gecko Legacy, the hand-made opener, is shorter). One 
 | 9 | Twin suns remembered | a dark sun and a bright one | a black hole where the old sun's heart was, bumpers, timer, five lives | Under Aurel's one sun, the geckos light a second: the dome, glowing from inside. |
 | 10 | Home | a family on the glass | everything: key and locks, explosives, regen, bumpers, a guard, shrink, ice, ×3, three lives, the narrowest paddle, four minutes | Home is where they are. He is home. |
 
+**Episode 9 — Green Static** — A signal in Kal's own heartbeat, a polite envoy, and a loan that has come due.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | The signal | a heartbeat waveform | a magnet, bumpers | The dome is nearly closed when a signal cuts through it: Kal's heartbeat, played back by someone who knows the code. |
+| 2 | The green ship | a leaf on its side | steel keel, sticky, grow | It lands without a sound, the color of a leaf. Nobody on Aurel has seen a ship like it. Sable has. |
+| 3 | The loan | a sealed document | keys and locks, mirror | The envoy is courteous. The document carries the marks from Kal's shell. Specimen K-L, it says. On loan. Due. |
+| 4 | Vireo | a green world | ghosts in the clouds, anti-gravity | Kal goes, because the envoy has the one thing he has wanted since the Grey Moon: the why. |
+| 5 | Canopy | layers of leaves | regen leaves, two fans | Leaves the size of sails, and a warm wind that never stops. Everything here grows back. |
+| 6 | Vines | hanging vines | rails, gravity | Kal climbs the way he always has. The vines are the first wall that climbs back. |
+| 7 | Fireflies | sparks in the dark | explosives, fog, split | At night the jungle lights up in his rhythm. Every firefly here pulses the way his beacon did. |
+| 8 | The glass roof | panes in steel ribs | locks and keys, ice | Above the canopy, panes in steel ribs. Vireo is not a world. It is a greenhouse. |
+| 9 | The Tally | a row of cages | magnets in steel, a guard, shrink | A corridor of cages, something bright in every one, from a dozen skies. The Tally. On loan. |
+| 10 | The cage | Kal's cage | rotor hinges, a lock, descend, four minutes, five lives | The last cage is empty and the right size. The door closes behind him. Kal has been inside a shell before. |
+
+**Episode 10 — The Vivarium** — Under the jungle, a laboratory — and the truth about the twelfth pod.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Cold light | ceiling lamps | hard bars, ice | Under the jungle, a floor that hums. Lamps in a row, cold and even. Nothing here was grown by accident. |
+| 2 | Specimen tanks | three cylinders | ghosts, anti-gravity | Cylinders of glass, and in them, things that are only half there. One of them has a tail. |
+| 3 | Marrow | a gecko in profile | a magnet eye, a key, sticky | An old gecko with a grey tail opens the cage. Not to free him. He has waited a long time to tell someone. |
+| 4 | The Tally's ledger | a grid of entries | keys and locks, order (cyan first), mirror | One line reads: Vitra. One egg. Not returned. |
+| 5 | Sap lines | pipes | regen joints, rails, fans | Vireo was never a world. It was the Sowers' vivarium, and the Curator kept it when they left. |
+| 6 | The vats | three vessels | explosive cores, gravity, fog | Three vessels, warm, in his rhythm. The Curator is growing more. |
+| 7 | Copies | rows of small geckos | regen tails, split, mirror, shrink | Rows of them, with his face. Whatever made Kal invisible to the Hush, the copies do not have it. |
+| 8 | Lights out | a dark room | ghosts, fog, ice, invert | Kal cuts the power the only way he knows: wall by wall. |
+| 9 | Freeing the Tally | locked cages | locks, keys, two guards | Every cage opens the same way. The Tally pours out into the jungle. |
+| 10 | Marrow's truth | a seed in a shell | a black hole in a steel throat, mirror, five lives, four minutes | The twelfth pod was a return cradle. Kal was lent to Vitra as a seed the Hush could not see. |
+
+**Episode 11 — Glasshouse** — The Curator's tower, a polite offer, and a copy that wakes up hollow.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | The spire | a spire of amber | steel spine, bumpers | Above the canopy, a tower of amber glass. Someone has been watching from it for a generation. |
+| 2 | The Curator | a tall thin figure | magnet eyes, a ghost robe, mirror | He is polite, and he never raises his voice. He has waited a long time for his experiment to come home. |
+| 3 | The offer | a balance | keys and locks on rails | A place, he says. All Kal has to do is stand still. Kal has never stood still in his life. |
+| 4 | Wardens of glass | two wardens | rotor wings, two guards, ×3 | Wings that spin and eyes that do not blink. Kal hits what will not stay still. |
+| 5 | The hatching | opening vats | explosive seams, regen, split | The vats open early. Most of the copies do not wake. |
+| 6 | Nul | a hollow gecko | a black hole in a steel throat, fog, five lives | One wakes. It has Kal's face and none of his light, and the Hush looks out of its eyes. |
+| 7 | Shatter | breaking panes | explosives, descend, ice | The Curator finally raises his voice. The glasshouse answers: every pane at once. |
+| 8 | The seed-map | a constellation | order (cyan first), a portal and a decoy | Meridian, where the loan was written. Where it can be unwritten. |
+| 9 | The fall | floors giving way | rotors, gravity, a portal, shrink | Kal has fallen before — a whole sky, once. He knows how to land. |
+| 10 | Out of the glass | the tower as a bomb | steel hull, explosive core, a guard, narrow paddle, four minutes | Behind him the tower comes down, and something hollow climbs out of it. |
+
+**Episode 12 — Rootway** — Living tunnels between the stars, something hollow behind, and someone ahead.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Roots | arcs of root | hard knots, gravity | The Sowers do not fly between stars. They grow there. |
+| 2 | Sap light | pulses in the roots | regen beads, rails | Light runs through the walls in pulses. Not his rhythm. Close. |
+| 3 | Knots | a tangle | rotors, mirror | Where roots cross, the tunnel turns on itself. Kal climbs. Kal always climbs. |
+| 4 | Something following | shapes in fog | ghosts, explosives, fog, ×2 | Nul has learned the road by watching him walk it. |
+| 5 | Lys | two geckos facing | a portal between them, sticky | In the fifth tunnel, another gecko, waiting. The other egg. She looks at him a long time. |
+| 6 | Two on the wall | twins | split, grow | She climbs beside him, and for the first time since the Grey Moon, Kal is not the only one on the wall. |
+| 7 | The wardens' hunt | wardens in the tunnel | rotors, two guards, two fans, shrink, invert | Nul's wardens come with the Curator's patience and none of his manners. |
+| 8 | The burrow | a narrowing throat | a black hole in steel, mirror, five lives | Something in the throat has been eating the sap light. The Hush is in the roots too. |
+| 9 | Lys's light | crossed beams | rails, anti-gravity, ice, ×3 | She walks on light the way he walks on glass. Where the roots go dark, she draws a road. |
+| 10 | Out of the roots | the tunnel's mouth | keys and locks, a guard, descend, four minutes | The tunnel opens on stars. Lys points: a gecko drawn in stars, its tail pointing the way. |
+
+**Episode 13 — The Wall-walker** — A gecko drawn in stars across the whole sky, and two who walk it together.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | First stars | the gecko's head | hard stars, bumpers | Every Vitran hatchling was shown it once. Nobody showed Kal. Lys shows him now. |
+| 2 | The tail | a curling tail | rails, anti-gravity | The tail points the way the first geckos came, before Vitra, before the glass. |
+| 3 | Four feet | four clusters | split, grow | Four feet on the sky. Two geckos climbing. Kal has never had this much room. |
+| 4 | Nul's eye | an eye | a black hole in steel, fog, five lives | Through Nul's eye, for the first time, the Hush sees where the road goes. |
+| 5 | Sky-story | the whole Wall-walker | order (amber first), ghosts | The stars first, then the lines, the way the story is told on Meridian. |
+| 6 | Lantern light | a beam | rails, ice, two fans | Lys walks a Lantern's beam as if it were a floor. Kal learns what light is for. |
+| 7 | The chase | the hollow fleet | rotors, two guards, ×3, invert | Every ship has his face on the hull. |
+| 8 | Where the tail points | a circled star | a portal and a decoy, mirror | The last star has a circle drawn around it. Kal knows the circle. It was etched inside the pod. |
+| 9 | The Hush learns | a dark twin | a black hole, explosives, descend, five lives | Behind them the sky goes dark in the shape of a gecko. The Hush is telling the story back. |
+| 10 | Meridian rising | a garden world | keys and locks, regen, a guard, shrink, five minutes | Where the tail points, a green world comes up over the dark. |
+
+**Episode 14 — Meridian** — The garden world where the loan was written, and the wall where it is torn up.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | The garden | drifting seed-pods | regen blossoms, bumpers | Seed-pods the size of moons drift in a warm sky. Everything here was grown on purpose. |
+| 2 | The Council of Seeds | a council ring | keys and locks, grow | They have lent out a thousand things. They have never had one refused. |
+| 3 | The loan | a scale | order (blue first), mirror | They weigh him. Kal has been weighed before, by a queen. |
+| 4 | Not property | a sealed document | an explosive seal, two fans | Not a specimen. Not a seed. Not lent, not due. The seal breaks the way glass breaks. |
+| 5 | Lys's choice | two geckos | a portal, sticky, split | The Council raised her. She climbs onto the wall beside him and does not look back. |
+| 6 | The Curator's fleet | ships descending | rotors, two guards, descend | Amber hulls come down through the pods, and the Curator's voice, still polite, asks for what is his. |
+| 7 | The hollow fleet | ships with no light | ghosts, magnets, fog, ×3, invert | Nul leads them. The Hush rides every hull. |
+| 8 | The Curator's end | the Curator | a black hole in his chest, mirror, five lives, four minutes | The dark does not buy. It takes him first, through the hollow he made. |
+| 9 | Nul's escape | a broken constellation | mirror, rails, ice, shrink | When the light comes back, Nul is not in the wreckage. |
+| 10 | Two lights | two geckos on the wall | everything: locks and a key, explosives, regen, bumpers, a guard, shrink, ice, ×3, three lives, the narrowest paddle, five minutes | Somewhere above them, something with Kal's face turns toward Aurel. |
+
 ### Authoring the campaign
 
-Episodes 2 to 8 live in code, in `game/breakout/levels/story/`. Each wall is an ASCII map plus a legend (`wall(map, legend, top)` in `shape.ts`; the brick width follows the column count, so 8 to 11 columns all span the field). `pnpm story:seed` validates every wall, proves it with the flawless autopilot, rates its difficulty, uploads the episode photo to Cloudinary when configured, and upserts episodes and chapters by slug. Seeded episodes are owned by the code; `--dry-run` only proves and rates, `--retire <slug>` backs up and removes a hand-made episode.
+Every episode lives in code, in `game/breakout/levels/story/` (Gecko Legacy included since its ten-wall rewrite; its first four chapter slugs were kept so early clears survive). Each wall is an ASCII map plus a legend (`wall(map, legend, top)` in `shape.ts`; the brick width follows the column count, so 8 to 11 columns all span the field). `pnpm story:seed` validates every wall, proves it with the flawless autopilot, rates its difficulty, uploads the episode photo to Cloudinary when configured, and upserts episodes and chapters by slug. Seeded episodes are owned by the code; `--dry-run` only proves and rates, `--retire <slug>` backs up and removes a hand-made episode. Episode covers are the same-origin JPEGs in `public/backgrounds/`; the Season 2 covers were derived from the Season 1 art with Cloudinary's generative background replacement (`e_gen_background_replace`), so Kal keeps the same silhouette from one sky to the next.
 
 ### Difficulty rating
 

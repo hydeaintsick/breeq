@@ -35,7 +35,38 @@ export interface JourneyNodeInput {
   /** A small square photo for the medallion, or null for a plain glass disc. */
   cover: string | null;
   hue: JourneyHue;
+  /** What the sky around the zone shows; defaults to a cycle when not given. */
+  scene?: JourneyScene;
 }
+
+/**
+ * The set piece drawn around a zone, from the lore: the Grey Moon under its
+ * ringed giant, the asteroid belt and the wormhole, the Lanterns' gate under
+ * twin suns, the dark city under its dome, the reef lit from below, the dead
+ * star and its embers, the wrecks and the eye, the young sun and its dome.
+ */
+export type JourneyScene =
+  | "drill"
+  | "moon"
+  | "orbit"
+  | "gate"
+  | "city"
+  | "reef"
+  | "embers"
+  | "fleet"
+  | "sun"
+  /** Season 2: Vireo's jungle under a glass roof. */
+  | "canopy"
+  /** The laboratory: tanks and cold light. */
+  | "lab"
+  /** The Curator's amber tower. */
+  | "tower"
+  /** The Rootway: living tunnels between stars. */
+  | "roots"
+  /** The sky-story: a gecko drawn in stars. */
+  | "constellation"
+  /** Meridian: seed-pods in a warm sky, under the gecko's stars. */
+  | "garden";
 
 export interface JourneyNode extends JourneyNodeInput {
   index: number;
@@ -66,11 +97,55 @@ const HUE_BY_SLUG: Record<string, JourneyHue> = {
   "ashen-court": "amber",
   "the-hush": "pink",
   "second-sun": "amber",
+  "green-static": "lime",
+  "the-vivarium": "cyan",
+  glasshouse: "amber",
+  rootway: "violet",
+  "wall-walker": "blue",
+  meridian: "pink",
 };
 const HUE_CYCLE: readonly JourneyHue[] = ["blue", "cyan", "violet", "lime", "amber", "pink"];
 
 export function hueForEpisode(slug: string, index: number): JourneyHue {
   return HUE_BY_SLUG[slug] ?? HUE_CYCLE[index % HUE_CYCLE.length];
+}
+
+const SCENE_BY_SLUG: Record<string, JourneyScene> = {
+  tutorial: "drill",
+  "gecko-legacy": "moon",
+  "cold-orbit": "orbit",
+  "glass-sky": "gate",
+  "empty-nest": "city",
+  "lumen-reef": "reef",
+  "ashen-court": "embers",
+  "the-hush": "fleet",
+  "second-sun": "sun",
+  "green-static": "canopy",
+  "the-vivarium": "lab",
+  glasshouse: "tower",
+  rootway: "roots",
+  "wall-walker": "constellation",
+  meridian: "garden",
+};
+const SCENE_CYCLE: readonly JourneyScene[] = [
+  "moon",
+  "orbit",
+  "gate",
+  "city",
+  "reef",
+  "embers",
+  "fleet",
+  "sun",
+  "canopy",
+  "lab",
+  "tower",
+  "roots",
+  "constellation",
+  "garden",
+];
+
+export function sceneForEpisode(slug: string, index: number): JourneyScene {
+  return SCENE_BY_SLUG[slug] ?? SCENE_CYCLE[index % SCENE_CYCLE.length];
 }
 
 /** How far apart the nodes sit for a stage this wide: most of a phone, less of a desktop. */

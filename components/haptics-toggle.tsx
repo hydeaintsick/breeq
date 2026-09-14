@@ -8,10 +8,19 @@ import { useHaptics } from "@/components/haptics-provider";
  * `row` is a full-width glass button for the pause menu; `menu` is a text row
  * for the header dropdown.
  */
-export function HapticsToggle({ variant = "row" }: { variant?: "row" | "menu" }) {
+export function HapticsToggle({ variant = "row" }: { variant?: "row" | "menu" | "chip" }) {
   const { enabled, supported, toggle } = useHaptics();
   if (!supported) return null;
   const label = enabled ? "Turn vibration off" : "Turn vibration on";
+
+  if (variant === "chip") {
+    return (
+      <button type="button" className="header-chip" aria-pressed={enabled} aria-label={label} onClick={toggle}>
+        <span className="sr-only">{label}</span>
+        <VibrationIcon off={!enabled} />
+      </button>
+    );
+  }
 
   if (variant === "menu") {
     return (

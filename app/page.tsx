@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { BreakoutPreview } from "@/components/breakout-preview";
-import { LoreDeck, type LoreEpisode } from "@/components/lore-deck";
+import { LoreDeck } from "@/components/lore-deck";
 import { PieceKit } from "@/components/piece-kit";
 import { CATALOG, LEVEL_BUDGET } from "@/game/breakout/engine/catalog";
 import { GAME_MENU_PATH } from "@/lib/auth/paths";
 import { EARN_UNLOCK_LEVEL } from "@/lib/progress";
+import { LORE_EPISODES, type LoreEpisode } from "@/lib/lore";
 import { getEpisodeCovers } from "@/lib/story";
 
 const steps = [
@@ -32,69 +33,6 @@ const steps = [
 
 const PIECE_COUNT = CATALOG.filter((entry) => entry.family !== "rule").length;
 
-/**
- * The lore, one card per episode. `cover` is the same-origin photo the seed
- * ships; the database's photo (the one the admin picked) wins when it is
- * reachable. Gecko Legacy is hand-made in the editor and has no local file.
- */
-const episodes = [
-  {
-    index: "01",
-    slug: "gecko-legacy",
-    title: "Gecko Legacy",
-    body: "A light behind a window. A shell cracking on a cold grey moon. Kal is born far from anywhere, and the first walls teach him to move.",
-    cover: null,
-  },
-  {
-    index: "02",
-    slug: "cold-orbit",
-    title: "Cold Orbit",
-    body: "The pod he hatched from was built for one egg — and it holds a star chart with one star circled. Kal lifts off through asteroids, a dead relay, and a wormhole.",
-    cover: "/backgrounds/cold-orbit.jpg",
-  },
-  {
-    index: "03",
-    slug: "glass-sky",
-    title: "Glass Sky",
-    body: "The way home: a comet's tail, the rings of a giant, the Maw, the Sentinels' gate, twin suns — and one last wall, the glass sky of Vitra.",
-    cover: "/backgrounds/glass-sky.jpg",
-  },
-  {
-    index: "04",
-    slug: "empty-nest",
-    title: "Empty Nest",
-    body: "Under the glass, nobody is home. The Keepers — drones left to mind a dark city — show Kal the day the suns flickered and his people left.",
-    cover: "/backgrounds/empty-nest.jpg",
-  },
-  {
-    index: "05",
-    slug: "lumen-reef",
-    title: "Lumen Reef",
-    body: "A shallow ocean lit from below, and a reef that is a people. The Corallines sing of two fleets — then the Gnaw come at dusk, and Kal fights.",
-    cover: "/backgrounds/lumen-reef.jpg",
-  },
-  {
-    index: "06",
-    slug: "ashen-court",
-    title: "Ashen Court",
-    body: "A burned-out star, a court of Cindermoths who hoard the light, a queen called the Candle. The way on costs a cage, wardens, and a duel.",
-    cover: "/backgrounds/ashen-court.jpg",
-  },
-  {
-    index: "07",
-    slug: "the-hush",
-    title: "The Hush",
-    body: "A sky full of wrecks. The Ember Fleet — Kal's own kind — has held the line for years against a dark that eats light. Kal takes his place on the wall.",
-    cover: "/backgrounds/the-hush.jpg",
-  },
-  {
-    index: "08",
-    slug: "second-sun",
-    title: "Second Sun",
-    body: "Aurel: one young sun, an unclaimed world. A glass sky built pane by pane, one last shadow, and the truth about twelve pods. Home is where they are.",
-    cover: "/backgrounds/second-sun.jpg",
-  },
-] as const satisfies readonly LoreEpisode[];
 
 const earnSteps = [
   { title: "Build", body: "Your wall, your photo, your rules — from the same kit as the Story." },
@@ -104,7 +42,7 @@ const earnSteps = [
 
 export default async function Home() {
   const covers = await getEpisodeCovers();
-  const lore: LoreEpisode[] = episodes.map((episode) => ({
+  const lore: LoreEpisode[] = LORE_EPISODES.map((episode) => ({
     ...episode,
     cover: covers[episode.slug] ?? episode.cover,
   }));

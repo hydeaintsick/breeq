@@ -3,9 +3,11 @@
  *
  * Layers, back to front: a static plate (gradient + vignette, once per
  * resize), two seeded starfield tiles on slow parallax, one bloom per zone,
- * the route (a sampled curve, lit as far as Kal has come), the debris that
- * shrouds locked zones, the nodes themselves (cached medallions), Kal orbiting
- * the frontier, and a sparse near layer of dust for depth. Every gradient that
+ * the scenery behind each zone (`scenery.ts`: planets, suns, the wormhole, the
+ * eye…), the route (a sampled curve, lit as far as Kal has come), the debris
+ * that shrouds locked zones, the nodes themselves (cached medallions), Kal
+ * orbiting the frontier, the scenery in front (fleets, drones, embers), the
+ * visitors (a saucer, shooting stars) and a sparse near layer of dust. Every gradient that
  * does not move is a cached sprite; nothing uses `shadowBlur` or `filter`, so
  * a phone draws the frame with a few dozen `drawImage` calls.
  */
@@ -13,6 +15,7 @@ import { readNeonPalette, type NeonPalette } from "../breakout/render/palette";
 import { alpha, tint } from "../shared/color";
 import { createRng } from "../shared/random";
 import type { JourneyHue, JourneyLayout, JourneyNode } from "./model";
+import { SCENE_SIZED_PREFIX, Scenery } from "./scenery";
 
 const TAU = Math.PI * 2;
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -92,6 +95,7 @@ export class JourneyRenderer {
   private readonly debris = new Map<number, Debris>();
   private readonly near: Dust[];
   private readonly twinkle: { x: number; y: number; phase: number }[];
+  private readonly scenery: Scenery;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -102,6 +106,7 @@ export class JourneyRenderer {
     if (!ctx) throw new Error("Canvas 2D is not available");
     this.ctx = ctx;
     this.palette = readNeonPalette();
+    this.scenery = new Scenery(this.palette, (key, w, h, paint) => this.sprite(key, w, h, paint));
     const rng = createRng(0x5ea);
     this.near = Array.from({ length: 26 }, () => ({
       bx: rng.range(0, 1),
@@ -148,9 +153,9 @@ export class JourneyRenderer {
     this.plate = this.paintPlate();
     this.farTile = this.paintStars(0x51a7, 150, 0.6, 1.4, 0.35, 0.8);
     this.midTile = this.paintStars(0x7b3d, 70, 0.9, 2, 0.5, 1);
-    // Bloom and shroud sizes follow the stage height.
+    // Bloom, shroud and scenery sizes follow the stage height.
     for (const key of [...this.sprites.keys()]) {
-      if (key.startsWith("bloom|") || key.startsWith("shroud|")) this.sprites.delete(key);
+      if (key.startsWith("bloom|") || key.startsWith("shroud|") || key.startsWith(SCENE_SIZED_PREFIX)) this.sprites.delete(key);
     }
   }
 
@@ -209,6 +214,9 @@ export class JourneyRenderer {
 
     for (let i = first; i <= last; i++) this.bloom(ctx, nodes[i], cam, reveal[i] ?? 1);
 
+    const frame = { w, h, cam, spacing, midline: this.layout.midline };
+    for (let i = first; i <= last; i++) this.scenery.back(ctx, nodes[i], frame, t, reveal[i] ?? 1);
+
     this.route(ctx, cam, t, first, last);
 
     for (let i = first; i <= last; i++) {
@@ -219,8 +227,10 @@ export class JourneyRenderer {
       if (k < 1) this.shroud(ctx, c.x, c.y, 1 - k);
       if (k < 1) this.debrisLayer(ctx, node, cam, t, 1 - k);
       if (node.state === "current" && k >= 1) this.kal(ctx, node, c.x, c.y, t);
+      this.scenery.front(ctx, node, frame, t, k);
     }
 
+    this.scenery.visitors(ctx, w, h, t);
     this.nearDust(ctx, shift * PAR_NEAR, t);
 
     // Frame hairline: the map is the one dark object on the page.

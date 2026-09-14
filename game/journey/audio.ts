@@ -6,23 +6,25 @@
  *   drag across the map is heard as passage;
  * - distant pings, a low glass bell every several seconds far back in the
  *   hall, sparse and seeded, so the map never falls silent;
- * - moments: a settle when the camera lands on a zone (its own note on the
- *   scale), a soft rise when an episode opens, a dull knock on a locked one,
- *   and a long shimmer when a shroud lifts.
- * Nothing above 5 kHz; the theme keeps the melody, this keeps the room.
+ * - moments: a settle when the camera lands on a zone, a soft rise when an
+ *   episode opens, a dull knock on a locked one, and a long shimmer when a
+ *   shroud lifts.
+ * Every pitch is taken from the chord the theme is on at that moment
+ * (`storyThemeChord`), never from the bare scale: a random scale note over a
+ * moving chord is where the dissonance used to come from. Nothing above 5 kHz;
+ * the theme keeps the melody, this keeps the room.
  */
 import { unlockSound } from "../breakout/audio/bus";
 import { Layer } from "../breakout/audio/synth";
+import { storyThemeChord } from "../breakout/audio/theme";
 import { createRng } from "../shared/random";
 
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
-/** D major without the fourth, the game's scale. */
-const SCALE = [0, 2, 4, 7, 9, 11] as const;
 const ROOT = 50; // D3
 
 const WIND_MAX = 0.05;
-const RUMBLE_LEVEL = 0.035;
-const PING_EVERY: readonly [number, number] = [6.5, 13];
+const RUMBLE_LEVEL = 0.024;
+const PING_EVERY: readonly [number, number] = [7, 14];
 
 interface Bed {
   wind: GainNode;
@@ -68,13 +70,22 @@ export class JourneySfx {
     bed.windFilter.frequency.setTargetAtTime(320 + 900 * this.speed, now, 0.25);
     if (now >= this.nextPing) {
       this.nextPing = now + this.rng.range(PING_EVERY[0], PING_EVERY[1]);
-      const degree = this.rng.int(0, SCALE.length - 1);
+      const degree = this.chordTone(this.rng.chance(0.75));
       const octave = this.rng.chance(0.3) ? 12 : 0;
       const pan = this.rng.range(-0.7, 0.7);
-      L.bell({ freq: hz(ROOT + SCALE[degree] + octave - 12), gain: 0.045, decay: 3.6, pan, send: 0.98 });
+      L.bell({ freq: hz(ROOT + degree + octave - 12), gain: 0.045, decay: 3.6, pan, send: 0.98 });
       // A faint answer, further away.
-      L.bell({ freq: hz(ROOT + SCALE[degree] + octave), gain: 0.02, decay: 2.8, at: now + 0.9, pan: -pan, send: 1 });
+      L.bell({ freq: hz(ROOT + degree + octave), gain: 0.02, decay: 2.8, at: now + 0.9, pan: -pan, send: 1 });
     }
+  }
+
+  /** A pitch (semitones above D) inside the chord sounding now: a triad note, or a safe extension. */
+  private chordTone(triadOnly: boolean, pick?: number): number {
+    const chord = storyThemeChord();
+    if (triadOnly || chord.extras.length === 0) {
+      return chord.triad[(pick ?? this.rng.int(0, 2)) % 3];
+    }
+    return chord.extras[(pick ?? this.rng.int(0, chord.extras.length - 1)) % chord.extras.length];
   }
 
   /** The camera came to rest on zone `index`. */
@@ -87,10 +98,11 @@ export class JourneySfx {
       this.knock(L, 0.6);
       return;
     }
-    const degree = SCALE[index % SCALE.length];
-    const octave = 12 * (1 + Math.floor(index / SCALE.length));
+    // Each zone has its own place in the chord; further zones ring higher.
+    const degree = this.chordTone(true, index);
+    const octave = 12 * (1 + Math.floor(index / 3) % 2);
     L.bell({ freq: hz(ROOT + degree + octave), gain: 0.07, decay: 1.6, pan: 0, send: 0.85 });
-    L.tone({ freq: hz(ROOT + degree), gain: 0.03, attack: 0.05, decay: 0.9, lowpass: 700, send: 0.8 });
+    L.tone({ freq: hz(ROOT + degree + 12), gain: 0.025, attack: 0.05, decay: 0.9, lowpass: 900, send: 0.8 });
   }
 
   /** The player let go and the map is gliding to a zone. */
@@ -105,8 +117,9 @@ export class JourneySfx {
     const L = this.ensure();
     if (!L || !this.active) return;
     const at = L.now + 0.01;
-    L.bell({ freq: hz(ROOT + 12), gain: 0.09, decay: 1.4, at, pan: -0.2, send: 0.85 });
-    L.bell({ freq: hz(ROOT + 19), gain: 0.07, decay: 1.8, at: at + 0.11, pan: 0.2, send: 0.9 });
+    const chord = storyThemeChord();
+    L.bell({ freq: hz(ROOT + 12 + chord.triad[0]), gain: 0.09, decay: 1.4, at, pan: -0.2, send: 0.85 });
+    L.bell({ freq: hz(ROOT + 12 + chord.triad[2]), gain: 0.07, decay: 1.8, at: at + 0.11, pan: 0.2, send: 0.9 });
     L.noise({ gain: 0.03, attack: 0.02, decay: 0.7, filter: "bandpass", freq: 900, to: 2600, q: 1.1, send: 0.8, at });
   }
 
@@ -123,8 +136,10 @@ export class JourneySfx {
     if (!L || !this.active) return;
     const at = L.now + 0.02;
     L.noise({ gain: 0.06, attack: 0.3, hold: 0.4, decay: 1.6, filter: "bandpass", freq: 400, to: 1800, q: 0.7, send: 0.9, at });
+    const chord = storyThemeChord();
     for (let i = 0; i < 4; i++) {
-      const degree = SCALE[(i * 2) % SCALE.length];
+      // Up the chord and over the top: root, third, fifth, root.
+      const degree = chord.triad[i % 3] + (i === 3 ? 12 : 0);
       L.bell({ freq: hz(ROOT + 12 + degree), gain: 0.05, decay: 2.2, at: at + 0.35 + i * 0.16, pan: -0.4 + i * 0.27, send: 0.95 });
     }
   }
@@ -177,7 +192,7 @@ export class JourneySfx {
     // Sub-rumble: what a very large, very quiet place sounds like.
     const rumbleFilter = ctx.createBiquadFilter();
     rumbleFilter.type = "lowpass";
-    rumbleFilter.frequency.value = 95;
+    rumbleFilter.frequency.value = 70;
     rumbleFilter.Q.value = 0.6;
     const rumble = ctx.createGain();
     rumble.gain.value = RUMBLE_LEVEL;

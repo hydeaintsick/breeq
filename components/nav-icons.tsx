@@ -160,6 +160,73 @@ export function MailIcon() {
   );
 }
 
+/** The lore book: a closed cover with a spine. */
+export function BookIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M3.4 3.2c0-.55.45-1 1-1h8.2v9.6H4.6c-.66 0-1.2.54-1.2 1.2V3.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.4 13c0 .66.54 1.2 1.2 1.2h8V11.8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M6.4 5.4h3.6" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** The galaxy map: a spiral with the one charted star lit. */
+export function GalaxyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M8 8c0-1.6 1.3-2.7 2.8-2.5 1.9.3 3 2.2 2.6 4.2-.5 2.6-3 4.3-5.8 4C4.3 13.4 2.2 10.6 2.6 7.5 3 4.2 5.9 2 9.1 2.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="8" r="1.1" fill="currentColor" />
+      <circle cx="12.6" cy="3.6" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** The route: three zones on a curve, for the rolled-up story pill. */
+export function RouteIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M2.6 11.2C4.6 6.4 6.6 5 8 8c1.4 3 3.4 1.6 5.4-3.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="2.8" cy="11" r="1.5" fill="currentColor" />
+      <circle cx="8" cy="7.9" r="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="13.2" cy="5" r="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+export function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ListIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
