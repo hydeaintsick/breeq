@@ -4,12 +4,14 @@
  * Layers, back to front: a static plate (gradient + vignette, once per
  * resize), two seeded starfield tiles on slow parallax, one bloom per zone,
  * the scenery behind each zone (`scenery.ts`: planets, suns, the wormhole, the
- * eye…), the route (a sampled curve, lit as far as Kal has come), the debris
- * that shrouds locked zones, the nodes themselves (cached medallions), Kal
- * orbiting the frontier, the scenery in front (fleets, drones, embers), the
- * visitors (a saucer, shooting stars) and a sparse near layer of dust. Every gradient that
- * does not move is a cached sprite; nothing uses `shadowBlur` or `filter`, so
- * a phone draws the frame with a few dozen `drawImage` calls.
+ * eye…), the fog of the uncharted (a cold, starry mist that thickens past the
+ * frontier and hides the sky ahead), the route (a sampled curve, lit as far as
+ * Kal has come), the debris that shrouds locked zones, the nodes themselves
+ * (cached medallions), Kal orbiting the frontier, the scenery in front (fleets,
+ * drones, embers), a thinner pass of the same fog over the far zones, the
+ * visitors (a saucer, shooting stars) and a sparse near layer of dust. Every
+ * gradient that does not move is a cached sprite; nothing uses `shadowBlur` or
+ * `filter`, so a phone draws the frame with a few dozen `drawImage` calls.
  */
 import { readNeonPalette, type NeonPalette } from "../breakout/render/palette";
 import { alpha, tint } from "../shared/color";
@@ -32,6 +34,23 @@ const PAR_NEAR = 1.5;
 const SAMPLES = 22;
 /** Seconds for a shroud to lift once a zone opens. */
 export const REVEAL_SECONDS = 1.4;
+/**
+ * The fog of the uncharted, in nodes past the frontier: where it starts to
+ * gather (past the midpoint toward the next zone, so N+1 already sits in a
+ * light haze) and how far it takes to close (N+2 is gone).
+ */
+const FOG_FROM = 0.6;
+const FOG_RAMP = 1.5;
+/** How opaque the closed fog is, and how much of it lies over the far zones. */
+const FOG_MAX = 0.9;
+const FOG_FRONT = 0.42;
+/** The fog texture is laid in strips this wide, each at its own density. Divides `TILE`. */
+const FOG_STRIP = 64;
+/** Two sheets of stardust in the fog: parallax against the route, drift in px/s, and weight. */
+const FOG_SHEETS = [
+  { par: 0.3, drift: 2.5, a: 0.8 },
+  { par: 0.65, drift: -4, a: 0.55 },
+] as const;
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -153,9 +172,11 @@ export class JourneyRenderer {
     this.plate = this.paintPlate();
     this.farTile = this.paintStars(0x51a7, 150, 0.6, 1.4, 0.35, 0.8);
     this.midTile = this.paintStars(0x7b3d, 70, 0.9, 2, 0.5, 1);
-    // Bloom, shroud and scenery sizes follow the stage height.
+    // Bloom, shroud, fog and scenery sizes follow the stage height.
     for (const key of [...this.sprites.keys()]) {
-      if (key.startsWith("bloom|") || key.startsWith("shroud|") || key.startsWith(SCENE_SIZED_PREFIX)) this.sprites.delete(key);
+      if (key.startsWith("bloom|") || key.startsWith("shroud|") || key.startsWith("fog|") || key.startsWith(SCENE_SIZED_PREFIX)) {
+        this.sprites.delete(key);
+      }
     }
   }
 
@@ -217,6 +238,10 @@ export class JourneyRenderer {
     const frame = { w, h, cam, spacing, midline: this.layout.midline };
     for (let i = first; i <= last; i++) this.scenery.back(ctx, nodes[i], frame, t, reveal[i] ?? 1);
 
+    // The sky ahead is not drawn yet: fog closes over everything past the frontier.
+    const charted = chartedTo(nodes, reveal);
+    this.fog(ctx, cam, charted, t, false);
+
     this.route(ctx, cam, t, first, last);
 
     for (let i = first; i <= last; i++) {
@@ -229,6 +254,9 @@ export class JourneyRenderer {
       if (node.state === "current" && k >= 1) this.kal(ctx, node, c.x, c.y, t);
       this.scenery.front(ctx, node, frame, t, k);
     }
+
+    // A thinner pass over the far zones: their medallions stay findable, but in the mist.
+    this.fog(ctx, cam, charted, t, true);
 
     this.scenery.visitors(ctx, w, h, t);
     this.nearDust(ctx, shift * PAR_NEAR, t);
@@ -338,6 +366,101 @@ export class JourneyRenderer {
   }
 
   // ---------------------------------------------------------------------------
+  // Fog of the uncharted
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The mist over everything Kal has not reached. It gathers `FOG_FROM` nodes
+   * past `charted`, closes over `FOG_RAMP` nodes, then runs flat to the right
+   * edge, sliding forward as a shroud lifts. Nothing here has an edge: the
+   * base is one linear gradient painted straight onto the frame, and the
+   * stardust is a seamless tile laid in narrow strips, each strip as dense as
+   * the fog where it falls, on two sheets that drift against the route.
+   * `front` is the thinner pass drawn over the far zones.
+   */
+  private fog(ctx: Ctx, cam: number, charted: number, t: number, front: boolean): void {
+    const { spacing } = this.layout;
+    const { width: w, height: h, dpr } = this;
+    const rw = spacing * FOG_RAMP;
+    const x0 = w / 2 + (charted + FOG_FROM - cam) * spacing;
+    if (x0 >= w) return;
+    const strength = front ? FOG_FRONT : 1;
+    const density = (x: number) => smoothstep((x - x0) / rw);
+
+    const g = ctx.createLinearGradient(x0, 0, x0 + rw, 0);
+    for (let i = 0; i <= 8; i++) {
+      g.addColorStop(i / 8, `rgba(12, 15, 30, ${(FOG_MAX * strength * smoothstep(i / 8)).toFixed(3)})`);
+    }
+    ctx.fillStyle = g;
+    const left = Math.max(0, x0);
+    ctx.fillRect(left, 0, w - left, h);
+
+    const tile = this.sprite(`fog|tile|${h}`, TILE, h, (c) => this.paintFogTile(c, h));
+    const shift = -cam * spacing;
+    const perTile = TILE / FOG_STRIP;
+    const sheets = front ? FOG_SHEETS.slice(0, 1) : FOG_SHEETS;
+    for (const sheet of sheets) {
+      // Strips are pinned to the tile so each one is a clean crop of it.
+      const origin = wrap(shift * sheet.par + t * sheet.drift, -TILE, 0);
+      const k0 = Math.max(0, Math.floor((left - origin) / FOG_STRIP));
+      for (let k = k0; origin + k * FOG_STRIP < w; k++) {
+        const sx = origin + k * FOG_STRIP;
+        const a = density(sx + FOG_STRIP / 2) * sheet.a * strength;
+        if (a < 0.01) continue;
+        ctx.globalAlpha = a;
+        const u = (k % perTile) * FOG_STRIP;
+        ctx.drawImage(tile, u * dpr, 0, FOG_STRIP * dpr, h * dpr, sx, 0, FOG_STRIP, h);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /**
+   * One tile of the fog's body, seamless in x: long soft wisps, some a cold
+   * pale blue and some darker than the sky, and a fine mist of stardust so
+   * the fog reads as unmapped sky rather than paint.
+   */
+  private paintFogTile(c: Ctx, h: number): void {
+    const W = TILE;
+    const rng = createRng(0xf06b);
+    // Wisps: radial gradients stretched along x, drawn again across the seam.
+    for (let i = 0; i < 64; i++) {
+      const x = rng.range(0, W);
+      const y = rng.range(-h * 0.1, h * 1.1);
+      const r = h * rng.range(0.05, 0.16);
+      const stretch = rng.range(1.8, 3.6);
+      const cold = rng.chance(0.6);
+      const color = cold ? "#1e2648" : "#03040a";
+      const a = cold ? rng.range(0.07, 0.16) : rng.range(0.1, 0.22);
+      const paint = (px: number) => {
+        c.save();
+        c.translate(px, y);
+        c.scale(stretch, 1);
+        const g = c.createRadialGradient(0, 0, 0, 0, 0, r);
+        g.addColorStop(0, alpha(color, a));
+        g.addColorStop(0.5, alpha(color, a * 0.45));
+        g.addColorStop(1, alpha(color, 0));
+        c.fillStyle = g;
+        c.fillRect(-r, -r, r * 2, r * 2);
+        c.restore();
+      };
+      paint(x);
+      const reach = r * stretch;
+      if (x < reach) paint(x + W);
+      if (x > W - reach) paint(x - W);
+    }
+    // Stardust: many faint grains, a few brighter ones.
+    for (let i = 0; i < 720; i++) {
+      const bright = rng.chance(0.06);
+      const a = bright ? rng.range(0.2, 0.36) : rng.range(0.04, 0.16);
+      c.fillStyle = bright ? `rgba(255, 255, 255, ${a.toFixed(3)})` : `rgba(200, 210, 240, ${a.toFixed(3)})`;
+      c.beginPath();
+      c.arc(rng.range(0, W), rng.range(0, h), bright ? rng.range(0.5, 0.9) : rng.range(0.2, 0.65), 0, TAU);
+      c.fill();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Zones
   // ---------------------------------------------------------------------------
 
@@ -393,21 +516,22 @@ export class JourneyRenderer {
     let set = this.debris.get(node.index);
     if (set) return set;
     const rng = createRng(0xdeb0 + node.index * 131);
-    const rocks: Rock[] = Array.from({ length: 24 }, () => ({
+    // A few rocks and a drift of dust: the shroud is mostly fog now, not rubble.
+    const rocks: Rock[] = Array.from({ length: 9 }, () => ({
       bx: rng.range(-1, 1),
       by: rng.range(-1, 1),
-      size: rng.range(2.5, 10),
+      size: rng.range(2.5, 8),
       shape: rng.int(0, 3),
       vx: rng.range(-0.02, 0.02),
       vy: rng.range(-0.012, 0.012),
       spin: rng.range(-0.5, 0.5),
       angle: rng.range(0, TAU),
     }));
-    const dust: Dust[] = Array.from({ length: 64 }, () => ({
+    const dust: Dust[] = Array.from({ length: 40 }, () => ({
       bx: rng.range(-1, 1),
       by: rng.range(-1, 1),
-      size: rng.range(0.5, 1.5),
-      a: rng.range(0.18, 0.6),
+      size: rng.range(0.5, 1.4),
+      a: rng.range(0.14, 0.5),
       vx: rng.range(-0.014, 0.014),
       vy: rng.range(-0.01, 0.01),
     }));
@@ -783,6 +907,24 @@ function offscreen(w: number, h: number): HTMLCanvasElement {
 function wrap(v: number, lo: number, hi: number): number {
   const span = hi - lo;
   return ((((v - lo) % span) + span) % span) + lo;
+}
+
+function smoothstep(u: number): number {
+  const k = Math.max(0, Math.min(1, u));
+  return k * k * (3 - 2 * k);
+}
+
+/**
+ * How far the route is charted, as a fractional node index: the last zone
+ * that is lit, sliding one node forward while the next one's shroud lifts.
+ */
+function chartedTo(nodes: readonly JourneyNode[], reveal: readonly number[]): number {
+  let charted = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const k = reveal[i] ?? (nodes[i].state === "locked" ? 0 : 1);
+    if (k > 0) charted = i - 1 + smoothstep(k);
+  }
+  return charted;
 }
 
 function bezier(
