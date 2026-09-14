@@ -47,6 +47,11 @@ export interface ThemeGraph {
   chord(index: number, t: number): void;
   /** Strike a hit at `at`. Called only when audible and on time. */
   hit(hit: ThemeHit, at: number): void;
+  /**
+   * Themes that react to play (a run's tension) take a 0..1 level here and
+   * move their filters and layer gains from `t`. Optional; menu themes are flat.
+   */
+  intensity?(level: number, t: number): void;
 }
 
 export interface ThemeScore {

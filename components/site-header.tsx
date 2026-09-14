@@ -16,7 +16,6 @@ import {
   SignOutIcon,
 } from "@/components/nav-icons";
 import { SignOutButton } from "@/components/sign-out-button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ADMIN_DASHBOARD_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 
 const links = [
@@ -87,7 +86,6 @@ export function SiteHeader() {
           {session?.user ? (
             <SignOutButton className="nav-link" />
           ) : null}
-          <ThemeToggle />
           <Link href={GAME_MENU_PATH} className="btn-play play-shimmer gap-2">
             <PlayIcon />
             Play
@@ -95,7 +93,6 @@ export function SiteHeader() {
         </div>
 
         <div className="relative z-10 flex items-center gap-2 md:hidden">
-          <ThemeToggle />
           <button
             type="button"
             className="header-chip"

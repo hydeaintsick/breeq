@@ -3,12 +3,31 @@
 import { useSound } from "@/components/sound-provider";
 
 /**
- * Sound on/off. `chip` is the 44px header button next to the theme toggle;
- * `row` is a full-width glass button for the pause menu.
+ * Sound on/off. `chip` is the 44px header button; `row` is a full-width glass
+ * button for the pause menu and the settings; `menu` is a text row for the
+ * header dropdown, where the chip has no room on the narrowest phones.
  */
-export function SoundToggle({ variant = "chip" }: { variant?: "chip" | "row" }) {
+export function SoundToggle({ variant = "chip" }: { variant?: "chip" | "row" | "menu" }) {
   const { enabled, toggle } = useSound();
   const label = enabled ? "Turn sound off" : "Turn sound on";
+
+  if (variant === "menu") {
+    return (
+      <button
+        type="button"
+        className="nav-link flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-left"
+        aria-pressed={enabled}
+        aria-label={label}
+        onClick={toggle}
+      >
+        <span className="flex items-center gap-2.5">
+          {enabled ? <SoundOnIcon /> : <SoundOffIcon />}
+          Sound
+        </span>
+        <span className="text-xs font-medium uppercase tracking-[0.12em]">{enabled ? "On" : "Off"}</span>
+      </button>
+    );
+  }
 
   if (variant === "row") {
     return (

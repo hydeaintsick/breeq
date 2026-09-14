@@ -10,9 +10,20 @@ export const TUTORIAL_PATH = "/game/tutorial";
 export const STORY_FROM_TUTORIAL = "tutorial";
 export const STORY_AFTER_TUTORIAL_PATH = `${STORY_PATH}?from=${STORY_FROM_TUTORIAL}`;
 export const EARN_PATH = "/game/earn";
+/** The map wizard. */
+export const EARN_CREATE_PATH = "/game/earn/create";
+/** Gem packs (Stripe Checkout). */
+export const EARN_TOPUP_PATH = "/game/earn/topup";
+/** Balances, ledger, withdrawals. */
+export const EARN_WALLET_PATH = "/game/earn/wallet";
 export const ACCOUNT_PATH = "/game/account";
 export const ADMIN_DASHBOARD_PATH = "/admin/dashboard";
 export const ADMIN_EDITOR_PATH = "/admin/editor";
+export const ADMIN_EARN_PATH = "/admin/earn";
+export const ADMIN_ECONOMY_PATH = "/admin/economy";
+export const ADMIN_PLAYERS_PATH = "/admin/players";
+export const ADMIN_WITHDRAWALS_PATH = "/admin/withdrawals";
+export const ADMIN_SETTINGS_PATH = "/admin/settings";
 export const LOGIN_PATH = "/login";
 
 export function storyEpisodePath(slug: string) {

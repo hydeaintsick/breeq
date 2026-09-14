@@ -3,6 +3,7 @@
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
 import { SwipeToggle } from "@/components/swipe-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PlaySettings() {
   return (
@@ -10,9 +11,11 @@ export function PlaySettings() {
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Play</p>
       <h2 className="text-xl font-semibold tracking-tight text-ink">Controls</h2>
       <p className="text-sm leading-6 text-ink-muted">
-        Sound, vibration, and whether a swipe anywhere on the screen moves the paddle, or only the rail under the board.
+        Day or night, sound, vibration, and whether a swipe anywhere on the screen moves the paddle, or only the rail
+        under the board.
       </p>
       <div className="grid gap-3">
+        <ThemeToggle variant="row" />
         <SoundToggle variant="row" />
         <HapticsToggle variant="row" />
         <SwipeToggle variant="row" />

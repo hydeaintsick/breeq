@@ -1,7 +1,9 @@
 export { isSoundEnabled, isSoundSupported, setSoundEnabled, unlockSound } from "./bus";
 export { BreakoutSfx } from "./sfx";
 export { createPayoutSfx, type PayoutSfx } from "./payout";
-export { acquireStoryTheme, storyThemeChord, type StoryThemeChord, type StoryThemeHandle } from "./theme";
+export { acquireStoryTheme, acquireTheme, storyThemeChord, type StoryThemeChord, type StoryThemeHandle, type ThemeHandle } from "./theme";
+export { arcade, pursuit, type ThemeScore } from "./themes";
+export { levelKey } from "./sfx";
 
 import { unlockSound } from "./bus";
 import { Layer } from "./synth";

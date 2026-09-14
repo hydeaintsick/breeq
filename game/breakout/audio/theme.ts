@@ -1,15 +1,20 @@
 /**
- * The story theme player: loops a `ThemeScore` under the map and the episode
- * sheet. The music itself lives in `themes/` — "Lanterns" (the first theme,
- * glass bells over a sliding pad) and "Horizon" (calm synthwave, the default).
+ * The theme player: loops a `ThemeScore` under a surface — the story map and
+ * episode sheet, the Earn store, a paid run. The music itself lives in
+ * `themes/`: "Lanterns" and "Horizon" for the story, "Arcade" for the store,
+ * "Pursuit" for runs.
  *
  * The player owns time and plumbing: a look-ahead scheduler that survives
- * throttled hidden tabs, one fade for the whole theme, ducking during runs,
- * and teardown. Harmony always moves, even silently, so a return lands on the
- * right chord; notes are only struck while audible and on time.
+ * throttled hidden tabs, one fade for the whole theme, ducking, and teardown.
+ * Harmony always moves, even silently, so a return lands on the right chord;
+ * notes are only struck while audible and on time.
  *
- * Procedural, seeded, no samples. One instance per page (`acquireStoryTheme`):
- * route changes inside story mode hand the same loop over without a restart.
+ * Procedural, seeded, no samples. One instance per score (`acquireTheme`):
+ * route changes inside a mode hand the same loop over without a restart.
+ * Themes stack — the one acquired last is the one heard, the others hold
+ * their harmony underneath in silence and come back when it leaves. That is
+ * how a run's music takes over from the store and hands back on the clear
+ * screen without either surface knowing about the other.
  * `storyThemeChord()` tells other sound layers what is sounding right now so
  * their notes land inside it.
  */
@@ -47,7 +52,7 @@ interface Graph {
   closes: (() => void)[];
 }
 
-class StoryTheme {
+class ThemePlayer {
   readonly score: ThemeScore;
   private readonly steps: readonly Step[];
   private layer: Layer | null = null;
@@ -56,8 +61,12 @@ class StoryTheme {
   private loopStart = -1;
   private cursor = 0;
   private lap = 0;
+  /** The holder's wish: false during a run under it or a hidden tab. */
   private active = true;
+  /** The stack's verdict: false while a theme acquired later is sounding. */
+  private top = true;
   private level = 0;
+  private intensityLevel = 0;
   private disposed = false;
 
   constructor(score: ThemeScore) {
@@ -78,6 +87,7 @@ class StoryTheme {
       layer.setActive(true);
       this.layer = layer;
       this.graph = this.build(layer);
+      this.graph.voices.intensity?.(this.intensityLevel, layer.now);
       this.timer = window.setInterval(() => this.tick(), TICK * 1000);
       this.applyLevel(FADE_IN);
     }
@@ -88,6 +98,22 @@ class StoryTheme {
   setActive(on: boolean): void {
     this.active = on;
     this.applyLevel(on ? FADE_IN : FADE_OUT);
+  }
+
+  /** Set by the stack: only the theme on top is heard. */
+  setTop(on: boolean): void {
+    if (this.top === on) return;
+    this.top = on;
+    this.applyLevel(on ? FADE_IN : FADE_OUT);
+  }
+
+  /** 0..1, for scores that react to play. Remembered until the graph exists. */
+  setIntensity(level: number): void {
+    const clamped = Math.max(0, Math.min(1, level));
+    if (Math.abs(clamped - this.intensityLevel) < 0.005) return;
+    this.intensityLevel = clamped;
+    const L = this.layer;
+    if (L && this.graph) this.graph.voices.intensity?.(clamped, L.now);
   }
 
   fadeIn(): void {
@@ -142,13 +168,13 @@ class StoryTheme {
     const g = this.graph;
     const L = this.layer;
     if (!g || !L) return;
-    const target = this.active ? this.level : 0;
+    const target = this.active && this.top ? this.level : 0;
     const t = L.now;
     for (const duck of g.ducks) duck.gain.setTargetAtTime(target, t, tc);
   }
 
   private get audible(): boolean {
-    return this.active && this.level > 0;
+    return this.active && this.top && this.level > 0;
   }
 
   private tick(): void {
@@ -216,13 +242,18 @@ class StoryTheme {
 
 // -----------------------------------------------------------------------------
 
-export interface StoryThemeHandle {
+export interface ThemeHandle {
   /** Call from gestures too: a context created before any gesture resumes here. */
   start(): void;
   /** Duck for a run or a hidden tab; the harmony keeps moving underneath. */
   setActive(on: boolean): void;
+  /** 0..1 tension, for scores that listen (`ThemeGraph.intensity`). */
+  setIntensity(level: number): void;
   release(): void;
 }
+
+/** @deprecated Kept for the story surfaces; the same thing as `ThemeHandle`. */
+export type StoryThemeHandle = ThemeHandle;
 
 /** What the theme is playing now, for other layers to tune to. */
 export interface StoryThemeChord {
@@ -234,47 +265,88 @@ export interface StoryThemeChord {
   extras: readonly number[];
 }
 
-let theme: StoryTheme | null = null;
-let holders = 0;
-let disposeTimer = 0;
+interface Slot {
+  player: ThemePlayer;
+  holders: number;
+  disposeTimer: number;
+}
+
+/** Live players by score id. */
+const slots = new Map<string, Slot>();
+/** Acquisition order; the last entry is the theme that sounds. */
+const stack: Slot[] = [];
+
+function restack(): void {
+  const top = stack[stack.length - 1] ?? null;
+  for (const slot of stack) slot.player.setTop(slot === top);
+}
+
+function lift(slot: Slot): void {
+  const i = stack.indexOf(slot);
+  if (i >= 0) stack.splice(i, 1);
+  stack.push(slot);
+  restack();
+}
+
+function drop(slot: Slot): void {
+  const i = stack.indexOf(slot);
+  if (i >= 0) stack.splice(i, 1);
+  restack();
+}
 
 /**
- * Hold the theme while a story surface is mounted. Holders overlap during route
- * changes, so the loop carries across them; it fades out and is torn down only
- * once the last one has left.
+ * Hold a theme while a surface is mounted. Holders of the same score overlap
+ * during route changes, so the loop carries across them; it fades out and is
+ * torn down only once the last one has left. Acquiring a different score
+ * puts it on top: it sounds, the others wait underneath.
  */
-export function acquireStoryTheme(): StoryThemeHandle {
-  holders += 1;
-  window.clearTimeout(disposeTimer);
-  if (!theme) theme = new StoryTheme(activeTheme());
-  const current = theme;
-  current.fadeIn();
-  current.start();
+export function acquireTheme(score: ThemeScore): ThemeHandle {
+  let slot = slots.get(score.id);
+  if (!slot) {
+    slot = { player: new ThemePlayer(score), holders: 0, disposeTimer: 0 };
+    slots.set(score.id, slot);
+  }
+  const current = slot;
+  current.holders += 1;
+  window.clearTimeout(current.disposeTimer);
+  lift(current);
+  current.player.fadeIn();
+  current.player.start();
   let released = false;
   return {
-    start: () => current.start(),
-    setActive: (on) => current.setActive(on),
+    start: () => current.player.start(),
+    setActive: (on) => current.player.setActive(on),
+    setIntensity: (level) => current.player.setIntensity(level),
     release: () => {
       if (released) return;
       released = true;
-      holders = Math.max(0, holders - 1);
-      if (holders > 0) return;
-      current.fadeOut();
-      disposeTimer = window.setTimeout(() => {
-        if (holders > 0 || theme !== current) return;
-        current.dispose();
-        theme = null;
+      current.holders = Math.max(0, current.holders - 1);
+      if (current.holders > 0) return;
+      current.player.fadeOut();
+      // Leave the stack now so the theme underneath comes back at once.
+      drop(current);
+      current.disposeTimer = window.setTimeout(() => {
+        if (current.holders > 0 || slots.get(score.id) !== current) return;
+        current.player.dispose();
+        slots.delete(score.id);
       }, DISPOSE_MS);
     },
   };
 }
 
+/** The story theme (the player's default, or the local override). */
+export function acquireStoryTheme(): ThemeHandle {
+  return acquireTheme(activeTheme());
+}
+
 /**
- * The chord sounding right now — the first chord of the active theme when it
- * is not running, so a layer tuned to it is always in the key.
+ * The chord sounding right now — from the theme on top of the stack, or the
+ * first chord of the story theme when nothing runs, so a layer tuned to it is
+ * always in a key.
  */
 export function storyThemeChord(): StoryThemeChord {
-  const score = theme ? theme.score : activeTheme();
-  const chord = theme ? theme.chord() : score.chords[0];
+  const top = stack[stack.length - 1]?.player ?? null;
+  const score = top ? top.score : activeTheme();
+  const chord = top ? top.chord() : score.chords[0];
   return { root: score.root, triad: chord.triad, extras: chord.extras };
 }

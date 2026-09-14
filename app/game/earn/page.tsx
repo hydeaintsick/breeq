@@ -1,43 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { BreakoutPreview } from "@/components/breakout-preview";
-import { LOCKDOWN, UNDERTOW } from "@/game/breakout/levels";
-import { GAME_MENU_PATH } from "@/lib/auth/paths";
+import { EarnStore } from "@/components/earn-store";
 import { requireEarn } from "@/lib/auth/session";
-
-const EARN_LEVELS = [LOCKDOWN, UNDERTOW];
+import { getEarnStore, isEarnSort, type EarnSort } from "@/lib/earn";
 
 export const metadata: Metadata = {
-  title: "Earn",
-  description: "Publish or play levels to earn real money.",
+  title: "Earn — Breeq",
+  description: "Walls built by players. Pay a ticket in gems, bring the wall down, get paid in ETH.",
 };
 
-export default async function EarnPage() {
-  await requireEarn();
+export default async function EarnPage({ searchParams }: PageProps<"/game/earn">) {
+  const [{ user }, params] = await Promise.all([requireEarn(), searchParams]);
+  const raw = Array.isArray(params.sort) ? params.sort[0] : params.sort;
+  const sort: EarnSort = isEarnSort(raw) ? raw : "plays";
+  const store = await getEarnStore(user.id, sort);
 
-  return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-12 px-6 pb-20 pt-28 lg:flex-row">
-      <div className="max-w-xl">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-          Earn
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-          Other players&apos; walls
-        </h1>
-        <p className="mt-5 text-lg leading-8 text-ink-muted">
-          Publish or play levels to earn real money. Move over a board to take
-          the paddle.
-        </p>
-        <Link href={GAME_MENU_PATH} className="nav-link mt-8 inline-flex min-h-11 items-center">
-          Back to modes
-        </Link>
-      </div>
-      <BreakoutPreview
-        levels={EARN_LEVELS}
-        seed={23}
-        followQuery={false}
-        controls="hybrid"
-      />
-    </section>
-  );
+  return <EarnStore key={sort} store={store} sort={sort} />;
 }

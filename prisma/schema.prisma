@@ -28,9 +28,18 @@ model User {
   tutorialDoneAt DateTime?
   /// Piece ids ("brick:explosive", "zone:portal", "rule:timer") the story has already explained once.
   discoveries    String[]       @default([])
+  /// Earn: the gem balance (tickets and publishing are paid in gems).
+  gems           Int            @default(0)
+  /// Earn: the ETH balance in gwei (1 ETH = 1e9 gwei). Wins credit it; withdrawals debit it.
+  ethGwei        BigInt         @default(0)
   accounts       Account[]
   sessions       Session[]
   chapterClears  ChapterClear[]
+  earnMaps       EarnMap[]
+  earnRuns       EarnRun[]
+  purchases      GemPurchase[]
+  ledger         LedgerEntry[]
+  withdrawals    Withdrawal[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
@@ -134,4 +143,173 @@ model ChapterClear {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, chapterId])
+}
+
+// -----------------------------------------------------------------------------
+// Earn — player-built maps played for gems, cleared for ETH
+// -----------------------------------------------------------------------------
+
+/// One row, id "economy": the numbers an admin tunes. Defaults in `lib/economy.ts`.
+model EconomySettings {
+  id                String   @id @map("_id")
+  /// USD price of one gem. Drives pack prices and the payout formula.
+  gemPriceUsd       Float    @default(0.02)
+  /// USD reference price of one ETH, for converting the USD payout into ETH.
+  ethPriceUsd       Float    @default(3000)
+  /// A win pays this multiple of the ticket's USD value. 1.5 = 150%.
+  winMultiplier     Float    @default(1.5)
+  /// Players can request a withdrawal once their ETH balance reaches this.
+  withdrawMinEth    Float    @default(0.001)
+  /// Gems charged to publish a map.
+  publishCostGems   Int      @default(50)
+  /// The ticket an author may set, in gems.
+  ticketMinGems     Int      @default(20)
+  ticketMaxGems     Int      @default(500)
+  ticketDefaultGems Int      @default(100)
+  /// Gem packs on the top-up page: `[{ gems, discountPct, tag }]`.
+  packs             Json
+  updatedAt         DateTime @updatedAt
+}
+
+enum EarnMapStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+/// A player-built wall in the Earn store.
+model EarnMap {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  authorId        String        @db.ObjectId
+  author          User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title           String
+  slug            String        @unique
+  level           Json
+  /// The author's photo (Cloudinary), or null when a gradient was picked.
+  backgroundUrl   String?
+  /// One of the twenty gradients in `lib/gradients.ts`, when no photo.
+  gradientId      String?
+  /// Gems a player pays to start a run.
+  ticketGems      Int
+  /// `rateDifficulty` at publish time: 0–100 and its tier label.
+  difficulty      Int
+  difficultyLabel String
+  meanSeconds     Float?
+  plays           Int           @default(0)
+  wins            Int           @default(0)
+  /// Admin pick for the top row of the store.
+  featured        Boolean       @default(false)
+  featuredOrder   Int           @default(0)
+  status          EarnMapStatus @default(PUBLISHED)
+  runs            EarnRun[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status, plays, id])
+  @@index([status, createdAt, id])
+  @@index([status, difficulty, id])
+  @@index([status, ticketGems, id])
+  @@index([status, featured, featuredOrder])
+  @@index([authorId])
+}
+
+enum EarnRunOutcome {
+  OPEN
+  WON
+  LOST
+}
+
+/// One paid attempt at a map. The payout is locked in when the ticket is paid.
+model EarnRun {
+  id         String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String         @db.ObjectId
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mapId      String         @db.ObjectId
+  map        EarnMap        @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  ticketGems Int
+  outcome    EarnRunOutcome @default(OPEN)
+  seed       Int
+  score      Int            @default(0)
+  /// What a win pays, in gwei, fixed at start.
+  payoutGwei BigInt         @default(0)
+  payoutUsd  Float          @default(0)
+  createdAt  DateTime       @default(now())
+  endedAt    DateTime?
+
+  @@index([userId, mapId, outcome])
+  @@index([userId, outcome])
+  @@index([mapId])
+  @@index([createdAt])
+}
+
+enum PurchaseStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+/// A gem pack bought through Stripe Checkout. Credited once, when the session is paid.
+model GemPurchase {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String         @db.ObjectId
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gems            Int
+  usdCents        Int
+  discountPct     Float          @default(0)
+  stripeSessionId String?        @unique
+  status          PurchaseStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+  paidAt          DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+enum LedgerKind {
+  TOPUP
+  PUBLISH
+  TICKET
+  PAYOUT
+  WITHDRAW
+  WITHDRAW_REFUND
+  GRANT
+}
+
+/// Every balance change, both currencies, signed. The wallet page reads it back.
+model LedgerEntry {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String     @db.ObjectId
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      LedgerKind
+  gems      Int        @default(0)
+  ethGwei   BigInt     @default(0)
+  /// Run, map, purchase or withdrawal id this entry belongs to.
+  ref       String?
+  note      String?
+  createdAt DateTime   @default(now())
+
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
+/// A player's request to receive ETH. Debited on request; refunded if rejected.
+model Withdrawal {
+  id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String           @db.ObjectId
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountGwei BigInt
+  toAddress  String
+  status     WithdrawalStatus @default(PENDING)
+  txHash     String?
+  note       String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }

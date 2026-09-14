@@ -283,6 +283,14 @@ The board on the home page is not a video. It is the real engine playing real le
 
 Zero runtime dependencies beyond React.
 
+## Earn — walls built by players
+
+Earn is the second mode after Story, unlocked at player level 5. Any player can publish a wall: name it, pick a sky (their own photo or one of twenty gradients), build it in the same editor the Story chapters use, and put it on sale once the robot has proved it clearable and rated it 0–100. Every wall carries a ticket price in **gems**, the game's currency; a player pays the ticket to try it, and bringing the wall down pays a pot in **ETH** to their balance — 150% of the ticket's value, once per wall, never on their own map. ETH accrues until the withdrawal threshold and is sent by hand from the admin space.
+
+The store is a Netflix-style floor: a sticky strip with the wallet and "Create my map", the admins' featured shelf, the most played, and every wall in an infinite grid you can sort by plays, date, pot, or difficulty. Each card is the live board playing itself, with the difficulty tier, the play count, the ticket, and the pot. Both balances sit in the game header as a bag pill beside the level; its "+" (and every "Top up gems" button) slides the gem shop up as a sheet over the current page — packs from 100 to 10,000 with degressive discounts set by the admin, paid through Stripe Checkout, which sends the player back to the same page where the pack lands with a counter and a fanfare. The admin space (`/admin/dashboard`) has the stats, the economy form (gem price, ETH reference, multiplier, thresholds, packs), map curation, players, and withdrawals.
+
+The store has its own music (Arcade — a driving anthem) and a run has its own (Pursuit — a chase in the level's key that tightens as lives go and heat climbs); both are synthesized live like everything else, no samples.
+
 ## Getting started
 
 ```bash

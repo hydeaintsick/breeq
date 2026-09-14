@@ -249,3 +249,62 @@ export function ListIcon() {
     </svg>
   );
 }
+
+export function GemIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M4.4 2.6h7.2L14 6.2 8 13.6 2 6.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path d="M2 6.2h12M5.8 6.2 8 13.6l2.2-7.4" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function WallIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <rect x="2.2" y="3" width="5" height="2.6" rx="0.7" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="8.8" y="3" width="5" height="2.6" rx="0.7" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="5.5" y="7" width="5" height="2.6" rx="0.7" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M4 13.2h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PeopleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <circle cx="6" cy="5.4" r="2.4" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M1.8 13.2c.4-2.6 2-4 4.2-4s3.8 1.4 4.2 4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M10.4 3.4a2.2 2.2 0 0 1 0 4.2M11.6 9.4c1.6.3 2.4 1.5 2.6 3.4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function WithdrawIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path d="M8 2.4v7.4M4.9 6.7 8 9.8l3.1-3.1" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.6 12.2v1.4h10.8v-1.4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SettingsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M8 1.9v1.8M8 12.3v1.8M1.9 8h1.8M12.3 8h1.8M3.7 3.7l1.3 1.3M11 11l1.3 1.3M3.7 12.3 5 11M11 5l1.3-1.3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

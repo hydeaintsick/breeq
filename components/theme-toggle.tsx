@@ -3,12 +3,28 @@
 import { useTheme } from "@/components/theme-provider";
 
 /**
- * Day / night. `chip` is the 44px header button; `menu` is a text row for the
- * header dropdown, used where the header pill has no room for another chip.
+ * Day / night. It lives in the player's settings (`row`, a full-width glass
+ * button) — no longer in any header. `chip` and `menu` stay for the pause
+ * menu or a future dropdown.
  */
-export function ThemeToggle({ variant = "chip" }: { variant?: "chip" | "menu" }) {
+export function ThemeToggle({ variant = "chip" }: { variant?: "chip" | "menu" | "row" }) {
   const { theme, toggle } = useTheme();
   const night = theme === "dark";
+
+  if (variant === "row") {
+    return (
+      <button
+        type="button"
+        className="btn-glass min-h-11 w-full"
+        aria-pressed={night}
+        aria-label={night ? "Use day mode" : "Use night mode"}
+        onClick={toggle}
+      >
+        {night ? <SunIcon /> : <MoonIcon />}
+        {night ? "Night mode" : "Day mode"}
+      </button>
+    );
+  }
 
   if (variant === "menu") {
     return (

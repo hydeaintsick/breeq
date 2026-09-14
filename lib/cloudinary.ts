@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 
 export const STORY_BACKGROUND_FOLDER = "breeq/story-backgrounds";
+/** Photos players put behind their Earn maps. */
+export const EARN_BACKGROUND_FOLDER = "breeq/earn-backgrounds";
 export const MAX_STORY_IMAGE_BYTES = 10 * 1024 * 1024;
 
 export function cloudinaryConfigured() {
@@ -11,7 +13,15 @@ export function cloudinaryConfigured() {
   );
 }
 
-export async function uploadStoryBackground(file: File): Promise<string> {
+export function uploadStoryBackground(file: File): Promise<string> {
+  return uploadImage(file, STORY_BACKGROUND_FOLDER);
+}
+
+export function uploadEarnBackground(file: File): Promise<string> {
+  return uploadImage(file, EARN_BACKGROUND_FOLDER);
+}
+
+export async function uploadImage(file: File, folder: string): Promise<string> {
   const cloud = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const secret = process.env.CLOUDINARY_API_SECRET;
@@ -35,14 +45,14 @@ export async function uploadStoryBackground(file: File): Promise<string> {
   const timestamp = Math.floor(Date.now() / 1000);
   const eager = "q_auto,f_auto,c_limit,w_2560";
   const signature = createHash("sha1")
-    .update(`eager=${eager}&folder=${STORY_BACKGROUND_FOLDER}&timestamp=${timestamp}${secret}`)
+    .update(`eager=${eager}&folder=${folder}&timestamp=${timestamp}${secret}`)
     .digest("hex");
 
   const body = new FormData();
   body.set("file", file);
   body.set("api_key", apiKey);
   body.set("timestamp", String(timestamp));
-  body.set("folder", STORY_BACKGROUND_FOLDER);
+  body.set("folder", folder);
   body.set("eager", eager);
   body.set("signature", signature);
 

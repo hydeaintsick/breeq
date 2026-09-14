@@ -9,16 +9,34 @@ import { MenuIcon } from "@/components/menu-icon";
 import {
   DashboardIcon,
   EditorIcon,
+  GemIcon,
+  PeopleIcon,
   PlayIcon,
+  SettingsIcon,
   SignOutIcon,
+  WallIcon,
+  WithdrawIcon,
 } from "@/components/nav-icons";
 import { SignOutButton } from "@/components/sign-out-button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { ADMIN_DASHBOARD_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
+import {
+  ADMIN_DASHBOARD_PATH,
+  ADMIN_EARN_PATH,
+  ADMIN_ECONOMY_PATH,
+  ADMIN_EDITOR_PATH,
+  ADMIN_PLAYERS_PATH,
+  ADMIN_SETTINGS_PATH,
+  ADMIN_WITHDRAWALS_PATH,
+  GAME_MENU_PATH,
+} from "@/lib/auth/paths";
 
 const links = [
   { href: ADMIN_DASHBOARD_PATH, label: "Dashboard", match: "exact", Icon: DashboardIcon },
-  { href: ADMIN_EDITOR_PATH, label: "Editor", match: "prefix", Icon: EditorIcon },
+  { href: ADMIN_EDITOR_PATH, label: "Story editor", match: "prefix", Icon: EditorIcon },
+  { href: ADMIN_EARN_PATH, label: "Earn maps", match: "prefix", Icon: WallIcon },
+  { href: ADMIN_ECONOMY_PATH, label: "Economy", match: "prefix", Icon: GemIcon },
+  { href: ADMIN_PLAYERS_PATH, label: "Players", match: "prefix", Icon: PeopleIcon },
+  { href: ADMIN_WITHDRAWALS_PATH, label: "Withdrawals", match: "prefix", Icon: WithdrawIcon },
+  { href: ADMIN_SETTINGS_PATH, label: "Settings", match: "prefix", Icon: SettingsIcon },
 ] as const;
 
 export function AdminHeader() {
@@ -45,7 +63,6 @@ export function AdminHeader() {
         </Link>
 
         <div className="relative z-10 flex items-center gap-2">
-          <ThemeToggle />
           <button
             type="button"
             className="header-chip"

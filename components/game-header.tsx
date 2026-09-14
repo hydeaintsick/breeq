@@ -9,24 +9,29 @@ import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
 import { LoreBook } from "@/components/lore-book";
 import { MenuIcon } from "@/components/menu-icon";
-import { AccountIcon, BookIcon, CloseIcon, EditorIcon, GalaxyIcon, RouteIcon, SignOutIcon } from "@/components/nav-icons";
+import { AccountIcon, BookIcon, CloseIcon, DashboardIcon, GalaxyIcon, PlayIcon, RouteIcon, SignOutIcon } from "@/components/nav-icons";
 import { RankMeter } from "@/components/rank-meter";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useStoryChrome } from "@/components/story-chrome";
 import { SwipeToggle } from "@/components/swipe-toggle";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { ACCOUNT_PATH, ADMIN_EDITOR_PATH, GAME_MENU_PATH, STORY_PATH } from "@/lib/auth/paths";
+import { WalletChip } from "@/components/wallet-chip";
+import { ACCOUNT_PATH, ADMIN_DASHBOARD_PATH, EARN_PATH, GAME_MENU_PATH, STORY_PATH } from "@/lib/auth/paths";
 import type { Progress, StarTally } from "@/lib/progress";
+
+type Pill = "rank" | "wallet";
 
 export function GameHeader({
   progress,
   stars,
   isAdmin = false,
+  earn = false,
 }: {
   progress: Progress;
   stars: StarTally;
   isAdmin?: boolean;
+  /** The player can use Earn: the bag pill joins the level pill. */
+  earn?: boolean;
 }) {
   const pathname = usePathname();
   const [menuPath, setMenuPath] = useState<string | null>(null);
@@ -38,6 +43,23 @@ export function GameHeader({
   const mainOpen = !story || chrome.focus === "main";
   // Rolling the game's pill up also folds its dropdown.
   const open = mainOpen && menuPath === pathname;
+
+  // Two pills, one unfolded at a time: the bag in Earn, the level elsewhere.
+  // A tap on the folded one swaps them; a route change goes back to the default.
+  const inEarn = pathname.startsWith(EARN_PATH);
+  const defaultPill: Pill = earn && inEarn ? "wallet" : "rank";
+  const [pick, setPick] = useState<{ path: string; pill: Pill } | null>(null);
+  const picked = earn && pick && pick.path === pathname ? pick.pill : null;
+  const swapped = picked !== null;
+  const pill: Pill = picked ?? (earn ? defaultPill : "rank");
+  const showPill = (next: Pill) => setPick({ path: pathname, pill: next });
+
+  const pills = (
+    <>
+      <RankMeter progress={progress} stars={stars} folded={pill !== "rank"} onUnfold={() => showPill("rank")} />
+      {earn ? <WalletChip folded={pill !== "wallet"} onUnfold={() => showPill("wallet")} /> : null}
+    </>
+  );
 
   useEffect(() => {
     const onScroll = () => {
@@ -72,6 +94,14 @@ export function GameHeader({
     >
       <div className="glass-sheet flex w-full max-w-xs flex-col gap-1 p-3">
         <Link
+          href={GAME_MENU_PATH}
+          className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
+          data-active={pathname === GAME_MENU_PATH}
+        >
+          <PlayIcon />
+          Play
+        </Link>
+        <Link
           href={ACCOUNT_PATH}
           className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
           data-active={pathname === ACCOUNT_PATH}
@@ -79,17 +109,22 @@ export function GameHeader({
           <AccountIcon />
           Account settings
         </Link>
-        {story ? <ThemeToggle variant="menu" /> : null}
+        {/* The sound chip leaves the pill on the narrowest phones; the row takes over here. */}
+        {!story ? (
+          <div className="header-sound-row">
+            <SoundToggle variant="menu" />
+          </div>
+        ) : null}
         <HapticsToggle variant="menu" />
         <SwipeToggle variant="menu" />
         {isAdmin ? (
           <Link
-            href={ADMIN_EDITOR_PATH}
+            href={ADMIN_DASHBOARD_PATH}
             className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
-            data-active={pathname.startsWith(ADMIN_EDITOR_PATH)}
+            data-active={pathname.startsWith("/admin")}
           >
-            <EditorIcon />
-            Editor
+            <DashboardIcon />
+            Admin space
           </Link>
         ) : null}
         <SignOutButton className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left">
@@ -119,13 +154,14 @@ export function GameHeader({
             </span>
           </Link>
 
-          <div className="relative z-10 mx-2 flex min-w-0 flex-1 justify-start sm:mx-3">
-            <RankMeter progress={progress} stars={stars} />
+          <div className="header-pills relative z-10 mx-2 flex min-w-0 flex-1 items-center justify-start gap-2 sm:mx-3" data-swapped={swapped}>
+            {pills}
           </div>
 
           <div className="relative z-10 flex shrink-0 items-center gap-2">
-            <SoundToggle />
-            <ThemeToggle />
+            <div className="header-sound-chip">
+              <SoundToggle />
+            </div>
             {menuButton}
           </div>
         </nav>
@@ -158,8 +194,8 @@ export function GameHeader({
                   Breeq
                 </span>
               </Link>
-              <div className="relative z-10 mx-2 flex min-w-0 flex-1 justify-start sm:mx-3">
-                <RankMeter progress={progress} stars={stars} />
+              <div className="header-pills relative z-10 mx-2 flex min-w-0 flex-1 items-center justify-start gap-2 sm:mx-3" data-swapped={swapped}>
+                {pills}
               </div>
               <div className="relative z-10 flex shrink-0 items-center gap-2">{menuButton}</div>
             </>

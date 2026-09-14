@@ -17,10 +17,34 @@ function StarMark() {
   );
 }
 
-/** The player's level in the game header: a badge, the XP to the next rung, the bar, and stars collected. */
-export function RankMeter({ progress, stars }: { progress: Progress; stars: StarTally }) {
+/**
+ * The player's level in the game header: a badge, the XP to the next rung, the
+ * bar, and stars collected. `folded` shrinks it to the badge alone (the bag
+ * pill has the room); tapping the badge unfolds it.
+ */
+export function RankMeter({
+  progress,
+  stars,
+  folded = false,
+  onUnfold,
+}: {
+  progress: Progress;
+  stars: StarTally;
+  folded?: boolean;
+  onUnfold?: () => void;
+}) {
   const pct = Math.max(0, Math.min(100, Math.round(progress.ratio * 100)));
   const summary = `Level ${progress.level} · ${format(progress.into)} / ${format(progress.next)} XP · ${format(stars.earned)} stars`;
+
+  if (folded) {
+    return (
+      <button type="button" className="header-chip rank-folded" aria-label={`Show your level: ${summary}`} aria-expanded={false} onClick={onUnfold}>
+        <span className="rank-badge" aria-hidden="true">
+          {progress.level}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div className="rank-chip" title={summary}>

@@ -40,6 +40,11 @@ function keyOf(level: Level): number {
   return 50 + (h % 8);
 }
 
+/** The key the effects play a level in (MIDI root, D3..A3) — the run theme tunes to it. */
+export function levelKey(level: Level): number {
+  return keyOf(level);
+}
+
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
