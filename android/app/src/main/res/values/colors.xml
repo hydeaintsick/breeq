@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors app/globals.css tokens. Light page, night board. -->
+    <color name="bg">#F4F5FA</color>
+    <color name="ink">#0F1117</color>
+    <color name="ink_muted">#6B7080</color>
+    <color name="accent">#5B5BFF</color>
+    <!-- The board's plate: splash and launcher background. -->
+    <color name="night">#07080E</color>
+    <color name="night_high">#1B1F33</color>
+    <color name="glass_white">#FFFFFF</color>
+</resources>

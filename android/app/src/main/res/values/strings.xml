@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher label. The Play listing title is "Breeq: Brick Breaker & Earn" (see android/store/listing.md). -->
+    <string name="app_name">Breeq</string>
+
+    <string name="offline_title">You\'re offline</string>
+    <string name="offline_body">Breeq needs a connection to load your walls, your gems and your pots.</string>
+    <string name="offline_retry">Try again</string>
+    <string name="error_title">Breeq couldn\'t load</string>
+    <string name="error_body">The server didn\'t answer. Check your connection and try again.</string>
+    <string name="open_failed">No app can open this link</string>
+</resources>

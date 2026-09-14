@@ -1,0 +1,17 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+local.properties
+
+# Signing: the upload key and its passwords never leave this machine (back them up).
+keystore.properties
+keystore/
+
+# Release outputs
+dist/
+
+# IDE
+.idea/
+*.iml
+.DS_Store

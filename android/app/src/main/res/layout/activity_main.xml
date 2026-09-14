@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg"
+        android:scrollbars="none"
+        android:overScrollMode="never" />
+
+    <!-- Shown when the first page cannot load (offline, server down). The page itself handles everything else. -->
+    <LinearLayout
+        android:id="@+id/offline"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="32dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="128dp"
+            android:layout_height="128dp"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_launcher_monochrome"
+            android:tint="@color/ink_muted" />
+
+        <TextView
+            android:id="@+id/offline_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:text="@string/offline_title"
+            android:textColor="@color/ink"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/offline_body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="28dp"
+            android:gravity="center"
+            android:lineSpacingExtra="3sp"
+            android:maxWidth="320dp"
+            android:text="@string/offline_body"
+            android:textColor="@color/ink_muted"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/retry"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_pill"
+            android:minWidth="160dp"
+            android:paddingHorizontal="28dp"
+            android:text="@string/offline_retry"
+            android:textAllCaps="false"
+            android:textColor="@color/glass_white"
+            android:textSize="15sp" />
+    </LinearLayout>
+</FrameLayout>

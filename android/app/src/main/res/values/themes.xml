@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The running app: no action bar, the page paints everything; bars are drawn by the activity from the page's colors. -->
+    <style name="Theme.Breeq" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/ink_muted</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- Cold start: the board's night plate with the launcher mark, then Theme.Breeq. -->
+    <style name="Theme.Breeq.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/night</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimationDuration">300</item>
+        <item name="postSplashScreenTheme">@style/Theme.Breeq</item>
+    </style>
+</resources>
