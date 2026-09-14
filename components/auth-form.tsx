@@ -11,12 +11,15 @@ type Mode = "signin" | "signup";
 export function AuthForm({
   googleEnabled,
   initialError = null,
+  initialMode = "signin",
 }: {
   googleEnabled: boolean;
   /** Message for an Auth.js redirect back to `/login?error=…` (OAuth failures). */
   initialError?: string | null;
+  /** An invited visitor opens on sign up. */
+  initialMode?: Mode;
 }) {
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState<string | null>(initialError);
   const [pending, setPending] = useState(false);
 

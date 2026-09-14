@@ -3361,6 +3361,93 @@ html[data-theme="dark"] {
   pointer-events: auto;
 }
 
+/* Share the win: one line and a row of round glass buttons under "Quit". Lands
+   on the buttons' beat, never before the payout has settled. */
+.story-clear-share {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition:
+    opacity 360ms var(--ease) 80ms,
+    transform 360ms var(--ease) 80ms;
+}
+
+.story-clear-share[data-show="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.story-clear-share-label {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.story-clear-share-label .gem-glyph {
+  font-size: 0.9em;
+  vertical-align: -0.08em;
+}
+
+.story-clear-share-fine {
+  margin-top: 0.8rem;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding: 0;
+  list-style: none;
+}
+
+.share-btn {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.share-btn svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.share-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.share-btn:active {
+  transform: scale(0.94);
+}
+
+.share-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.share-btn[data-copied="true"] {
+  background: color-mix(in srgb, var(--neon-lime) 28%, transparent);
+  border-color: color-mix(in srgb, var(--neon-lime) 60%, transparent);
+}
+
 /* A paid skip's clear screen lives over the episode sheet, not over a run. */
 .story-skip-stage {
   position: fixed;
@@ -4118,6 +4205,7 @@ html[data-theme="dark"] .lore-halo-photo {
   .story-clear-level,
   .story-clear-actions,
   .story-clear-next,
+  .story-clear-share,
   .story-clear-stars,
   .tutorial-veil {
     transition: none !important;

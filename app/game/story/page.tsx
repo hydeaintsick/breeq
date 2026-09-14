@@ -4,6 +4,7 @@ import { StoryShelf } from "@/components/story-shelf";
 import { GAME_MENU_PATH, STORY_FROM_TUTORIAL, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { requireProgress } from "@/lib/auth/session";
 import { getDiscoveries } from "@/lib/discoveries-server";
+import { getReferralCode } from "@/lib/referrals";
 import { getStoryShelf } from "@/lib/story";
 import { getTutorialStatus } from "@/lib/tutorial";
 
@@ -18,10 +19,11 @@ export default async function StoryPage({
   searchParams: Promise<{ from?: string | string[] }>;
 }) {
   const { user } = await requireProgress();
-  const [{ episodes }, tutorial, discovered, { from }] = await Promise.all([
+  const [{ episodes }, tutorial, discovered, referralCode, { from }] = await Promise.all([
     getStoryShelf(user.id),
     getTutorialStatus(user.id),
     getDiscoveries(user.id),
+    getReferralCode(user.id),
     searchParams,
   ]);
   const fromTutorial = from === STORY_FROM_TUTORIAL && tutorial.enabled && tutorial.done;
@@ -58,6 +60,7 @@ export default async function StoryPage({
       tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       arriveFromTutorial={fromTutorial}
       discovered={discovered}
+      referralCode={referralCode}
     />
   );
 }

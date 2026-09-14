@@ -10,6 +10,7 @@ import { isGoogleEnabled } from "@/lib/auth/google";
 import { isAdminEmail, LOGIN_PATH, type Role } from "@/lib/auth/paths";
 import { SIWE_NONCE_COOKIE, siweMessage } from "@/lib/auth/siwe";
 import { normalizeUsername, uniqueUsername } from "@/lib/auth/username";
+import { applyReferral } from "@/lib/referrals";
 
 const googleEnabled = isGoogleEnabled();
 
@@ -118,6 +119,7 @@ async function authorizeWallet(addressRaw: string, signature: string) {
       },
     },
   });
+  await applyReferral(created.id);
 
   return toAuthUser(created);
 }
@@ -220,6 +222,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: isAdminEmail(current.email) ? "ADMIN" : current.role,
         },
       });
+      // Google sign-ups: the adapter has just created the row. Same referral
+      // cookie as the other doors; the note wants the username set above.
+      await applyReferral(user.id);
     },
     async linkAccount({ user, account }) {
       // Google only gets this far with a verified email (see `signIn`), so the

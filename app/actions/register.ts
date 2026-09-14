@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/paths";
 import { isValidUsername, normalizeUsername } from "@/lib/auth/username";
+import { applyReferral } from "@/lib/referrals";
 
 export async function registerAccount(input: {
   username: string;
@@ -30,7 +31,7 @@ export async function registerAccount(input: {
   }
 
   try {
-    await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         username,
         name: username,
@@ -39,7 +40,9 @@ export async function registerAccount(input: {
         passwordSetAt: new Date(),
         role: isAdminEmail(email) ? "ADMIN" : "PLAYER",
       },
+      select: { id: true },
     });
+    await applyReferral(created.id);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

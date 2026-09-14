@@ -32,6 +32,14 @@ model User {
   gems           Int            @default(0)
   /// Earn: the ETH balance in gwei (1 ETH = 1e9 gwei). Wins credit it; withdrawals debit it.
   ethGwei        BigInt         @default(0)
+  /// The short code in this player's share links (`/r/<code>`). Minted the first time it is
+  /// needed. Not `@unique`: Mongo would file every player without a code under one null key.
+  /// `lib/referrals.ts` checks for a clash before writing.
+  referralCode   String?
+  /// Players who signed up through this player's link.
+  referralsMade  Referral[]     @relation("referrer")
+  /// The link this player signed up through, if any.
+  referredBy     Referral?      @relation("referred")
   accounts       Account[]
   sessions       Session[]
   chapterClears  ChapterClear[]
@@ -42,6 +50,8 @@ model User {
   withdrawals    Withdrawal[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@index([referralCode])
 }
 
 model Account {
@@ -274,6 +284,26 @@ enum LedgerKind {
   GRANT
   /// Story: a chapter bought past instead of cleared.
   SKIP
+  /// A friend signed up through the player's share link.
+  REFERRAL
+}
+
+/// One sign-up through a share link. `referredId` is unique: an account is
+/// referred once, whichever link it arrived by; creating the row is the gate
+/// before the referrer is paid.
+model Referral {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  referrerId String   @db.ObjectId
+  referrer   User     @relation("referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId String   @unique @db.ObjectId
+  referred   User     @relation("referred", fields: [referredId], references: [id], onDelete: Cascade)
+  /// Gems paid to the referrer for this sign-up; 0 once their paid sign-ups are capped.
+  gems       Int
+  /// The share button the link came from ("x", "whatsapp", …), when known.
+  via        String?
+  createdAt  DateTime @default(now())
+
+  @@index([referrerId, createdAt])
 }
 
 /// Every balance change, both currencies, signed. The wallet page reads it back.

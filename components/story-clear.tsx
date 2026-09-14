@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { GemGlyph } from "@/components/currency-glyphs";
+import { ShareRow } from "@/components/share-row";
 import { StarRating } from "@/components/star-rating";
 import { createPayoutSfx, type PayoutSfx } from "@/game/breakout/audio";
 import { isHapticsEnabled, isHapticsSupported } from "@/game/breakout/haptics";
 import type { StarCount } from "@/game/breakout/engine/stars";
 import { formatGems } from "@/lib/economy";
 import { progressFromXp, type Progress } from "@/lib/progress";
+import { clearShareText, REFERRAL_GEMS, REFERRAL_MAX_PAID } from "@/lib/share";
 
 /** Timeline, in ms from mount. */
 const T = {
@@ -73,6 +75,7 @@ export function StoryClear({
   kicker: kickerOverride,
   note,
   cost,
+  shareCode = null,
   nextLabel = "Next chapter",
   closeLabel = "Close",
   onNext,
@@ -93,6 +96,8 @@ export function StoryClear({
   note?: string;
   /** The clear was bought: the gems leave the bag first and there is no score line. */
   cost?: ClearCost;
+  /** The player's referral code: shows the share row under the buttons. Null hides it. */
+  shareCode?: string | null;
   nextLabel?: string;
   closeLabel?: string;
   onNext: () => void;
@@ -434,6 +439,18 @@ export function StoryClear({
             {closeLabel}
           </button>
         </div>
+
+        {shareCode && !paid ? (
+          <div className="story-clear-share" data-show={buttons}>
+            <p className="story-clear-share-label">
+              Share the win. Every friend who joins earns you <GemGlyph /> {REFERRAL_GEMS}.
+            </p>
+            <ShareRow code={shareCode} text={clearShareText(title)} />
+            <p className="story-clear-share-fine">
+              {REFERRAL_GEMS} gems per friend who signs up through your link, for up to {REFERRAL_MAX_PAID} friends.
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

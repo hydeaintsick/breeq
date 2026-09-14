@@ -20,6 +20,7 @@ const KIND_LABEL: Record<string, string> = {
   WITHDRAW_REFUND: "Withdrawal returned",
   GRANT: "Gems from Breeq",
   SKIP: "Chapter skipped",
+  REFERRAL: "Friend joined",
 };
 
 const STATUS_LABEL: Record<string, string> = {

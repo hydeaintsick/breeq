@@ -158,6 +158,7 @@ export function StoryShelf({
   tutorial = null,
   arriveFromTutorial = false,
   discovered = EMPTY_DISCOVERIES,
+  referralCode = null,
 }: {
   episodes: StoryEpisodeCard[];
   initialSlug?: string;
@@ -167,6 +168,8 @@ export function StoryShelf({
   arriveFromTutorial?: boolean;
   /** Piece ids already explained to this player; a run stops on the first touch of anything else. */
   discovered?: readonly string[];
+  /** The player's share code for the clear screen's share row. */
+  referralCode?: string | null;
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -885,6 +888,7 @@ export function StoryShelf({
                       result={cleared.result}
                       hasNext={nextChapter !== null}
                       episodeDone={episodeDone}
+                      shareCode={referralCode}
                       onNext={() => {
                         if (nextChapter) startChapter(nextChapter);
                       }}
