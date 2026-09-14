@@ -106,7 +106,8 @@ export function EarnWizard({
 
   if (done) {
     return (
-      <section className="mx-auto flex min-h-[100svh] w-full max-w-2xl flex-col justify-center px-4 pb-20 pt-28 sm:px-6">
+      <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-20 pt-28">
+        <div className="mx-auto flex w-full max-w-2xl flex-col justify-center">
         <div className="glass p-6 text-center sm:p-10">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">On sale</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{cleanTitle}</h1>
@@ -135,12 +136,14 @@ export function EarnWizard({
             </button>
           </div>
         </div>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col px-4 pb-20 pt-28 sm:px-6">
+    <section className="page-gutter flex min-h-[100svh] flex-col pb-20 pt-28">
+      <div className="mx-auto flex w-full max-w-6xl flex-col">
       <div className="flex items-baseline justify-between gap-4">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Create a map</p>
         <p className="text-xs text-ink-muted">
@@ -291,6 +294,7 @@ export function EarnWizard({
           </Link>
         </div>
       ) : null}
+      </div>
     </section>
   );
 }

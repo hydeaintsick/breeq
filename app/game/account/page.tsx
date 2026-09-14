@@ -38,7 +38,8 @@ export default async function AccountPage() {
     (user && hasPassword ? user.updatedAt.toISOString() : null);
 
   return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-xl flex-col justify-center px-6 pb-20 pt-28">
+    <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-20 pt-28">
+      <div className="mx-auto flex w-full max-w-xl flex-col justify-center">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
         Account
       </p>
@@ -63,6 +64,7 @@ export default async function AccountPage() {
 
       <div className="mt-4">
         <PlaySettings />
+      </div>
       </div>
     </section>
   );

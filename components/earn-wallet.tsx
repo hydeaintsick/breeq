@@ -76,7 +76,8 @@ export function EarnWallet({
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl px-4 pb-24 pt-28 sm:px-6">
+    <section className="page-gutter pb-24 pt-28">
+      <div className="mx-auto w-full max-w-4xl">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Wallet</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
         Your <span className="text-neon">balances</span>
@@ -210,6 +211,7 @@ export function EarnWallet({
             })}
           </div>
         )}
+      </div>
       </div>
     </section>
   );

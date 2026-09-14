@@ -34,6 +34,15 @@
   --radius: 20px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --duration: 280ms;
+  /* Same outer inset as .site-header. Pages put this on a wrapper; the
+     max-w-6xl column sits inside it, so pills and copy share the header's edges. */
+  --page-gutter: 1rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-gutter: 1.5rem;
+  }
 }
 
 html[data-theme="dark"] {
@@ -624,97 +633,14 @@ html[data-theme="dark"] {
     margin-left: auto;
   }
 
-  /* The Earn card: the biggest pot floats over the board in a glass pill... */
-  .mode-card-badge {
-    position: absolute;
-    top: 1.1rem;
-    left: 1.1rem;
-    z-index: 20;
-    display: flex;
-    max-width: calc(100% - 2.2rem);
-  }
-
-  .earn-pot-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    min-height: 2.5rem;
-    padding: 0.3rem 0.85rem 0.3rem 0.85rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: rgba(5, 6, 12, 0.55);
-    color: #ffffff;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.12),
-      0 10px 30px -10px color-mix(in srgb, var(--neon-cyan) 70%, transparent);
-    @apply backdrop-blur-[12px];
-  }
-
-  .earn-pot-pill-label {
-    font-size: 0.62rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .earn-pot-pill-n {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-family: var(--font-geist-mono), ui-monospace, monospace;
-    font-size: 0.98rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-    text-shadow: 0 0 14px color-mix(in srgb, var(--neon-cyan) 75%, transparent);
-  }
-
-  .earn-pot-pill-n .eth-glyph {
-    font-size: 0.95rem;
+  /* The Earn card's ETH mark, after the title: one quiet accent, sized to the cap height. */
+  .mode-card-title-mark {
+    width: 0.72em;
+    height: 0.72em;
+    flex: none;
     color: var(--neon-cyan);
-    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--neon-cyan) 70%, transparent));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--neon-cyan) 60%, transparent));
   }
-
-  .earn-pot-pill-n small {
-    font-size: 0.66rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  /* ...and the deal is one line under the title: ticket → pot. */
-  .earn-card-deal {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    margin-top: 0.8rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.08);
-    font-family: var(--font-geist-mono), ui-monospace, monospace;
-    font-size: 0.78rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .earn-card-deal > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
-  .earn-card-deal-arrow {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .earn-card-deal-win {
-    color: var(--neon-cyan);
-    text-shadow: 0 0 12px color-mix(in srgb, var(--neon-cyan) 60%, transparent);
-  }
-
 
   .mode-card:hover {
     transform: translateY(-2px);
@@ -1104,15 +1030,14 @@ html[data-theme="dark"] {
   /* No transform / opacity / filter on this ancestor: any of those
      flattens the stacking context and kills backdrop-filter on the nav. */
   padding-top: max(1rem, env(safe-area-inset-top));
-  padding-left: max(1rem, env(safe-area-inset-left));
-  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right));
 }
 
-@media (min-width: 640px) {
-  .site-header {
-    padding-left: max(1.5rem, env(safe-area-inset-left));
-    padding-right: max(1.5rem, env(safe-area-inset-right));
-  }
+/* Page copy under a .site-header: same outer gutter, then a max-w-6xl column. */
+.page-gutter {
+  padding-left: max(var(--page-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--page-gutter), env(safe-area-inset-right));
 }
 
 .site-nav {
@@ -1860,7 +1785,7 @@ html[data-theme="dark"] {
 .story-page-copy {
   flex: none;
   /* Same outer gutter as .site-header so the title sits under the pill. */
-  padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right));
+  padding-inline: max(var(--page-gutter), env(safe-area-inset-left)) max(var(--page-gutter), env(safe-area-inset-right));
 }
 
 .story-page-copy-inner {
@@ -1885,10 +1810,6 @@ html[data-theme="dark"] {
 @media (min-width: 640px) {
   .story-page {
     padding-top: max(6.5rem, calc(env(safe-area-inset-top) + 5rem));
-  }
-
-  .story-page-copy {
-    padding-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right));
   }
 
   .story-page-copy-inner {
@@ -4201,12 +4122,12 @@ html[data-theme="dark"] .lore-halo-photo {
 .earn-row {
   display: flex;
   gap: 0.85rem;
-  margin-inline: -1rem;
-  padding: 0.25rem 1rem 0.75rem;
+  margin-inline: calc(-1 * var(--page-gutter));
+  padding: 0.25rem var(--page-gutter) 0.75rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 1rem;
+  scroll-padding-inline: var(--page-gutter);
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -4224,32 +4145,11 @@ html[data-theme="dark"] .lore-halo-photo {
   flex-basis: min(78vw, 17rem);
 }
 
-@media (min-width: 640px) {
-  .earn-row {
-    margin-inline: -1.5rem;
-    padding-inline: 1.5rem;
-    scroll-padding-inline: 1.5rem;
-  }
-}
-
-.earn-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
-}
-
-@media (min-width: 640px) {
-  .earn-grid {
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
-  }
-}
-
 .earn-sort {
   display: flex;
   gap: 0.4rem;
-  margin-inline: -1rem;
-  padding: 0.25rem 1rem;
+  margin-inline: calc(-1 * var(--page-gutter));
+  padding: 0.25rem var(--page-gutter);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -4263,6 +4163,19 @@ html[data-theme="dark"] .lore-halo-photo {
 
 .earn-sort::-webkit-scrollbar {
   display: none;
+}
+
+.earn-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+}
+
+@media (min-width: 640px) {
+  .earn-grid {
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  }
 }
 
 /* --- A map card: the board is the card ------------------------------------ */
@@ -5076,13 +4989,7 @@ html[data-theme="dark"] .lore-halo-photo {
   width: 100%;
   max-width: 80rem;
   margin: 0 auto;
-  padding: 7rem 1rem 4rem;
-}
-
-@media (min-width: 640px) {
-  .admin-shell {
-    padding-inline: 1.5rem;
-  }
+  padding: 7rem max(var(--page-gutter), env(safe-area-inset-left)) 4rem max(var(--page-gutter), env(safe-area-inset-right));
 }
 
 @media (min-width: 1024px) {
@@ -5096,8 +5003,8 @@ html[data-theme="dark"] .lore-halo-photo {
 .admin-nav {
   display: flex;
   gap: 0.35rem;
-  margin-inline: -1rem;
-  padding: 0.25rem 1rem;
+  margin-inline: calc(-1 * var(--page-gutter));
+  padding: 0.25rem var(--page-gutter);
   overflow-x: auto;
   scrollbar-width: none;
 }

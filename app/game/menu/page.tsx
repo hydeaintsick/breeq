@@ -28,7 +28,8 @@ export default async function GameMenuPage() {
     : "Earn is closed for now.";
 
   return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
+    <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-16 pt-28">
+      <div className="mx-auto flex w-full max-w-6xl flex-col justify-center">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
         Play
       </p>
@@ -48,6 +49,7 @@ export default async function GameMenuPage() {
           earnLockedHint={earnLockedHint}
           tutorialRequired={tutorial.required}
         />
+      </div>
       </div>
     </section>
   );

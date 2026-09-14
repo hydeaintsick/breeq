@@ -96,7 +96,8 @@ export function EarnStore({ store, sort }: { store: Store; sort: EarnSort }) {
   const empty = store.total === 0;
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pb-24 pt-24 sm:px-6">
+    <section className="page-gutter pb-24 pt-24">
+      <div className="mx-auto w-full max-w-6xl">
       <div className="earn-bar">
         <div className="earn-bar-inner glass">
           {/* Balances live in the header's bag pill; the strip is the two doors: the wallet and the editor. */}
@@ -192,6 +193,7 @@ export function EarnStore({ store, sort }: { store: Store; sort: EarnSort }) {
           onClose={onCloseRun}
         />
       ) : null}
+      </div>
     </section>
   );
 }

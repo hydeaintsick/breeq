@@ -28,7 +28,8 @@ export default async function StoryPage({
 
   if (episodes.length === 0) {
     return (
-      <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col justify-center px-4 pb-16 pt-28 sm:px-6">
+      <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-16 pt-28">
+        <div className="mx-auto flex w-full max-w-6xl flex-col justify-center">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Story</p>
         <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
           Choose an <span className="text-neon">episode</span>.
@@ -45,6 +46,7 @@ export default async function StoryPage({
           <Link href={GAME_MENU_PATH} className="nav-link inline-flex min-h-11 items-center">
             Back to modes
           </Link>
+        </div>
         </div>
       </section>
     );

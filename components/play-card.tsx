@@ -42,8 +42,7 @@ export function PlayCard({
   stars,
   paused = false,
   preview = true,
-  badge,
-  detail,
+  titleMark,
 }: {
   href?: string;
   /** Runs inside the click on a linked card, before the navigation (a gesture-gated request). */
@@ -71,10 +70,8 @@ export function PlayCard({
   paused?: boolean;
   /** Mount the live board at all. Off while the card's surface is still animating in. */
   preview?: boolean;
-  /** A glass pill floating over the top of the board (the Earn card's biggest pot). */
-  badge?: ReactNode;
-  /** A row under the body: the Earn card's ticket → pot line. */
-  detail?: ReactNode;
+  /** A small glyph after the title (the Earn card's ETH mark). Decorative; the title carries the meaning. */
+  titleMark?: ReactNode;
 }) {
   const hasProgress = Boolean(progress && progress.total > 0);
   const showStars = typeof stars === "number";
@@ -110,12 +107,13 @@ export function PlayCard({
         </div>
       )}
       {locked ? LOCK_MARK : null}
-      {badge ? <div className="mode-card-badge">{badge}</div> : null}
       <div className="mode-card-copy">
         <p className="font-mono text-xs tracking-[0.16em] text-accent">{kicker}</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">{title}</h2>
+        <h2 className="mt-2 flex items-center gap-2 text-3xl font-semibold tracking-tight text-white">
+          {title}
+          {titleMark ?? null}
+        </h2>
         <p className="mt-2 max-w-[16rem] text-sm leading-6 text-white/75">{body}</p>
-        {detail ?? null}
         {meta ? <p className="mt-1 font-mono text-xs tracking-[0.08em] text-white/60">{meta}</p> : null}
         {locked && lockedHint ? (
           <p className="mt-1 max-w-[16rem] text-sm leading-6 text-white/75">{lockedHint}</p>

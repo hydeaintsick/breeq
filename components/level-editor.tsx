@@ -67,7 +67,8 @@ export function LevelEditor({
   }
 
   return (
-    <section className="mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col px-4 pb-16 pt-28 sm:px-6">
+    <section className="page-gutter flex min-h-[100svh] flex-col pb-16 pt-28">
+      <div className="mx-auto flex w-full max-w-6xl flex-col">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
         Editor
       </p>
@@ -155,6 +156,7 @@ export function LevelEditor({
             </>
           )}
         />
+      </div>
       </div>
     </section>
   );
