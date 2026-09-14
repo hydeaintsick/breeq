@@ -37,9 +37,11 @@ Under the jungle, a laboratory in cold light. **Marrow**, an old keeper with a g
 
 Kal brings the glasshouse down and follows the Sowers' seed-map into the **Rootway**, living tunnels between stars, with Nul's hollow fleet behind him. In the fifth tunnel he meets **Lys**: the other egg, grown in the same vat, kept by the Sowers as the control and raised on Meridian as a scout who walks on light the way Kal walks on glass. She was sent to bring the loan home. She climbs onto the wall beside him instead. From there the sky is a story — **the Wall-walker**, a gecko drawn in stars across the whole night whose tail points the way the first geckos came — and they walk it together while the Hush, through Nul, learns the shape and tells it back in the dark. At the tail's tip, a star with a circle around it, the pod's circle, and **Meridian** rising: seed-pods the size of moons, the **Council of Seeds** who wrote the loan and have never had one refused. Kal refuses. Lys chooses him over the Council that raised her. The Curator's fleet comes down with Nul at its head; the dark he thought he was selling an answer to takes him first. Two geckos hold the last wall over the garden. Nul is not in the wreckage. Somewhere above Meridian, something with Kal's face turns toward Aurel.
 
+**Season 3 — The Gleaner.** The morning after, the Council confesses what it kept for an age: the Hush is theirs. Long ago the Sowers grew a **Gleaner** — a hunger built to sweep stray light out of the dark between stars and carry it to their gardens. It got out and never stopped being hungry. The mark grown into every seed says *not for gleaning*; that mark is Kal's gift, and to the Gleaner he is not food but cargo. Nul is a day ahead on the straight road to Aurel, so Kal and Lys take a **seed-ship** down the long one — back along the route, to every people who owes them light. On Vireo the freed **Tally** and **Marrow** join them, and Marrow says the mark can be grown into light itself. On the **Grey Moon** Nul is waiting with one question — *which of us is the copy?* — and leaves with the pod's beacon while the eye of the Hush opens over the dust. On Vitra the **Keepers** wake the whole **Lantern** yard and grow the mark into its light; the Archive's last file is the contract for the egg, under Vitra's seal. The **Corallines** grow the mark into their light-seeds and, for the first time, leave their sea in ships of shell. The **Candle** pays her debt by coming herself, with the one thing the moths know — how to live at the dark's edge — and her map: the Hush is a swarm with one heart. In the wrecks the hollow fleet waits, and **Nul**, who learned the shape by watching, shuts the eye of the Hush and lets them pass; the dark turns on him for it. At **Aurel** everyone is on the wall when the Hush arrives whole. The marked light holds — the dark passes over the Lanterns and the seedlings as if they were not there — but it can see the geckos, and it starts on the dome. So Kal does the one thing left: he walks into the Hush, the one thing it cannot see, with Lys behind him drawing a road of light it can. Inside is not a monster but a **granary** — every light it ever took, kept, Vitra's twin suns among them, waiting for a garden that never came to collect. Kal lets it see him: Lys draws him in light, and the Gleaner, shown a seed for the first time, follows it out. Along the whole road back it delivers — the twin suns return to Vitra's sky — and at the Grey Moon, a place with nothing to eat, a tool that has finished its work settles into the dust and sleeps, with Nul, hollow and blind, holding its eye shut from inside. Kal names the moon **Hush**. He goes home to set the last pane, three geckos on the finished glass, and two suns far off in a sky that used to be his.
+
 ### The episodes
 
-Each episode is ten walls. One new idea per chapter, the ball a little faster each time, and XP that climbs with the stakes. Episodes 4 to 8 are where the kit stops arriving and starts combining: every wall after Glass Sky mixes pieces the player already knows, and the black hole, the guards, ice and the timer come back in harder company. The difficulty rating (below) peaks at each episode's boss and finale — about 50 in Empty Nest and Lumen Reef, 40 in Ashen Court, and close to 60 for the last walls of The Hush and Second Sun.
+Each episode is ten walls. One new idea per chapter, the ball a little faster each time, and XP that climbs with the stakes. Episodes 4 to 8 are where the kit stops arriving and starts combining: every wall after Glass Sky mixes pieces the player already knows, and the black hole, the guards, ice and the timer come back in harder company. The difficulty rating (below) peaks at each episode's boss and finale — about 50 in Empty Nest and Lumen Reef, 40 in Ashen Court, and close to 60 for the last walls of The Hush and Second Sun. Season 3 (episodes 15 to 24) runs the ball from 432 to 477 and keeps the same shape: a black-hole wall in a steel throat as each episode's dark heart (rated 30 to 60), a finale on the clock, and a Seed-ship … Name for the Moon arc that revisits every world of the road.
 
 **Episode 1 — Gecko Legacy** — Kal wakes up on a world that is not his own. Ten gentle walls, one idea each, the ball never above 305.
 
@@ -251,9 +253,159 @@ Each episode is ten walls. One new idea per chapter, the ball a little faster ea
 | 9 | Nul's escape | a broken constellation | mirror, rails, ice, shrink | When the light comes back, Nul is not in the wreckage. |
 | 10 | Two lights | two geckos on the wall | everything: locks and a key, explosives, regen, bumpers, a guard, shrink, ice, ×3, three lives, the narrowest paddle, five minutes | Somewhere above them, something with Kal's face turns toward Aurel. |
 
+**Episode 15 — Seed-ship** — The Council's confession, a hunger with a name, and the long road back.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | The confession | a council ring with a dark heart | bumpers, fog | The morning after, the Council of Seeds says what it has kept for an age: the Hush is theirs. |
+| 2 | The Gleaner | a sickle | ghosts, anti-gravity | A Gleaner, built to sweep stray light out of the dark and carry it to the gardens. It got out. |
+| 3 | The mark | a seed with a chevron | order (pink first), sticky | Every seed carries a mark that says: not for gleaning. That mark is Kal's gift. |
+| 4 | Seed-ship | a pod-ship | steel hull, a regen sprout, grow | Lys takes a seed-ship from the Council that raised her. Nobody stops her. |
+| 5 | Launch | pods parting | rails, split | Two geckos on the hull, and for the first time the road ahead is one they chose. |
+| 6 | Two roads | a fork | a portal, mirror | Nul is a day ahead on the straight road. They take the long one, back along the route. |
+| 7 | The Rootway again | root arcs | rotors, gravity | The roots know them now. The sap light runs ahead of the ship. |
+| 8 | Sap dark | a root eaten from inside | a black hole in a steel throat, five lives | Where the hollow fleet passed, the roots are dark inside. The Gleaner eats what it passes. |
+| 9 | Lys's chart | the route in reverse | keys and locks, two fans | Vireo, the Grey Moon, Vitra, the reef, the ash, the wrecks. Then Aurel. |
+| 10 | Green world behind | a green world under a roof | explosives, a guard, ice, descend, four minutes | Kal left Vireo burning. Something has been living in the ashes. |
+
+**Episode 16 — The Tally** — A jungle through a broken roof, an old keeper's ledger, and a fleet with nothing in common but a cage.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Broken roof | steel ribs, fallen panes | bumpers | Vireo's roof is open to the sky and the jungle has climbed through it. |
+| 2 | Marrow's ledger | a grid of entries | keys and locks, mirror | Marrow keeps a ledger of the Tally. This one has no column for due. |
+| 3 | The Tally free | five creatures | regen tails, grow | Creatures from a dozen skies. They remember who opened the cages. |
+| 4 | The lantern-fish | a fish | a magnet eye, fog | A fish that hums in the dark and swims in air. It has decided Kal is worth pulling toward. |
+| 5 | The glass-eater | a jaw | rotor teeth, ×3 | Something with rotor teeth that eats glass. Lys says it is exactly what a wall-walker's road needs. |
+| 6 | Fireflies again | sparks | explosives, split | At night the jungle still lights up in his rhythm. It was grown to. |
+| 7 | The Curator's grave | a fallen tower | ghosts, gravity | The amber tower lies where it fell. Nobody has moved a pane of it. |
+| 8 | Vat-dark | a vessel | a black hole in a steel throat, mirror, five lives | One vat never opened. What grew in it is not a gecko. |
+| 9 | Marrow's gift | a shell with a mark | order (cyan first), a key, locks, two fans | The mark can be grown into light, if someone knows how to grow light. The Corallines do. |
+| 10 | Menagerie fleet | ships of every color | regen, a guard, shrink, four minutes | A fleet with nothing in common but a cage they were let out of. |
+
+**Episode 17 — Grey Moon** — The place it started, a question with no good answer, and the eye opening over the dust.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Old prints | a wandering trail | slow, grow | Nothing has changed. A trail of small prints wanders away from the pod. |
+| 2 | The pod again | a capsule | steel hull, sticky, grow | Lys puts a claw on the hull and reads the marks the way he never could. |
+| 3 | The beacon | a lamp on a mast | explosives, a steel mast | The lamp still pulses in his rhythm. It was never a call for help. It was a return address. |
+| 4 | Ring shadow | the ringed giant | anti-gravity, rails | The first thing that ever looked like home and was not. |
+| 5 | Nul on the dust | a hollow gecko | ghosts, a magnet eye | He has Kal's face and none of his light, and he did not come to fight. |
+| 6 | The question | two geckos | mirror, a portal | Which of us is the copy? Kal does not have an answer. He has a wall. |
+| 7 | Hollow prints | a second trail | ghosts, fog, ice | Prints made by feet that were never here. Nul walked Kal's road backward to find him. |
+| 8 | Nul's eye | an eye | a black hole in a steel throat, ice, five lives | Through Nul, the Hush is looking at the one place it has never been able to see. |
+| 9 | The stolen beacon | a locked lamp | locks and a key, rotors, invert | Nul takes the lamp. The rhythm goes with him, toward Aurel. |
+| 10 | Cold dawn | a crescent and one star | a guard, shrink, descend, four minutes | The Grey Moon gives him a second sunrise. He leaves it a second time. |
+
+**Episode 18 — Keepers** — Vitra with the lights on, the Archive's last file, and a fleet built to keep strangers out.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Lights on | a lit skyline | bumpers | Every window on Vitra is lit. The Keepers kept them that way for nobody, because Kal asked. |
+| 2 | Keepers' welcome | three drones | regen arms, magnet eyes, grow | They have never seen two geckos at once. They decide Lys counts. |
+| 3 | The Archive's last file | shelves of tablets | keys and locks, mirror | The contract for the egg, in the Sowers' script, under Vitra's seal. His people knew. |
+| 4 | The cradles | twelve cradles | a portal into the empty one | The twelfth was aimed somewhere else entirely, and Kal finally knows where. |
+| 5 | The Lantern yard | six Lanterns | explosive lamps, rotors | The whole fleet his people built to keep strangers out. Kal asks for all of it. |
+| 6 | Waking the fleet | one hull | an explosive chain, two fans | Light one lamp and let the light run along the deck to the rest. |
+| 7 | Twin suns dark | two suns, one dark | a black hole in a steel throat, five lives | The Archive's picture of the day it happened. The Gleaner's first meal here. |
+| 8 | The gate opens | two towers and a gate | a guard in the gap, ice | The gate opened for keys once. Today it opens for a Vitran claw. |
+| 9 | Keepers on the dome | a dome with Keepers on it | order (violet first), split, trampoline | The Keepers grow the mark into the Lanterns' light, on the inside of the glass sky. |
+| 10 | Lanterns rising | ships through the dome | bumpers, shrink, descend, four minutes | The fleet rises lit with a light the Hush cannot see. The Keepers turn the city off behind them. |
+
+**Episode 19 — Reef Fleet** — A pearl returned, a mark grown into light, and a sea that leaves the sea.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Return to the shallows | waves | hard crests, ice | The whole reef is glowing his name when the seed-ship lands. |
+| 2 | The elders | a coral fan | regen tips, grow | He paid for a pearl with a story once. He has a longer one now. |
+| 3 | The pearl returned | a clam | steel jaws, a ring of locks, sticky | Nobody has ever returned a gift to the reef. The Corallines do not have a color for it yet. |
+| 4 | Growing the mark | a seedling | regen buds, anti-gravity | Under the shallows, the first light-seed that cannot be gleaned takes root. |
+| 5 | Bells of war | three bells | ghosts, split | The Gnaw are coming early this year, and in numbers. |
+| 6 | The Gnaw return | teeth | rotors, ×3 | The scouts cannot see the new light. They chew the reef around it instead. |
+| 7 | Dusk tide | a worm's mouth | a black hole in a steel throat, ice, five lives | The big one comes up from where the reef's light does not reach. Lys learns fast. |
+| 8 | Shell ships | spiral shells | bumpers, rails | Ships of shell they never had a reason to fly. They have one now. |
+| 9 | Lifting the reef | a reef rising | two fans, gravity | The reef comes up off the sea floor with its light-seeds in its arms. |
+| 10 | Sea leaves the sea | ships over waves | a guard, shrink, descend, four minutes | For the first time since the reef was a reef, the Corallines leave their ocean. |
+
+**Episode 20 — The Candle's Debt** — A queen who keeps accounts, a map of the dark's edge, and a court that comes to pay.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Ash again | a dead star | hard core, fog | The Cindermoths saw the seed-ship's light before it landed. |
+| 2 | The Court lit | a hall of fires | regen embers, mirror | The Court does not kneel this time. It stands, which for moths is harder. |
+| 3 | The debt | a scale | order (pink first), sticky | Kal gave the Court its light back and asked for nothing. She has considered that a debt. |
+| 4 | Moth fleet | moths | ghost wings, anti-gravity | The moths know how to live where there is almost no light at all. |
+| 5 | Wardens at his side | two wardens | rotor wings, two guards, ×3 | The wardens who beat him back fly at his side now. |
+| 6 | The Candle's map | a swarm with one heart | ghosts, a magnet | The Hush is not one thing. It is a swarm with one heart, and the heart is where the light goes. |
+| 7 | Ember storm | embers thrown | rotors, two fans, ×3, invert | Kal cannot see the wall. He has listened for one here before. |
+| 8 | The heart | a heart | a black hole in a steel throat, mirror, five lives | The Gleaner was grown with a heart, Lys says. Everything the Sowers grow is. |
+| 9 | Wax and wick | a candle | explosive flame, magnet wick, steel holder, trampoline | The Candle pays her debt in the only coin she has. She comes herself. |
+| 10 | Leaving the ash | a tunnel | steel walls, ghosts, a guard, a portal, ice, four minutes | The route: the wrecks. Something is waiting in them. |
+
+**Episode 21 — Nul** — The hollow fleet in the wrecks, a copy who learned the shape, and an eye that closes.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Wreck field again | wrecks | steel debris, bumpers | The fleet is on Aurel. Something else has taken up the position. |
+| 2 | The hollow fleet waits | ghost ships | magnets, fog | Ships with no light in them, waiting for him. |
+| 3 | The beacon's rhythm | a heartbeat | rails, sticky | Nul has been listening to it since the Grey Moon. The only thing he has ever owned. |
+| 4 | Same face | two geckos | mirror, a portal | Nul knows which of them is the copy. He has stopped caring. |
+| 5 | What Nul learned | the Wall-walker | order (blue first) | He draws it himself, the stars first. Hollow does not mean empty. |
+| 6 | Wardens turn | a warden flight | rotors, two guards, ×3 | Grown to obey the face, they have never had to choose which one. |
+| 7 | The eye turns | an eye | a black hole in a steel throat, ice, five lives | The Hush turns in Nul's face to look at what he is doing. Nul looks back. |
+| 8 | Nul's wall | an arch | steel, explosives, invert | A good wall. Kal breaks it anyway, because that is what the two of them are for. |
+| 9 | The eye closes | closing lids | hard lids, split, shrink | Nul shuts the eye. The Hush goes blind in the wrecks. |
+| 10 | Let them pass | a gap in the fleet | a guard, shrink, descend, narrow paddle, four minutes | Kal does not stay to watch what the dark does to its eye. He will regret that. |
+
+**Episode 22 — Siege of Aurel** — Everyone on the wall, the dark arriving whole, and a light it cannot see.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | Aurel in sight | a young planet | bumpers | Kal is home, and he brought company. |
+| 2 | Sable on the dome | a gecko on a dome | locks and a key, a magnet eye, sticky | Sable reads Lys's shell and goes still a third time. Then she makes room on the wall. |
+| 3 | Every people | six colors in formation | regen, grow | Nobody has a word for a fleet like this. Sable suggests one: a wall. |
+| 4 | Marked light | seedlings | order (lime first), anti-gravity | Every light on Aurel now says: not for gleaning. Except the geckos. |
+| 5 | The dark arrives | a wave | ghosts, fog | Not a shadow. Not scouts. The swarm and its heart. |
+| 6 | Lanterns hold | a lantern wall | explosives, two fans | The Hush passes over the Lanterns as if they were not there. It can see everyone standing in them. |
+| 7 | Moths at the edge | moths | rotors, two guards, ×3 | Where the dark has already fed, only the moths can fly. |
+| 8 | Shadow on the dome | a dome with a shadow | a black hole in a steel throat, mirror, five lives | The heart settles on the glass over the seedlings and starts on the dome. |
+| 9 | The dome cracks | breaking panes | explosives, ice, descend | Kal is fastest. Lys is second. It is not enough. |
+| 10 | Held | the dome held | everything: locks and a key, explosives, regen, bumpers, a guard, shrink, ice, ×3, three lives, five minutes | At sunrise the Hush is still there. One place left to go: inside it. |
+
+**Episode 23 — Into the Hush** — The one thing it cannot see walks in, and finds a granary where it expected a monster.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | The edge | a wall of dark | ghosts, hard rim, slow | Kal walks across the line. The Hush does not notice. It never has. |
+| 2 | Lys's road | a beam | rails, ice | She is the lure and the lantern. The swarm follows her instead of the dome. |
+| 3 | Swallowed light | veins | regen, a magnet | Every glow it ever took, still moving. None of it was eaten. All of it was kept. |
+| 4 | The granary | steel bins | keys and locks | A Gleaner holds what it gathers for a garden to collect. No garden ever came. |
+| 5 | Vitra's suns | two suns held in dark | explosives, ×3 | Two lights larger than the rest, whole, in a rhythm Kal knows from inside the egg. |
+| 6 | The Gnaw's nest | teeth | rotors, fog | Even a granary has to keep the vermin out. |
+| 7 | The heart's throat | a throat | a black hole in a steel throat, ice, five lives | It has swallowed suns. It has never been shown what it was grown to carry. |
+| 8 | Kal seen | a gecko in light | order (amber first), invert, sticky | For the first time in his life, the Hush sees him: a seed. Not for gleaning. For planting. |
+| 9 | The delivery | a beam out | a portal, two fans, split | A Gleaner follows a seed to the garden. The whole dark turns with him. |
+| 10 | Out with the light | a sunrise from inside | a guard, shrink, descend, four minutes | Aurel watches a sunrise from the wrong direction. |
+
+**Episode 24 — A Name for the Moon** — The Gleaner follows the seed home, two suns come back, and a nameless moon gets a name.
+
+| # | Wall | Shape | What it brings | The story |
+|---|------|-------|----------------|-----------|
+| 1 | The long road | the route as stars | bumpers | Kal leads it back along the whole road, lit by Lys so it can see him. |
+| 2 | Seed in light | a seed in a ring of light | order (cyan first), sticky | The most visible thing in the sky. He does not like it. He keeps walking. |
+| 3 | Nul's eye shut | a closed eye | hard lids, mirror | Nul holds the eye shut from the inside, so the dark can only follow the light it is shown. |
+| 4 | Vitra relit | twin suns | explosives, two fans, ×2 | At Vitra a Gleaner delivers. The Keepers watch the glass warm. |
+| 5 | The Grey Moon | a crescent | ice | The one place in the sky with nothing to eat. |
+| 6 | The pod's cradle | the pod | steel, a regen sprout, grow | Lys plants a light-seed where an egg was. Something on the Grey Moon is growing. |
+| 7 | Gleaner's rest | a dark moon | a black hole in a steel throat, five lives | A tool that has finished its work settles into the dust and goes quiet. |
+| 8 | A name | a moon in a ring of stars | keys and locks, rails | Kal gives the moon its name. Hush. |
+| 9 | The last pane | one pane in a steel frame | sticky, descend | The dome has been three panes from closed for a year. Kal sets the last one. |
+| 10 | Two suns, three geckos | three geckos on the glass | everything: locks and a key, explosives, regen, bumpers, a guard, shrink, ice, ×3, three lives, the narrowest paddle, five minutes | Home is where they are. He is home, and so is the road. |
+
 ### Authoring the campaign
 
-Every episode lives in code, in `game/breakout/levels/story/` (Gecko Legacy included since its ten-wall rewrite; its first four chapter slugs were kept so early clears survive). Each wall is an ASCII map plus a legend (`wall(map, legend, top)` in `shape.ts`; the brick width follows the column count, so 8 to 11 columns all span the field). `pnpm story:seed` validates every wall, proves it with the flawless autopilot, rates its difficulty, uploads the episode photo to Cloudinary when configured, and upserts episodes and chapters by slug. Seeded episodes are owned by the code; `--dry-run` only proves and rates, `--retire <slug>` backs up and removes a hand-made episode. Episode covers are the same-origin JPEGs in `public/backgrounds/`; the Season 2 covers were derived from the Season 1 art with Cloudinary's generative background replacement (`e_gen_background_replace`), so Kal keeps the same silhouette from one sky to the next.
+Every episode lives in code, in `game/breakout/levels/story/` (Gecko Legacy included since its ten-wall rewrite; its first four chapter slugs were kept so early clears survive). Each wall is an ASCII map plus a legend (`wall(map, legend, top)` in `shape.ts`; the brick width follows the column count, so 8 to 11 columns all span the field). `pnpm story:seed` validates every wall, proves it with the flawless autopilot, rates its difficulty, uploads the episode photo to Cloudinary when configured, and upserts episodes and chapters by slug. Seeded episodes are owned by the code; `--dry-run` only proves and rates, `--retire <slug>` backs up and removes a hand-made episode. Episode covers are the same-origin JPEGs in `public/backgrounds/`; the Season 2 and 3 covers were derived from the Season 1 art with Cloudinary's generative background replacement (`e_gen_background_replace`), so Kal keeps the same silhouette from one sky to the next.
 
 ### Difficulty rating
 

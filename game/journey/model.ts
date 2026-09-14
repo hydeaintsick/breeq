@@ -103,6 +103,17 @@ const HUE_BY_SLUG: Record<string, JourneyHue> = {
   rootway: "violet",
   "wall-walker": "blue",
   meridian: "pink",
+  // Season 3 — the road back: garden, jungle, moon, city, reef, ash, wrecks, sun, the dark, the moon named.
+  "seed-ship": "lime",
+  "the-tally": "cyan",
+  "grey-moon": "blue",
+  keepers: "violet",
+  "reef-fleet": "lime",
+  "candles-debt": "amber",
+  nul: "pink",
+  "siege-of-aurel": "amber",
+  "into-the-hush": "violet",
+  "name-for-the-moon": "cyan",
 };
 const HUE_CYCLE: readonly JourneyHue[] = ["blue", "cyan", "violet", "lime", "amber", "pink"];
 
@@ -126,6 +137,17 @@ const SCENE_BY_SLUG: Record<string, JourneyScene> = {
   rootway: "roots",
   "wall-walker": "constellation",
   meridian: "garden",
+  // Season 3 walks the route back, so the zones revisit the set pieces of the road.
+  "seed-ship": "garden",
+  "the-tally": "canopy",
+  "grey-moon": "moon",
+  keepers: "city",
+  "reef-fleet": "reef",
+  "candles-debt": "embers",
+  nul: "fleet",
+  "siege-of-aurel": "sun",
+  "into-the-hush": "roots",
+  "name-for-the-moon": "moon",
 };
 const SCENE_CYCLE: readonly JourneyScene[] = [
   "moon",
