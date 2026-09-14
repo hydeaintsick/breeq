@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ChapterClearResult } from "@/app/actions/progress";
+import { GemGlyph } from "@/components/currency-glyphs";
 import { StarRating } from "@/components/star-rating";
 import { createPayoutSfx, type PayoutSfx } from "@/game/breakout/audio";
 import { isHapticsEnabled, isHapticsSupported } from "@/game/breakout/haptics";
 import type { StarCount } from "@/game/breakout/engine/stars";
+import { formatGems } from "@/lib/economy";
 import { progressFromXp, type Progress } from "@/lib/progress";
 
 /** Timeline, in ms from mount. */
@@ -20,10 +22,26 @@ const T = {
   /** Extra bar time per level crossed, so a rollover is legible. */
   xpPerLevel: 520,
   buttonsAfter: 260,
+  /** A paid skip opens with the gems leaving the bag; the stars wait for it. */
+  costStamp: 360,
+  costCount: 760,
+  costDur: 900,
+  costSettle: 260,
 } as const;
 
 /** Counter steps that tick, spread over the XP gained. */
 const XP_TICKS = 24;
+/** Counter steps that tick while the bag counts down. */
+const COST_TICKS = 14;
+
+/** Gems paid for this screen: the bag counts down from `from` to `to` before anything else lands. */
+export type ClearCost = {
+  gems: number;
+  from: number;
+  to: number;
+  /** The countdown has started: the header pill may roll now. */
+  onCount?: () => void;
+};
 
 const SPARKS = 16;
 const SPARK_COLORS = ["blue", "violet", "pink", "cyan", "lime", "amber"] as const;
@@ -36,9 +54,13 @@ function format(n: number) {
   return Math.round(n).toLocaleString("en-US");
 }
 
-function pulseStar(index: number) {
+function pulse(pattern: number | number[]) {
   if (!isHapticsEnabled() || !isHapticsSupported()) return;
-  navigator.vibrate(index >= 2 ? [16, 40, 22] : 12);
+  navigator.vibrate(pattern);
+}
+
+function pulseStar(index: number) {
+  pulse(index >= 2 ? [16, 40, 22] : 12);
 }
 
 export function StoryClear({
@@ -50,6 +72,7 @@ export function StoryClear({
   episodeDone,
   kicker: kickerOverride,
   note,
+  cost,
   nextLabel = "Next chapter",
   closeLabel = "Close",
   onNext,
@@ -68,6 +91,8 @@ export function StoryClear({
   kicker?: string;
   /** A line under the level meter, for what comes next. */
   note?: string;
+  /** The clear was bought: the gems leave the bag first and there is no score line. */
+  cost?: ClearCost;
   nextLabel?: string;
   closeLabel?: string;
   onNext: () => void;
@@ -82,6 +107,7 @@ export function StoryClear({
   const showStars = earned > 0;
 
   const [skipped, setSkipped] = useState(false);
+  const [costStageAnim, setCostStage] = useState<"hidden" | "stamp" | "done">("hidden");
   const [starsReadyAnim, setStarsReady] = useState(false);
   const [litAnim, setLit] = useState(0);
   const [starsDoneAnim, setStarsDone] = useState(!showStars);
@@ -93,11 +119,18 @@ export function StoryClear({
   const xpRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const intoRef = useRef<HTMLSpanElement>(null);
+  const bagRef = useRef<HTMLSpanElement>(null);
   const sfxRef = useRef<PayoutSfx | null>(null);
   const countingRef = useRef(false);
+  const countedCost = useRef(false);
 
   const skip = reduced || skipped;
   const replay = result !== null && result.xpGained === 0;
+  const paid = cost !== undefined;
+  const costStage = !paid || skip ? "done" : costStageAnim;
+  /** With a cost, the stars and XP wait for the bag to settle. */
+  const starsAt = paid ? T.costCount + T.costDur + T.costSettle : T.starsStart;
+  const xpAt = starsAt + (T.xpStart - T.starsStart);
   const starsReady = skip || starsReadyAnim;
   const lit = skip ? earned : litAnim;
   const starsDone = skip || starsDoneAnim;
@@ -120,6 +153,65 @@ export function StoryClear({
     };
   }, []);
 
+  // The price first: the "−N" stamps, then the bag counts down and locks.
+  useEffect(() => {
+    if (!cost) return;
+    const { from, to, onCount } = cost;
+    const paint = (n: number) => {
+      if (bagRef.current) bagRef.current.textContent = formatGems(n);
+    };
+    if (skip) {
+      paint(to);
+      if (!countedCost.current) {
+        countedCost.current = true;
+        onCount?.();
+      }
+      return;
+    }
+    paint(from);
+    let raf = 0;
+    const timers: number[] = [];
+    timers.push(
+      window.setTimeout(() => {
+        setCostStage("stamp");
+        sfxRef.current?.stamp();
+        pulse(14);
+      }, T.costStamp),
+    );
+    timers.push(
+      window.setTimeout(() => {
+        if (!countedCost.current) {
+          countedCost.current = true;
+          onCount?.();
+        }
+        const start = performance.now();
+        let lastStep = 0;
+        const frame = (now: number) => {
+          const t = Math.min(1, (now - start) / T.costDur);
+          const eased = easeOutCubic(t);
+          paint(Math.round(from + (to - from) * eased));
+          const step = Math.floor(eased * COST_TICKS);
+          if (step !== lastStep) {
+            lastStep = step;
+            // The bag empties: the ticks walk down the scale.
+            sfxRef.current?.tick(1 - eased);
+          }
+          if (t < 1) raf = requestAnimationFrame(frame);
+          else {
+            paint(to);
+            sfxRef.current?.settle();
+            setCostStage("done");
+          }
+        };
+        raf = requestAnimationFrame(frame);
+      }, T.costCount),
+    );
+    return () => {
+      cancelAnimationFrame(raf);
+      for (const id of timers) window.clearTimeout(id);
+    };
+  }, [cost, skip]);
+
   // Three outlines, then each earned star fills with a deep note.
   useEffect(() => {
     if (!showStars) {
@@ -133,9 +225,9 @@ export function StoryClear({
       return;
     }
     const timers: number[] = [];
-    timers.push(window.setTimeout(() => setStarsReady(true), T.starsStart));
+    timers.push(window.setTimeout(() => setStarsReady(true), starsAt));
     for (let i = 0; i < earned; i += 1) {
-      const at = T.starsStart + T.starLead + i * T.starGap;
+      const at = starsAt + T.starLead + i * T.starGap;
       timers.push(
         window.setTimeout(() => {
           setLit(i + 1);
@@ -147,13 +239,13 @@ export function StoryClear({
     timers.push(
       window.setTimeout(
         () => setStarsDone(true),
-        T.starsStart + T.starLead + Math.max(0, earned - 1) * T.starGap + T.starSettle,
+        starsAt + T.starLead + Math.max(0, earned - 1) * T.starGap + T.starSettle,
       ),
     );
     return () => {
       for (const id of timers) window.clearTimeout(id);
     };
-  }, [earned, showStars, skip]);
+  }, [earned, showStars, skip, starsAt]);
 
   // XP + level bar: waits until the stars have landed.
   useEffect(() => {
@@ -177,7 +269,7 @@ export function StoryClear({
     paint(before, 0);
     const levelsCrossed = progress.level - before.level;
     const dur = T.xpDur + T.xpPerLevel * levelsCrossed;
-    const stampAt = Math.max(performance.now(), mountedAt.current + T.xpStart);
+    const stampAt = Math.max(performance.now(), mountedAt.current + xpAt);
     let raf = 0;
     let lastLevel = before.level;
     let lastStep = 0;
@@ -218,7 +310,7 @@ export function StoryClear({
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
     };
-  }, [result, skip, starsDone]);
+  }, [result, skip, starsDone, xpAt]);
 
   useEffect(() => {
     if (buttons || xpStage !== "done" || !starsDone) return;
@@ -242,6 +334,7 @@ export function StoryClear({
       aria-modal="true"
       aria-label={`${kicker}: ${title}`}
       data-skip={skip}
+      data-paid={paid ? "true" : undefined}
       onClick={() => setSkipped(true)}
     >
       <div className="story-clear-body">
@@ -249,6 +342,21 @@ export function StoryClear({
         <h2 className="story-clear-title">{title}</h2>
         {episodeDone && !kickerOverride ? (
           <p className="story-clear-epilogue">Episode complete</p>
+        ) : null}
+
+        {cost ? (
+          <div className="story-clear-xp story-clear-cost" data-stage={costStage}>
+            <span className="story-clear-stamp story-clear-cost-stamp">
+              <GemGlyph /> −{formatGems(cost.gems)}
+            </span>
+            <span className="story-clear-bag" data-done={costStage === "done"}>
+              <span className="story-clear-label">In your bag</span>
+              <span className="story-clear-bag-n">
+                <GemGlyph />
+                <span ref={bagRef}>{formatGems(skip ? cost.to : cost.from)}</span>
+              </span>
+            </span>
+          </div>
         ) : null}
 
         {showStars ? (
@@ -262,10 +370,12 @@ export function StoryClear({
           </div>
         ) : null}
 
-        <p className="story-clear-scoreline">
-          <span className="story-clear-label">Score</span>
-          <span className="story-clear-scoreline-n">{format(score)}</span>
-        </p>
+        {cost ? null : (
+          <p className="story-clear-scoreline">
+            <span className="story-clear-label">Score</span>
+            <span className="story-clear-scoreline-n">{format(score)}</span>
+          </p>
+        )}
 
         <div className="story-clear-xp" data-stage={xpStage} data-replay={replay}>
           <span ref={xpRef} className="story-clear-stamp">

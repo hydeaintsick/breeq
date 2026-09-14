@@ -2588,6 +2588,41 @@ html[data-theme="dark"] {
   box-shadow: none;
 }
 
+/* Buy past the wall: a quiet line under Play, never a second bright button. */
+.trail-dock-skip {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  gap: 0.35rem;
+  margin-top: -0.35rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.66);
+  transition:
+    color var(--duration) var(--ease),
+    background-color var(--duration) var(--ease);
+}
+
+.trail-dock-skip .gem-glyph {
+  font-size: 0.95rem;
+}
+
+.trail-dock-skip:hover,
+.trail-dock-skip:active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.trail-dock-skip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @media (min-width: 640px) {
   .trail-dock {
     width: min(100% - 1.5rem, 36rem);
@@ -3324,6 +3359,55 @@ html[data-theme="dark"] {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+/* A paid skip's clear screen lives over the episode sheet, not over a run. */
+.story-skip-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+}
+
+/* The price, first beat of a paid clear: the "−N" stamp, then the bag counting down. */
+.story-clear-cost {
+  margin-top: 1.5rem;
+  min-height: 5.4rem;
+  gap: 0.75rem;
+}
+
+.story-clear-cost-stamp {
+  gap: 0.45rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.story-clear-cost-stamp .gem-glyph {
+  font-size: 0.95rem;
+}
+
+.story-clear-bag {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+}
+
+.story-clear-bag-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: text-shadow 400ms var(--ease);
+}
+
+.story-clear-bag-n .gem-glyph {
+  font-size: 0.8em;
+}
+
+.story-clear-bag[data-done="true"] .story-clear-bag-n {
+  text-shadow: 0 0 22px color-mix(in srgb, var(--neon-cyan) 55%, transparent);
 }
 
 /* The sheet is dark in both themes: keep the primary CTA light-on-dark. */
@@ -4445,6 +4529,16 @@ html[data-theme="dark"] .lore-halo-photo {
 .earn-sheet-row[data-big="true"] strong {
   font-size: 1.35rem;
   letter-spacing: -0.01em;
+}
+
+/* Short on gems: the line the player must still find, in the one danger red. */
+.earn-sheet-row[data-short="true"] strong {
+  color: var(--danger);
+}
+
+/* The skip's confirmation sits over the episode sheet (70) and under the shop (90). */
+.story-skip-sheet {
+  z-index: 82;
 }
 
 /* --- The clear screen: an ETH stamp instead of XP ------------------------- */

@@ -19,6 +19,7 @@ const KIND_LABEL: Record<string, string> = {
   WITHDRAW: "Withdrawal",
   WITHDRAW_REFUND: "Withdrawal returned",
   GRANT: "Gems from Breeq",
+  SKIP: "Chapter skipped",
 };
 
 const STATUS_LABEL: Record<string, string> = {

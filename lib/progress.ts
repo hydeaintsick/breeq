@@ -7,6 +7,12 @@ export const XP_PER_STORY_CLEAR = 100;
 export const XP_TUTORIAL_CLEAR = 50;
 
 /**
+ * Gems to skip a Story wall: the chapter is marked cleared with one star and
+ * pays its XP as a first clear would. A replay can still raise the grade.
+ */
+export const SKIP_CHAPTER_GEMS = 50;
+
+/**
  * The total to store after paying `reward`.
  *
  * Payouts write this absolute number rather than `{ increment: reward }`:

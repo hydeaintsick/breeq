@@ -3,19 +3,22 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useBalances } from "@/components/balances-provider";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { useGemShop } from "@/components/gem-shop";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useStorySurface, type StoryZone } from "@/components/story-chrome";
-import { StoryClear } from "@/components/story-clear";
+import { StoryClear, type ClearCost } from "@/components/story-clear";
 import { StoryJourney, type JourneyCard, type StoryJourneyHandle } from "@/components/story-journey";
 import { StoryLose } from "@/components/story-lose";
 import { StoryPlay } from "@/components/story-play";
+import { StorySkipSheet } from "@/components/story-skip";
 import { HUE_VAR, StoryTrail } from "@/components/story-trail";
 import { SwipeToggle } from "@/components/swipe-toggle";
 import { useImmersive } from "@/components/use-immersive";
 import { useStoryTheme } from "@/components/use-story-theme";
-import type { ChapterClearResult } from "@/app/actions/progress";
+import type { ChapterClearResult, ChapterSkipResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
@@ -38,6 +41,37 @@ const TUTORIAL_HINT = "Finish the tutorial first.";
 const EMPTY_DISCOVERIES: readonly string[] = [];
 /** The iris takes this long to open or close, matched by `.story-sheet` in the stylesheet. */
 const IRIS_MS = 440;
+
+/**
+ * A skip that went to the shop for gems. Stripe Checkout leaves the page, so
+ * the wall being skipped is kept here and the sheet comes back up over it when
+ * the player returns — the pack lands, then the skip is one more tap.
+ */
+const SKIP_INTENT_KEY = "breeq-skip-intent";
+const SKIP_INTENT_TTL_MS = 15 * 60 * 1000;
+type SkipIntent = { episode: string; chapter: string; at: number };
+
+function readSkipIntent(): SkipIntent | null {
+  try {
+    const raw = window.sessionStorage.getItem(SKIP_INTENT_KEY);
+    window.sessionStorage.removeItem(SKIP_INTENT_KEY);
+    if (!raw) return null;
+    const intent = JSON.parse(raw) as Partial<SkipIntent>;
+    if (typeof intent.episode !== "string" || typeof intent.chapter !== "string" || typeof intent.at !== "number") return null;
+    if (Date.now() - intent.at > SKIP_INTENT_TTL_MS) return null;
+    return { episode: intent.episode, chapter: intent.chapter, at: intent.at };
+  } catch {
+    return null;
+  }
+}
+
+function writeSkipIntent(intent: Omit<SkipIntent, "at">) {
+  try {
+    window.sessionStorage.setItem(SKIP_INTENT_KEY, JSON.stringify({ ...intent, at: Date.now() }));
+  } catch {
+    // Private mode without storage: the shop still opens, the sheet just will not come back after Stripe.
+  }
+}
 
 /** The how-to-play slide that sits ahead of the episodes while the tutorial is on. */
 export type ShelfTutorial = { done: boolean };
@@ -183,9 +217,15 @@ export function StoryShelf({
   const [chapterActive, setChapterActive] = useState(() => openingChapterIndex(episodes, initialSlug));
   /** Bumps when the road should stand on `chapterActive` at once. */
   const [trailSnap, setTrailSnap] = useState(0);
+  /** The wall the player is about to buy past: the confirmation sheet is up. */
+  const [skipping, setSkipping] = useState<StoryChapterCard | null>(null);
+  /** The skip went through: its clear screen owns the sheet until it is tapped away. */
+  const [skipped, setSkipped] = useState<{ chapter: StoryChapterCard; index: number; result: ChapterSkipResult } | null>(null);
+  const shop = useGemShop();
+  const publishBalances = useBalances()?.setBalances;
 
-  // The theme plays under the map and the episode sheet, and steps aside for a run.
-  useStoryTheme(playing !== null);
+  // The theme plays under the map and the episode sheet, and steps aside for a run or a skip's clear screen.
+  useStoryTheme(playing !== null || skipped !== null);
   // Story owns the screen: full screen and portrait where the browser allows it.
   useImmersive();
 
@@ -295,6 +335,30 @@ export function StoryShelf({
     setShelf(episodes);
   }, [episodes]);
 
+  // Back from the shop with a skip in mind: the episode opens straight on
+  // (no medallion to grow from) with the confirmation sheet already up.
+  useEffect(() => {
+    const intent = readSkipIntent();
+    if (!intent || gate) return;
+    const index = episodes.findIndex((episode) => episode.slug === intent.episode);
+    const episode = episodes[index];
+    if (!episode || episodeIsLocked(episodes, index)) return;
+    const chapterIndex = episode.chapters.findIndex((chapter) => chapter.id === intent.chapter);
+    const chapter = episode.chapters[chapterIndex];
+    if (!chapter || chapter.cleared || chapterIsLocked(episode.chapters, chapterIndex)) return;
+    // Restoring a surface the player left mid-flow: the state is the intent, read once on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrigin(null);
+    setGrown(true);
+    setClosing(false);
+    setOpen(episode);
+    setChapterActive(chapterIndex);
+    setTrailSnap((n) => n + 1);
+    setSkipping(chapter);
+    // Mount only: the intent is consumed as it is read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The iris has opened: the page under it is fully hidden, and its map and
   // sound can rest until the sheet comes down.
   useEffect(() => {
@@ -334,6 +398,8 @@ export function StoryShelf({
     setPaused(false);
     setCleared(null);
     setLost(null);
+    setSkipping(null);
+    setSkipped(null);
     setOpen(null);
     setGrown(false);
     setOrigin(null);
@@ -421,6 +487,18 @@ export function StoryShelf({
       if (event.key !== "Escape") {
         return;
       }
+      if (shop.isOpen) {
+        // The shop's own handler closes it; the sheet under it stays.
+        return;
+      }
+      if (skipping) {
+        setSkipping(null);
+        return;
+      }
+      if (skipped) {
+        closeSkipped();
+        return;
+      }
       if (playing) {
         if (cleared || lost) {
           setPaused(false);
@@ -440,7 +518,7 @@ export function StoryShelf({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cleared, closeSheet, intro, lost, open, playing]);
+  });
 
   // Fresh from the tutorial: let the card land, then carry the player on to
   // the first episode, now unlocked. The query is dropped so a reload stays put.
@@ -534,6 +612,55 @@ export function StoryShelf({
     setRunId((n) => n + 1);
   }
 
+  /** "Skip for 50" under Play: the confirmation sheet comes up over the road. */
+  function askSkip(chapter: StoryChapterCard) {
+    if (!open) return;
+    const index = open.chapters.findIndex((item) => item.id === chapter.id);
+    if (chapter.cleared || chapterIsLocked(open.chapters, index)) return;
+    setChapterActive(index);
+    setSkipping(chapter);
+  }
+
+  /** Short on gems: remember the wall, then open the shop over the sheet. */
+  function topUpForSkip() {
+    if (open && skipping) writeSkipIntent({ episode: open.slug, chapter: skipping.id });
+    shop.open();
+  }
+
+  /** The server took the gems and recorded the clear: the road moves on, the clear screen plays. */
+  function onSkipped(result: ChapterSkipResult) {
+    const chapter = skipping;
+    if (!open || !chapter) return;
+    const index = open.chapters.findIndex((item) => item.id === chapter.id);
+    markCleared(chapter.id, 1);
+    setSkipping(null);
+    setSkipped({ chapter, index, result });
+  }
+
+  /** Off the skip's clear screen: the dock stands on the next wall. */
+  function closeSkipped() {
+    if (skipped && open) {
+      const next = skipped.index < open.chapters.length - 1 ? skipped.index + 1 : skipped.index;
+      setChapterActive(next);
+      setTrailSnap((n) => n + 1);
+    }
+    setSkipped(null);
+  }
+
+  const skipCost = useMemo<ClearCost | undefined>(
+    () =>
+      skipped
+        ? {
+            gems: skipped.result.cost,
+            from: skipped.result.before.gems,
+            to: skipped.result.balances.gems,
+            onCount: () => publishBalances?.(skipped.result.balances),
+          }
+        : undefined,
+    [publishBalances, skipped],
+  );
+  const skippedNext = skipped && open ? (open.chapters[skipped.index + 1] ?? null) : null;
+
   const playingIndex = open && playing ? open.chapters.findIndex((chapter) => chapter.id === playing.id) : -1;
   const nextChapter = playingIndex >= 0 ? (open?.chapters[playingIndex + 1] ?? null) : null;
   const episodeDone = Boolean(open && open.chapters.every((chapter) => chapter.cleared));
@@ -622,12 +749,44 @@ export function StoryShelf({
                     selected={chapterActive}
                     onSelect={setChapterActive}
                     onPlay={startChapter}
+                    onSkip={askSkip}
                     live={covered}
                     snap={trailSnap}
-                    keyboard={!playing && !closing}
+                    keyboard={!playing && !closing && !skipping && !skipped}
                   />
                 </div>
               </div>
+              {skipping && !playing ? (
+                <StorySkipSheet
+                  key={skipping.id}
+                  chapter={skipping}
+                  index={Math.max(0, open.chapters.findIndex((item) => item.id === skipping.id))}
+                  onSkipped={onSkipped}
+                  onTopUp={topUpForSkip}
+                  onClose={() => setSkipping(null)}
+                />
+              ) : null}
+              {skipped && !playing ? (
+                <div className="story-skip-stage">
+                  <StoryClear
+                    key={skipped.chapter.id}
+                    title={skipped.chapter.title}
+                    score={0}
+                    stars={1}
+                    result={skipped.result.result}
+                    hasNext={skippedNext !== null}
+                    episodeDone={episodeDone}
+                    kicker="Chapter skipped"
+                    cost={skipCost}
+                    note="One star for now. Replay the wall any time to earn the other two."
+                    onNext={() => {
+                      setSkipped(null);
+                      if (skippedNext) startChapter(skippedNext);
+                    }}
+                    onClose={closeSkipped}
+                  />
+                </div>
+              ) : null}
               {playing ? (
                 <div className="story-play" role="dialog" aria-modal="true" aria-label={playing.title}>
                   <StoryPlay

@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { GemGlyph } from "@/components/currency-glyphs";
 import { StarRating } from "@/components/star-rating";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { layoutTrail, type JourneyHue } from "@/game/journey";
+import { formatGems } from "@/lib/economy";
 import { boardPhoto } from "@/lib/photo";
+import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 import { chapterIsLocked, chapterLockHint, continueChapterIndex, type StoryChapterCard } from "@/lib/story";
 
 export const HUE_VAR: Record<JourneyHue, string> = {
@@ -32,6 +35,7 @@ export function StoryTrail({
   selected,
   onSelect,
   onPlay,
+  onSkip,
   live,
   snap,
   keyboard = true,
@@ -42,6 +46,8 @@ export function StoryTrail({
   selected: number;
   onSelect: (index: number) => void;
   onPlay: (chapter: StoryChapterCard) => void;
+  /** Buy past the wall for gems. Offered under Play on the next open wall only. */
+  onSkip?: (chapter: StoryChapterCard) => void;
   /** The sheet has finished opening: the board in the dock may run. */
   live: boolean;
   /** Bumps when the road should re-centre on the selected wall at once (open, back from a run). */
@@ -58,6 +64,7 @@ export function StoryTrail({
   const lit = layout.reach[litTo] ?? 0;
   const chapter = chapters[selected] ?? chapters[0];
   const selectedLocked = chapter ? chapterIsLocked(chapters, selected) : true;
+  const skippable = Boolean(onSkip && chapter && !selectedLocked && !chapter.cleared);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -199,7 +206,7 @@ export function StoryTrail({
       </div>
 
       {chapter ? (
-        <div className="trail-dock" data-locked={selectedLocked ? "true" : undefined}>
+        <div className="trail-dock" data-locked={selectedLocked ? "true" : undefined} data-skip={skippable ? "true" : undefined}>
           <div className="trail-dock-board" aria-hidden="true">
             {live ? (
               <div className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none" inert>
@@ -238,6 +245,16 @@ export function StoryTrail({
           >
             {selectedLocked ? "Locked" : chapter.cleared ? "Replay" : "Play"}
           </button>
+          {skippable ? (
+            <button
+              type="button"
+              className="trail-dock-skip"
+              aria-label={`Skip ${chapter.title} for ${formatGems(SKIP_CHAPTER_GEMS)} gems`}
+              onClick={() => onSkip?.(chapter)}
+            >
+              Skip for <GemGlyph /> {formatGems(SKIP_CHAPTER_GEMS)}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
