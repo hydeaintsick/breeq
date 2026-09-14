@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GemGlyph } from "@/components/currency-glyphs";
+import { formatGems } from "@/lib/economy";
+import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 
 /** Timeline, in ms from mount — same beats as the clear screen. */
 const T = {
@@ -29,12 +32,18 @@ export function StoryLose({
   score,
   reason,
   onRetry,
+  onSkip,
+  veiled = false,
   onClose,
 }: {
   title: string;
   score: number;
   reason: "lives" | "timeout" | "crushed";
   onRetry: () => void;
+  /** Buy past this wall for gems. Omitted where a skip makes no sense (tutorial, replays). */
+  onSkip?: () => void;
+  /** A sheet is up over the screen: the copy steps out so it does not bleed through the glass. */
+  veiled?: boolean;
   onClose: () => void;
 }) {
   const reduced = useMemo(
@@ -97,6 +106,7 @@ export function StoryLose({
       aria-modal="true"
       aria-label={`Game over: ${title}`}
       data-skip={skip}
+      data-veiled={veiled ? "true" : undefined}
       onClick={() => setSkipped(true)}
     >
       <div className="story-clear-body">
@@ -126,6 +136,19 @@ export function StoryLose({
           >
             Try again
           </button>
+          {onSkip ? (
+            <button
+              type="button"
+              className="story-clear-skip"
+              aria-label={`Skip ${title} for ${formatGems(SKIP_CHAPTER_GEMS)} gems`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSkip();
+              }}
+            >
+              Skip for <GemGlyph /> {formatGems(SKIP_CHAPTER_GEMS)}
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn-glass story-clear-glass min-h-11 w-full"

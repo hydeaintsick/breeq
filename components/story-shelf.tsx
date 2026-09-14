@@ -25,6 +25,7 @@ import { QUIET_START } from "@/game/breakout/levels";
 import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
 import { STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { ambientPhoto, boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
+import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 import {
   chapterIsLocked,
   continueChapterIndex,
@@ -222,7 +223,9 @@ export function StoryShelf({
   /** The skip went through: its clear screen owns the sheet until it is tapped away. */
   const [skipped, setSkipped] = useState<{ chapter: StoryChapterCard; index: number; result: ChapterSkipResult } | null>(null);
   const shop = useGemShop();
-  const publishBalances = useBalances()?.setBalances;
+  const balances = useBalances();
+  const publishBalances = balances?.setBalances;
+  const gems = balances?.balances.gems ?? 0;
 
   // The theme plays under the map and the episode sheet, and steps aside for a run or a skip's clear screen.
   useStoryTheme(playing !== null || skipped !== null);
@@ -622,9 +625,23 @@ export function StoryShelf({
   }
 
   /** Short on gems: remember the wall, then open the shop over the sheet. */
-  function topUpForSkip() {
-    if (open && skipping) writeSkipIntent({ episode: open.slug, chapter: skipping.id });
+  function topUpForSkip(chapter: StoryChapterCard | null = skipping) {
+    if (open && chapter) writeSkipIntent({ episode: open.slug, chapter: chapter.id });
     shop.open();
+  }
+
+  /**
+   * "Skip for 50" on the game over screen: the confirmation sheet comes up over
+   * the lost run. Short on gems, the shop opens straight away with the sheet
+   * waiting underneath — the pack lands, then the skip is one more tap.
+   */
+  function skipFromLose() {
+    if (!open || !playing) return;
+    const index = open.chapters.findIndex((item) => item.id === playing.id);
+    const chapter = open.chapters[index];
+    if (!chapter || chapter.cleared) return;
+    setSkipping(chapter);
+    if (gems < SKIP_CHAPTER_GEMS) topUpForSkip(chapter);
   }
 
   /** The server took the gems and recorded the clear: the road moves on, the clear screen plays. */
@@ -633,6 +650,11 @@ export function StoryShelf({
     if (!open || !chapter) return;
     const index = open.chapters.findIndex((item) => item.id === chapter.id);
     markCleared(chapter.id, 1);
+    // Bought from the game over screen: the run is over for good.
+    setPlaying(null);
+    setPaused(false);
+    setCleared(null);
+    setLost(null);
     setSkipping(null);
     setSkipped({ chapter, index, result });
   }
@@ -663,6 +685,8 @@ export function StoryShelf({
 
   const playingIndex = open && playing ? open.chapters.findIndex((chapter) => chapter.id === playing.id) : -1;
   const nextChapter = playingIndex >= 0 ? (open?.chapters[playingIndex + 1] ?? null) : null;
+  /** Read from the shelf, not `playing`: a clear earlier in this session already patched it. */
+  const playingCleared = playingIndex >= 0 ? Boolean(open?.chapters[playingIndex]?.cleared) : true;
   const episodeDone = Boolean(open && open.chapters.every((chapter) => chapter.cleared));
   const openProgress = open ? episodeProgress(open) : null;
   const openIndex = open ? shelf.findIndex((item) => item.id === open.id) : -1;
@@ -756,13 +780,13 @@ export function StoryShelf({
                   />
                 </div>
               </div>
-              {skipping && !playing ? (
+              {skipping && (!playing || lost) ? (
                 <StorySkipSheet
                   key={skipping.id}
                   chapter={skipping}
                   index={Math.max(0, open.chapters.findIndex((item) => item.id === skipping.id))}
                   onSkipped={onSkipped}
-                  onTopUp={topUpForSkip}
+                  onTopUp={() => topUpForSkip()}
                   onClose={() => setSkipping(null)}
                 />
               ) : null}
@@ -874,6 +898,8 @@ export function StoryShelf({
                       score={lost.score}
                       reason={lost.reason}
                       onRetry={retryRun}
+                      onSkip={playingCleared ? undefined : skipFromLose}
+                      veiled={skipping !== null}
                       onClose={quitRun}
                     />
                   ) : null}
