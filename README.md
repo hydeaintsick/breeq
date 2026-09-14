@@ -291,4 +291,10 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
 
+### Sign in with Google
+
+Auth is Auth.js with the Prisma adapter on MongoDB. "Continue with Google" is one button for new and returning players: the adapter creates the `User` (plus a `google` `Account`) on first use and finds the same player by Google account afterwards. An existing email/password account with the same verified email is linked instead of duplicated. The button only renders when both `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are set.
+
+To register the app on Google's side: in [Google Cloud Console](https://console.cloud.google.com/) create a project, set up the **OAuth consent screen** (External, scopes `email` / `profile` / `openid`), then add an **OAuth client ID** of type **Web application** with the authorized redirect URI `{AUTH_URL}/api/auth/callback/google`. Google only allows plain `http://` on `localhost`, so develop on `http://localhost:3333` (not a `*.local` host) and add the `https://` production URI as a second entry. Copy the client ID and secret into `.env`. While the consent screen is in "Testing", only the listed test users can sign in; publish it to open it to everyone.
+
 Engine checks live outside the repo; the pre-commit hook runs `pnpm build`. `pnpm story:seed --dry-run` proves and rates every Story wall without touching the database.

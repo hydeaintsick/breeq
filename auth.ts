@@ -6,13 +6,12 @@ import { compare } from "bcryptjs";
 import { cookies } from "next/headers";
 import { getAddress, isAddress, verifyMessage } from "viem";
 import { prisma } from "@/lib/prisma";
-import { isAdminEmail, type Role } from "@/lib/auth/paths";
+import { isGoogleEnabled } from "@/lib/auth/google";
+import { isAdminEmail, LOGIN_PATH, type Role } from "@/lib/auth/paths";
 import { SIWE_NONCE_COOKIE, siweMessage } from "@/lib/auth/siwe";
 import { normalizeUsername, uniqueUsername } from "@/lib/auth/username";
 
-const googleEnabled = Boolean(
-  process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET,
-);
+const googleEnabled = isGoogleEnabled();
 
 async function withRole<T extends { id: string; email?: string | null; role: Role; username?: string | null; name?: string | null }>(
   user: T,
@@ -128,11 +127,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt" },
   pages: {
-    signIn: "/login",
+    signIn: LOGIN_PATH,
+    error: LOGIN_PATH,
   },
   providers: [
     ...(googleEnabled
       ? [
+          // One button for both sign up and sign in: the adapter creates the
+          // player on first use and finds them by Google account afterwards.
+          // Linking by email is safe here because the `signIn` callback only
+          // lets through Google profiles whose email Google has verified.
           Google({
             allowDangerousEmailAccountLinking: true,
           }),
@@ -217,8 +221,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       });
     },
+    async linkAccount({ user, account }) {
+      // Google only gets this far with a verified email (see `signIn`), so the
+      // player's address counts as confirmed from that moment.
+      if (account.provider !== "google" || !user.id) {
+        return;
+      }
+
+      await prisma.user.updateMany({
+        where: { id: user.id, emailVerified: null },
+        data: { emailVerified: new Date() },
+      });
+    },
   },
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account?.provider === "google") {
+        return profile?.email_verified === true && typeof profile.email === "string";
+      }
+
+      return true;
+    },
     async jwt({ token, user, trigger }) {
       const userId = user?.id ?? (trigger === "update" ? token.sub : undefined);
 

@@ -8,9 +8,16 @@ import { siweMessage } from "@/lib/auth/siwe";
 
 type Mode = "signin" | "signup";
 
-export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
+export function AuthForm({
+  googleEnabled,
+  initialError = null,
+}: {
+  googleEnabled: boolean;
+  /** Message for an Auth.js redirect back to `/login?error=…` (OAuth failures). */
+  initialError?: string | null;
+}) {
   const [mode, setMode] = useState<Mode>("signin");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -228,42 +235,42 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
         </button>
       </form>
 
-      {mode === "signin" ? (
-        <>
-          <div className="mt-6 flex items-center gap-3 text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ink-muted">
-            <span className="h-px flex-1 bg-hairline" />
-            or
-            <span className="h-px flex-1 bg-hairline" />
-          </div>
+      <div className="mt-6 flex items-center gap-3 text-[0.68rem] font-medium uppercase tracking-[0.18em] text-ink-muted">
+        <span className="h-px flex-1 bg-hairline" />
+        or
+        <span className="h-px flex-1 bg-hairline" />
+      </div>
 
-          <div className="mt-5 grid gap-3">
-            {googleEnabled ? (
-              <button
-                type="button"
-                className="btn-glass w-full"
-                onClick={() => {
-                  void onGoogle();
-                }}
-                disabled={pending}
-              >
-                <GoogleMark />
-                Continue with Google
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="btn-glass w-full"
-              onClick={() => {
-                void onMetaMask();
-              }}
-              disabled={pending}
-            >
-              <WalletMark />
-              Continue with MetaMask
-            </button>
-          </div>
-        </>
-      ) : (
+      {/* One tap for new and returning players alike: the server creates the
+          account on first use and signs in the same player afterwards. */}
+      <div className="mt-5 grid gap-3">
+        {googleEnabled ? (
+          <button
+            type="button"
+            className="btn-glass w-full"
+            onClick={() => {
+              void onGoogle();
+            }}
+            disabled={pending}
+          >
+            <GoogleMark />
+            Continue with Google
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="btn-glass w-full"
+          onClick={() => {
+            void onMetaMask();
+          }}
+          disabled={pending}
+        >
+          <WalletMark />
+          Continue with MetaMask
+        </button>
+      </div>
+
+      {mode === "signup" ? (
         <p className="mt-5 text-center text-sm text-ink-muted">
           Already have an account?{" "}
           <button
@@ -277,7 +284,7 @@ export function AuthForm({ googleEnabled }: { googleEnabled: boolean }) {
             Sign in
           </button>
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
