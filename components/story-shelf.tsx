@@ -5,21 +5,23 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BreakoutPreview } from "@/components/breakout-preview";
-import { Chevron, coverStyle, place, SIDE, useDeck } from "@/components/deck";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { PlayCard } from "@/components/play-card";
 import { SoundToggle } from "@/components/sound-toggle";
 import { StoryClear } from "@/components/story-clear";
+import { StoryJourney, type JourneyCard, type StoryJourneyHandle } from "@/components/story-journey";
 import { StoryLose } from "@/components/story-lose";
 import { StoryPlay } from "@/components/story-play";
 import { SwipeToggle } from "@/components/swipe-toggle";
+import { useImmersive } from "@/components/use-immersive";
 import { useStoryTheme } from "@/components/use-story-theme";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { starsForClear } from "@/game/breakout/engine/stars";
-import { QUIET_START, TUTORIAL } from "@/game/breakout/levels";
+import { QUIET_START } from "@/game/breakout/levels";
+import { hueForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
 import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
-import { ambientPhoto, boardPhoto, screenPhoto } from "@/lib/photo";
+import { boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import {
   chapterIsLocked,
   chapterLockHint,
@@ -33,7 +35,6 @@ import {
 } from "@/lib/story";
 
 const FALLBACK_LEVELS = [QUIET_START];
-const TUTORIAL_LEVELS = [TUTORIAL];
 const TUTORIAL_HINT = "Finish the tutorial first.";
 const EMPTY_DISCOVERIES: readonly string[] = [];
 
@@ -66,22 +67,7 @@ function chapterLevels(chapter: StoryChapterCard, backgroundUrl: string | null) 
   ];
 }
 
-function previewLevels(episode: StoryEpisodeCard) {
-  return episode.previewLevel
-    ? [
-        applyBackgroundPhoto(
-          parseStoredLevel(episode.previewLevel, {
-            id: episode.id,
-            name: episode.title,
-            author: "Breeq",
-          }),
-          episode.backgroundUrl ? boardPhoto(episode.backgroundUrl) : episode.backgroundUrl,
-        ),
-      ]
-    : FALLBACK_LEVELS;
-}
-
-/** Episode index → rail slide index (the tutorial, when shown, is slide 0). */
+/** Episode index → journey node index (the tutorial, when shown, is node 0). */
 function continueIndex(episodes: readonly StoryEpisodeCard[], slug?: string) {
   if (slug) {
     const match = episodes.findIndex((episode) => episode.slug === slug);
@@ -109,27 +95,24 @@ function scrollToSlide(root: HTMLElement, index: number, behavior: ScrollBehavio
 }
 
 /**
- * Where the sheet shrinks back to: the card the episode was opened from when it
- * is still on the page, otherwise the cover at the episode's slot in the deck
- * (direct `/story/[slug]` visits never clicked a card). That cover is the open
- * one, so its box is not leaning or scaled.
+ * Where the sheet shrinks back to: the medallion the episode was opened from
+ * when it is still on the page, otherwise the episode's node on the map
+ * (direct `/story/[slug]` visits never tapped one).
  */
 function cardRect(
-  stage: HTMLElement | null,
+  journey: StoryJourneyHandle | null,
   episodes: readonly StoryEpisodeCard[],
   episode: StoryEpisodeCard,
   card: HTMLElement | null,
   offset: number,
 ): DOMRect | null {
   if (card?.isConnected) {
-    return card.getBoundingClientRect();
+    const rect = card.getBoundingClientRect();
+    if (rect.width >= 8) return rect;
   }
   const index = episodes.findIndex((item) => item.id === episode.id) + offset;
-  const slide = stage?.querySelector<HTMLElement>(`[data-story-slide="${index}"]`);
-  if (!slide || slide.offsetWidth < 8) {
-    return null;
-  }
-  return slide.getBoundingClientRect();
+  const rect = journey?.anchorRect(index) ?? null;
+  return rect && rect.width >= 8 ? rect : null;
 }
 
 function openingChapterIndex(episodes: readonly StoryEpisodeCard[], slug?: string) {
@@ -170,9 +153,11 @@ export function StoryShelf({
   /** The story waits for the tutorial. */
   const gate = tutorial !== null && !tutorial.done;
   const [shelf, setShelf] = useState(episodes);
-  const [active, setActive] = useState(() =>
+  /** The node the map opens on. */
+  const [start] = useState(() =>
     gate || (arriveFromTutorial && offset > 0) ? 0 : continueIndex(episodes, initialSlug) + offset,
   );
+  const journeyRef = useRef<StoryJourneyHandle | null>(null);
   const [open, setOpen] = useState<StoryEpisodeCard | null>(() => {
     const episode = episodes.find((item) => item.slug === initialSlug);
     if (!episode || gate) {
@@ -206,7 +191,6 @@ export function StoryShelf({
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
   const [runId, setRunId] = useState(0);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
-  const platesRef = useRef<(HTMLDivElement | null)[]>([]);
   const sheetRef = useRef<HTMLDivElement>(null);
   const chapterRailRef = useRef<HTMLDivElement>(null);
   const chapterAligned = useRef(false);
@@ -215,42 +199,75 @@ export function StoryShelf({
   const [chapterSnap, setChapterSnap] = useState(0);
   const [chapterReady, setChapterReady] = useState(false);
 
-  // The theme plays under the shelf and the episode sheet, and steps aside for a run.
+  // The theme plays under the map and the episode sheet, and steps aside for a run.
   useStoryTheme(playing !== null);
+  // Story owns the screen: full screen and portrait where the browser allows it.
+  useImmersive();
 
-  /**
-   * The bloom behind the deck is the open cover's photo. `pos` is the rack's
-   * position in covers, fractional mid-drag, so two plates cross-fade under a
-   * finger that is halfway between episodes.
-   */
-  const paintPlates = useCallback((pos: number) => {
-    platesRef.current.forEach((plate, index) => {
-      if (!plate) {
-        return;
-      }
-      const weight = Math.max(0, 1 - Math.abs(index - pos));
-      plate.style.opacity = String(weight * weight);
-      // Plates that cannot be seen are not composited either.
-      plate.style.visibility = weight < 0.03 ? "hidden" : "";
+  /** The map: one node per episode, the tutorial ahead of them when it is on. */
+  const nodes = useMemo<JourneyNodeInput[]>(() => {
+    const list: JourneyNodeInput[] = [];
+    if (tutorial) {
+      list.push({
+        id: "tutorial",
+        kicker: "00",
+        title: "How to Play",
+        state: tutorial.done ? "cleared" : "current",
+        stars: 0,
+        progress: tutorial.done ? 1 : 0,
+        cover: null,
+        hue: "steel",
+      });
+    }
+    let frontier = gate;
+    shelf.forEach((episode, index) => {
+      const locked = gate || episodeIsLocked(shelf, index);
+      const progress = episodeProgress(episode);
+      const state: JourneyNodeState = locked ? "locked" : episodeIsComplete(episode) ? "cleared" : frontier ? "open" : "current";
+      if (state === "current") frontier = true;
+      list.push({
+        id: episode.id,
+        kicker: String(index + 1).padStart(2, "0"),
+        title: episode.title,
+        state,
+        stars: progress.starValue,
+        progress: progress.total > 0 ? progress.cleared / progress.total : 0,
+        cover: episode.backgroundUrl ? nodePhoto(episode.backgroundUrl) : null,
+        hue: hueForEpisode(episode.slug, index),
+      });
     });
-  }, []);
+    return list;
+  }, [gate, shelf, tutorial]);
 
-  const {
-    stageRef,
-    coverRef,
-    go: goTo,
-    last: lastSlide,
-    stageProps,
-  } = useDeck({
-    count: shelf.length + offset,
-    active,
-    onChange: setActive,
-    onPaint: paintPlates,
-  });
-
-  useEffect(() => {
-    paintPlates(active);
-  }, [active, paintPlates]);
+  const cards = useMemo<JourneyCard[]>(() => {
+    const list: JourneyCard[] = [];
+    if (tutorial) {
+      list.push({
+        kicker: "Tutorial",
+        title: "How to Play",
+        meta: tutorial.done ? "Done. Replay it any time." : "The paddle, the first two bricks, a zone. About two minutes.",
+        action: tutorial.done ? "Replay" : "Start",
+        locked: false,
+        hint: null,
+        stars: null,
+        href: TUTORIAL_PATH,
+      });
+    }
+    shelf.forEach((episode, index) => {
+      const locked = gate || episodeIsLocked(shelf, index);
+      const progress = episodeProgress(episode);
+      list.push({
+        kicker: `Episode ${String(index + 1).padStart(2, "0")}`,
+        title: episode.title,
+        meta: episode.tagline ?? chapterLabel(progress.cleared, progress.total),
+        action: episodeIsComplete(episode) ? "Replay" : progress.cleared > 0 ? "Continue" : "Play",
+        locked,
+        hint: gate ? TUTORIAL_HINT : episodeLockHint(shelf, index),
+        stars: progress.cleared > 0 ? progress.starValue : null,
+      });
+    });
+    return list;
+  }, [gate, shelf, tutorial]);
 
   const syncFromChapterRail = useCallback(() => {
     if (!chapterAligned.current) {
@@ -429,7 +446,7 @@ export function StoryShelf({
       return;
     }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const target = open ? cardRect(stageRef.current, shelf, open, originCardRef.current, offset) : null;
+    const target = open ? cardRect(journeyRef.current, shelf, open, originCardRef.current, offset) : null;
     if (!target || reduced) {
       finishClose();
       return;
@@ -443,7 +460,7 @@ export function StoryShelf({
     setOrigin(target);
     setGrown(false);
     setClosing(true);
-  }, [closing, finishClose, offset, open, shelf, stageRef]);
+  }, [closing, finishClose, offset, open, shelf]);
 
   useEffect(() => {
     if (!closing) {
@@ -529,10 +546,10 @@ export function StoryShelf({
     window.history.replaceState(window.history.state, "", STORY_PATH);
     const id = window.setTimeout(() => {
       arrived.current = true;
-      goTo(offset);
+      journeyRef.current?.goTo(offset);
     }, 700);
     return () => window.clearTimeout(id);
-  }, [arriveFromTutorial, goTo, offset]);
+  }, [arriveFromTutorial, offset]);
 
   const goToChapter = useCallback((index: number) => {
     if (!open) {
@@ -544,33 +561,29 @@ export function StoryShelf({
   }, [open, scrollChapterRail]);
 
   useEffect(() => {
-    if (playing) {
+    if (playing || !open) {
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      // A focused cover already turned the deck itself.
       if (event.defaultPrevented) {
         return;
       }
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        if (open) {
-          goToChapter(chapterActive + 1);
-        } else {
-          goTo(active + 1);
-        }
+        goToChapter(chapterActive + 1);
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
-        if (open) {
-          goToChapter(chapterActive - 1);
-        } else {
-          goTo(active - 1);
-        }
+        goToChapter(chapterActive - 1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, chapterActive, goTo, goToChapter, open, playing]);
+  }, [chapterActive, goToChapter, open, playing]);
+
+  function openNode(node: number, anchor: HTMLElement) {
+    const episode = shelf[node - offset];
+    if (episode) openEpisode(episode, anchor);
+  }
 
   function openEpisode(episode: StoryEpisodeCard, card: HTMLElement) {
     const index = shelf.findIndex((item) => item.id === episode.id);
@@ -664,140 +677,33 @@ export function StoryShelf({
       : { top: 0, left: 0, width: "100vw", height: "100svh" };
 
   return (
-    <div className="story-page" data-covered={covered ? "true" : undefined}>
-      <StoryAmbient episodes={shelf} offset={offset} platesRef={platesRef} />
+    <div className="story-page story-page-journey" data-covered={covered ? "true" : undefined}>
       {kicker || title || body ? (
         <header className="story-page-copy">
           <div className="story-page-copy-inner">
             {kicker ? (
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">{kicker}</p>
             ) : null}
-            {title ? <h1 className="max-w-2xl font-semibold tracking-tight text-ink">{title}</h1> : null}
-            {body ? <p className="story-page-lede max-w-xl text-ink-muted">{body}</p> : null}
+            {title ? <h1 className="max-w-2xl font-semibold tracking-tight text-white">{title}</h1> : null}
+            {body ? <p className="story-page-lede max-w-xl">{body}</p> : null}
           </div>
         </header>
       ) : null}
 
-      <div
-        {...stageProps}
-        className="story-deck"
-        role="group"
-        aria-roledescription="carousel"
-        aria-label="Episodes"
-      >
-        {tutorial ? (
-          <StoryCover
-            slide={0}
-            active={active}
-            label="Tutorial, How to Play"
-            coverRef={coverRef(0)}
-            onTurn={goTo}
-          >
-            <PlayCard
-              href={TUTORIAL_PATH}
-              kicker="00"
-              title="How to Play"
-              body={
-                tutorial.done
-                  ? "Done. Replay it any time."
-                  : "The paddle, the first two bricks, a zone. About two minutes."
-              }
-              action={tutorial.done ? "Replay" : "Start"}
-              levels={TUTORIAL_LEVELS}
-              seed={7}
-              fill
-              aura={false}
-              paused={covered || Math.abs(active) >= SIDE}
-            />
-          </StoryCover>
-        ) : null}
-        {shelf.map((episode, index) => {
-          const locked = gate || episodeIsLocked(shelf, index);
-          const hint = gate ? TUTORIAL_HINT : episodeLockHint(shelf, index);
-          const progress = episodeProgress(episode);
-          const slide = index + offset;
-          return (
-            <StoryCover
-              key={episode.id}
-              slide={slide}
-              active={active}
-              label={`Episode ${index + 1}, ${episode.title}`}
-              coverRef={coverRef(slide)}
-              onTurn={goTo}
-            >
-              <PlayCard
-                kicker={String(index + 1).padStart(2, "0")}
-                title={episode.title}
-                body={episode.tagline ?? chapterLabel(progress.cleared, progress.total)}
-                meta={episode.tagline ? chapterLabel(progress.cleared, progress.total) : undefined}
-                action="Play"
-                levels={previewLevels(episode)}
-                seed={11 + index}
-                cover={episode.backgroundUrl}
-                locked={locked}
-                lockedHint={hint ?? undefined}
-                fill
-                aura={false}
-                progress={progress}
-                stars={progress.starValue}
-                paused={covered || Math.abs(slide - active) >= SIDE}
-                onSelect={locked ? undefined : (card) => openEpisode(episode, card)}
-              />
-            </StoryCover>
-          );
-        })}
-      </div>
-
-      <div className="story-page-foot">
-        {shelf.length + offset > 1 ? (
-          <div className="story-deck-nav">
-            <button
-              type="button"
-              className="lore-arrow"
-              aria-label="Previous episode"
-              disabled={active === 0}
-              onClick={() => goTo(active - 1)}
-            >
-              <Chevron direction="left" />
-            </button>
-            <div className="story-dots" role="tablist" aria-label="Episode position">
-              {tutorial ? (
-                <button
-                  type="button"
-                  className="story-dot"
-                  role="tab"
-                  aria-selected={active === 0}
-                  aria-label="Tutorial, How to Play"
-                  onClick={() => goTo(0)}
-                />
-              ) : null}
-              {shelf.map((episode, index) => (
-                <button
-                  key={episode.id}
-                  type="button"
-                  className="story-dot"
-                  role="tab"
-                  aria-selected={index + offset === active}
-                  aria-label={`Episode ${index + 1}, ${episode.title}`}
-                  onClick={() => goTo(index + offset)}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              className="lore-arrow"
-              aria-label="Next episode"
-              disabled={active === lastSlide}
-              onClick={() => goTo(active + 1)}
-            >
-              <Chevron direction="right" />
-            </button>
-          </div>
-        ) : null}
-        <Link href={GAME_MENU_PATH} className="nav-link inline-flex min-h-11 items-center">
-          Back to modes
-        </Link>
-      </div>
+      <StoryJourney
+        ref={journeyRef}
+        nodes={nodes}
+        cards={cards}
+        start={start}
+        paused={covered}
+        keyboard={!open && !playing}
+        onOpen={openNode}
+        footer={
+          <Link href={GAME_MENU_PATH} className="nav-link journey-back inline-flex min-h-11 items-center">
+            Back to modes
+          </Link>
+        }
+      />
 
       {portal && open
         ? createPortal(
@@ -919,6 +825,18 @@ export function StoryShelf({
                     backgroundUrl={open.backgroundUrl}
                     seed={17 + runId}
                     paused={paused || intro}
+                    chrome={
+                      cleared || lost || intro ? null : (
+                        <button
+                          type="button"
+                          className="story-pause"
+                          aria-label="Pause"
+                          onClick={() => setPaused(true)}
+                        >
+                          <CloseGlyph />
+                        </button>
+                      )
+                    }
                     discovered={known}
                     onDiscovered={onDiscovered}
                     onCleared={({ score, paddleHits, livesLeft }) => {
@@ -948,16 +866,6 @@ export function StoryShelf({
                       setLost({ score, reason });
                     }}
                   />
-                  {cleared || lost || intro ? null : (
-                    <button
-                      type="button"
-                      className="story-pause"
-                      aria-label="Pause"
-                      onClick={() => setPaused(true)}
-                    >
-                      <CloseGlyph />
-                    </button>
-                  )}
                   {intro && playing.intro && !cleared && !lost ? (
                     <button
                       type="button"
@@ -1027,128 +935,22 @@ export function StoryShelf({
   );
 }
 
-/**
- * One cover in the episode deck. The open one is the live card; the others lean
- * back in its shade, inert, under a plain button that turns the deck to them.
- */
-function StoryCover({
-  slide,
-  active,
-  label,
-  coverRef,
-  onTurn,
-  children,
-}: {
-  slide: number;
-  active: number;
-  label: string;
-  coverRef: (node: HTMLDivElement | null) => void;
-  onTurn: (index: number) => void;
-  children: ReactNode;
-}) {
-  const placement = place(slide - active);
-  const isOpen = slide === active;
-  const hidden = placement.opacity === 0;
-  return (
-    <div
-      ref={coverRef}
-      className="story-deck-cover"
-      data-story-slide={slide}
-      data-open={isOpen ? "true" : undefined}
-      style={coverStyle(placement)}
-      aria-current={isOpen ? "true" : undefined}
-      aria-hidden={hidden ? "true" : undefined}
-    >
-      <div className="story-deck-frame" inert={!isOpen}>
-        {children}
-      </div>
-      {isOpen ? null : (
-        <button
-          type="button"
-          className="story-deck-turn"
-          aria-label={`Show ${label}`}
-          tabIndex={-1}
-          onClick={() => onTurn(slide)}
-        />
-      )}
-    </div>
-  );
-}
-
-function StoryAmbient({
-  episodes,
-  offset,
-  platesRef,
-}: {
-  episodes: readonly StoryEpisodeCard[];
-  /** Slides ahead of the first episode (the tutorial); each gets a plain plate. */
-  offset: number;
-  platesRef: { current: (HTMLDivElement | null)[] };
-}) {
-  return (
-    <div className="story-ambient" aria-hidden="true">
-      {Array.from({ length: offset }, (_, index) => (
-        <div
-          key={`lead-${index}`}
-          ref={(node) => {
-            platesRef.current[index] = node;
-          }}
-          className="story-ambient-plate"
-        >
-          <div className="story-ambient-drift" data-layer="wash" style={{ animationDelay: `${-index * 7}s` }}>
-            <div className="story-ambient-fallback" />
-          </div>
-        </div>
-      ))}
-      {episodes.map((episode, index) => (
-        <div
-          key={episode.id}
-          ref={(node) => {
-            platesRef.current[index + offset] = node;
-          }}
-          className="story-ambient-plate"
-        >
-          {episode.backgroundUrl ? (
-            <>
-              <div className="story-ambient-drift" data-layer="wash" style={{ animationDelay: `${-index * 7}s` }}>
-                <img
-                  src={ambientPhoto(episode.backgroundUrl)}
-                  alt=""
-                  className="story-ambient-wash"
-                  draggable={false}
-                  decoding="async"
-                />
-              </div>
-              <div
-                className="story-ambient-drift"
-                data-layer="core"
-                style={{ animationDelay: `${-index * 7 - 11}s` }}
-              >
-                <img
-                  src={ambientPhoto(episode.backgroundUrl)}
-                  alt=""
-                  className="story-ambient-core"
-                  draggable={false}
-                  decoding="async"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="story-ambient-drift" data-layer="wash" style={{ animationDelay: `${-index * 7}s` }}>
-              <div className="story-ambient-fallback" />
-            </div>
-          )}
-        </div>
-      ))}
-      <div className="story-ambient-scrim" />
-    </div>
-  );
-}
-
 function BreakoutFill({ episode }: { episode: StoryEpisodeCard }) {
+  const levels = useMemo(
+    () =>
+      episode.previewLevel
+        ? [
+            applyBackgroundPhoto(
+              parseStoredLevel(episode.previewLevel, { id: episode.id, name: episode.title, author: "Breeq" }),
+              episode.backgroundUrl ? boardPhoto(episode.backgroundUrl) : episode.backgroundUrl,
+            ),
+          ]
+        : FALLBACK_LEVELS,
+    [episode],
+  );
   return (
     <BreakoutPreview
-      levels={previewLevels(episode)}
+      levels={levels}
       seed={11}
       controls="auto"
       followQuery={false}

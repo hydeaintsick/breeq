@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
@@ -28,6 +28,25 @@ export const metadata: Metadata = {
   },
   description:
     "A brick breaker built by players, for players. Design a wall over your own photo, place bonus zones, and dare everyone else to clear it.",
+  manifest: "/manifest.webmanifest",
+  // From the home screen the game runs edge to edge under a translucent status
+  // bar: the only full screen an iPhone gives a web page.
+  appleWebApp: {
+    capable: true,
+    title: "Breeq",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Draw under the notch and the home indicator; the chrome pads with safe-area insets.
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f5fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#12141c" },
+  ],
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

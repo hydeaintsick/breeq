@@ -27,6 +27,17 @@ const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
 type Ctx = CanvasRenderingContext2D;
 
+/**
+ * A soft light painted once and reused: a shape's glow, a halo, an aura. The
+ * shape's box is `w × h` world units with `pad` of falloff on every side.
+ */
+interface LightSprite {
+  canvas: HTMLCanvasElement;
+  w: number;
+  h: number;
+  pad: number;
+}
+
 /** A rectangle in CSS pixels, relative to the canvas. */
 export interface CssRect {
   x: number;
@@ -58,6 +69,8 @@ export class BreakoutRenderer {
   private ox = 0;
   private oy = 0;
   private readonly brickCache = new Map<string, HTMLCanvasElement>();
+  /** Glows, halos and auras at the current scale (see `glow` and `light`). */
+  private readonly lightCache = new Map<string, LightSprite>();
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -103,7 +116,10 @@ export class BreakoutRenderer {
     ) {
       return;
     }
-    if (scale !== this.scale) this.brickCache.clear();
+    if (scale !== this.scale) {
+      this.brickCache.clear();
+      this.lightCache.clear();
+    }
     this.scale = scale;
     this.dpr = v.dpr;
     this.ox = ox;
@@ -353,12 +369,18 @@ export class BreakoutRenderer {
     }
 
     ctx.save();
-    const halo = ctx.createRadialGradient(zone.x, zone.y, r * 0.3, zone.x, zone.y, r * 2.2);
-    halo.addColorStop(0, alpha(color, (active ? 0.4 : 0.22) * breathe + pulse * 0.4));
-    halo.addColorStop(1, alpha(color, 0));
+    const k = r / zone.r;
+    const halo = this.light(`halo|${color}|${zone.r}`, zone.r * 2.2, (g, cx, cy) => {
+      const fill = g.createRadialGradient(cx, cy, zone.r * 0.3, cx, cy, zone.r * 2.2);
+      fill.addColorStop(0, color);
+      fill.addColorStop(1, alpha(color, 0));
+      g.fillStyle = fill;
+      g.fillRect(0, 0, zone.r * 4.4, zone.r * 4.4);
+    });
     ctx.globalCompositeOperation = "lighter";
-    ctx.fillStyle = halo;
-    ctx.fillRect(zone.x - r * 2.2, zone.y - r * 2.2, r * 4.4, r * 4.4);
+    ctx.globalAlpha = Math.min(1, (active ? 0.4 : 0.22) * breathe + pulse * 0.4);
+    this.drawLight(ctx, halo, zone.x, zone.y, k);
+    ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
 
     ctx.fillStyle = alpha(color, 0.12 + pulse * 0.2);
@@ -366,13 +388,19 @@ export class BreakoutRenderer {
     ctx.arc(zone.x, zone.y, r, 0, TAU);
     ctx.fill();
 
-    this.neonShadow(ctx, alpha(color, 0.9), 10);
+    const ring = this.glow(`ring|${color}|${zone.r}`, zone.r * 2, zone.r * 2, 10, (g) => {
+      g.strokeStyle = alpha(color, 0.9);
+      g.lineWidth = 4;
+      g.beginPath();
+      g.arc(zone.r, zone.r, zone.r, 0, TAU);
+      g.stroke();
+    });
+    this.drawLight(ctx, ring, zone.x, zone.y, k);
     ctx.strokeStyle = alpha(color, active ? 1 : 0.85);
     ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.arc(zone.x, zone.y, r, 0, TAU);
     ctx.stroke();
-    this.clearShadow(ctx);
 
     // Rotating dashed outer ring; speed hints at the effect.
     const spin =
@@ -473,16 +501,19 @@ export class BreakoutRenderer {
   private fog(ctx: Ctx, zone: Zone, time: number): void {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
+    const puff = this.light(`fog|${zone.r}`, zone.r * 1.1, (g, cx, cy) => {
+      const fill = g.createRadialGradient(cx, cy, 0, cx, cy, zone.r * 1.1);
+      fill.addColorStop(0, "rgba(255, 255, 255, 0.22)");
+      fill.addColorStop(0.6, "rgba(255, 255, 255, 0.08)");
+      fill.addColorStop(1, "rgba(255, 255, 255, 0)");
+      g.fillStyle = fill;
+      g.fillRect(0, 0, zone.r * 2.2, zone.r * 2.2);
+    });
     for (let i = 0; i < 3; i++) {
       const a = time * 0.35 + i * 2.1;
       const ox = Math.cos(a) * zone.r * 0.25;
       const oy = Math.sin(a * 1.3) * zone.r * 0.2;
-      const g = ctx.createRadialGradient(zone.x + ox, zone.y + oy, 0, zone.x + ox, zone.y + oy, zone.r * 1.1);
-      g.addColorStop(0, "rgba(255, 255, 255, 0.22)");
-      g.addColorStop(0.6, "rgba(255, 255, 255, 0.08)");
-      g.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(zone.x - zone.r * 1.4, zone.y - zone.r * 1.4, zone.r * 2.8, zone.r * 2.8);
+      this.drawLight(ctx, puff, zone.x + ox, zone.y + oy);
     }
     ctx.restore();
     ctx.save();
@@ -506,38 +537,62 @@ export class BreakoutRenderer {
     switch (o.kind) {
       case "bumper": {
         const color = p.neon.amber;
-        const r = o.r * (1 + pulse * 0.18);
-        const halo = ctx.createRadialGradient(o.x, o.y, r * 0.4, o.x, o.y, r * 2.4);
-        halo.addColorStop(0, alpha(color, 0.3 + pulse * 0.5));
-        halo.addColorStop(1, alpha(color, 0));
+        const k = 1 + pulse * 0.18;
+        const r = o.r * k;
+        const halo = this.light(`halo|${color}|${o.r}`, o.r * 2.4, (g, cx, cy) => {
+          const fill = g.createRadialGradient(cx, cy, o.r * 0.4, cx, cy, o.r * 2.4);
+          fill.addColorStop(0, color);
+          fill.addColorStop(1, alpha(color, 0));
+          g.fillStyle = fill;
+          g.fillRect(0, 0, o.r * 4.8, o.r * 4.8);
+        });
         ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = halo;
-        ctx.fillRect(o.x - r * 2.4, o.y - r * 2.4, r * 4.8, r * 4.8);
+        ctx.globalAlpha = Math.min(1, 0.3 + pulse * 0.5);
+        this.drawLight(ctx, halo, o.x, o.y, k);
+        ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = "source-over";
-        const body = ctx.createRadialGradient(o.x - r * 0.3, o.y - r * 0.3, r * 0.1, o.x, o.y, r);
-        body.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-        body.addColorStop(0.5, alpha(tint(color, 0.3), 0.9));
-        body.addColorStop(1, alpha(color, 0.85));
-        ctx.fillStyle = body;
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, r, 0, TAU);
-        ctx.fill();
-        this.neonShadow(ctx, alpha(color, 0.9), 10);
+        const ring = this.glow(`ring|${color}|${o.r}`, o.r * 2, o.r * 2, 10, (g) => {
+          g.strokeStyle = alpha(color, 0.9);
+          g.lineWidth = 4;
+          g.beginPath();
+          g.arc(o.r, o.r, o.r, 0, TAU);
+          g.stroke();
+        });
+        this.drawLight(ctx, ring, o.x, o.y, k);
+        const body = this.light(`bumper|${color}|${o.r}`, o.r, (g, cx, cy) => {
+          const fill = g.createRadialGradient(cx - o.r * 0.3, cy - o.r * 0.3, o.r * 0.1, cx, cy, o.r);
+          fill.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+          fill.addColorStop(0.5, alpha(tint(color, 0.3), 0.9));
+          fill.addColorStop(1, alpha(color, 0.85));
+          g.fillStyle = fill;
+          g.beginPath();
+          g.arc(cx, cy, o.r, 0, TAU);
+          g.fill();
+        });
+        this.drawLight(ctx, body, o.x, o.y, k);
         ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
         ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, r, 0, TAU);
         ctx.stroke();
-        this.clearShadow(ctx);
         break;
       }
       case "rail": {
-        this.neonShadow(ctx, "rgba(255, 255, 255, 0.7)", 8);
+        const bar = this.glow(`rail|${o.w}`, o.w, 0, 8, (g) => {
+          g.strokeStyle = "rgba(255, 255, 255, 0.7)";
+          g.lineWidth = 5;
+          g.beginPath();
+          g.moveTo(0, 0);
+          g.lineTo(o.w, 0);
+          g.stroke();
+        });
+        this.drawLight(ctx, bar, o.x + o.w / 2, o.y);
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 + pulse * 0.15})`;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(o.x, o.y);
         ctx.lineTo(o.x + o.w, o.y);
         ctx.stroke();
-        this.clearShadow(ctx);
         ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
         for (const ex of [o.x, o.x + o.w]) {
           ctx.beginPath();
@@ -549,14 +604,21 @@ export class BreakoutRenderer {
       case "trampoline": {
         const color = p.neon.lime;
         const sag = 1 + pulse * 3;
-        this.neonShadow(ctx, alpha(color, 0.9), 12);
+        const bar = this.glow(`tramp|${color}|${o.w}`, o.w, 0, 12, (g) => {
+          g.strokeStyle = alpha(color, 0.9);
+          g.lineWidth = 5;
+          g.beginPath();
+          g.moveTo(0, 0);
+          g.lineTo(o.w, 0);
+          g.stroke();
+        });
+        this.drawLight(ctx, bar, o.x + o.w / 2, o.y + sag);
         ctx.strokeStyle = alpha(tint(color, 0.2), 0.95);
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(o.x, o.y);
         ctx.quadraticCurveTo(o.x + o.w / 2, o.y + sag * 2, o.x + o.w, o.y);
         ctx.stroke();
-        this.clearShadow(ctx);
         // Springs.
         ctx.strokeStyle = alpha(color, 0.55);
         ctx.lineWidth = 1;
@@ -576,14 +638,23 @@ export class BreakoutRenderer {
         const gx = game.guardX(o, time);
         const x = gx - o.w / 2;
         const y = o.y - o.h / 2;
-        this.neonShadow(ctx, alpha(p.steel, 0.6 + pulse * 0.4), 8);
+        const plate = this.glow(`guard|${o.w}x${o.h}`, o.w, o.h, 8, (g) => {
+          g.fillStyle = alpha(p.steel, 0.6);
+          this.roundRect(g, 0, 0, o.w, o.h, o.h / 2);
+          g.fill();
+        });
+        this.drawLight(ctx, plate, gx, o.y);
+        if (pulse > 0.02) {
+          ctx.globalAlpha = pulse * 0.7;
+          this.drawLight(ctx, plate, gx, o.y, 1.15);
+          ctx.globalAlpha = 1;
+        }
         const g = ctx.createLinearGradient(0, y, 0, y + o.h);
         g.addColorStop(0, "rgba(255, 255, 255, 0.95)");
         g.addColorStop(1, alpha(p.steel, 0.8));
         ctx.fillStyle = g;
         this.roundRect(ctx, x, y, o.w, o.h, o.h / 2);
         ctx.fill();
-        this.clearShadow(ctx);
         ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
         ctx.lineWidth = 0.8;
         for (let i = 1; i < 4; i++) {
@@ -631,15 +702,21 @@ export class BreakoutRenderer {
         // Housing with spinning blades.
         const hx = o.x;
         const hr = o.spread * 0.42;
+        const hub = this.glow(`ring|${color}|${hr}`, hr * 2, hr * 2, 8, (g) => {
+          g.strokeStyle = alpha(color, 0.8);
+          g.lineWidth = 4;
+          g.beginPath();
+          g.arc(hr, hr, hr, 0, TAU);
+          g.stroke();
+        });
+        this.drawLight(ctx, hub, hx, o.y);
         ctx.fillStyle = "rgba(20, 24, 40, 0.9)";
         ctx.beginPath();
         ctx.arc(hx, o.y, hr, 0, TAU);
         ctx.fill();
         ctx.strokeStyle = alpha(color, 0.9);
-        this.neonShadow(ctx, alpha(color, 0.8), 8);
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        this.clearShadow(ctx);
         ctx.save();
         ctx.translate(hx, o.y);
         ctx.rotate(time * 9 * o.dir);
@@ -658,28 +735,39 @@ export class BreakoutRenderer {
       case "blackhole": {
         const color = p.neon.violet;
         const reach = o.r * 2.5;
-        const pull = ctx.createRadialGradient(o.x, o.y, o.r * 0.6, o.x, o.y, reach);
-        pull.addColorStop(0, "rgba(0, 0, 0, 0.85)");
-        pull.addColorStop(0.5, alpha(color, 0.18));
-        pull.addColorStop(1, alpha(color, 0));
-        ctx.fillStyle = pull;
-        ctx.fillRect(o.x - reach, o.y - reach, reach * 2, reach * 2);
+        const pull = this.light(`pull|${o.r}`, reach, (g, cx, cy) => {
+          const fill = g.createRadialGradient(cx, cy, o.r * 0.6, cx, cy, reach);
+          fill.addColorStop(0, "rgba(0, 0, 0, 0.85)");
+          fill.addColorStop(0.5, alpha(color, 0.18));
+          fill.addColorStop(1, alpha(color, 0));
+          g.fillStyle = fill;
+          g.fillRect(0, 0, reach * 2, reach * 2);
+        });
+        this.drawLight(ctx, pull, o.x, o.y);
         ctx.fillStyle = "#000000";
         ctx.beginPath();
         ctx.arc(o.x, o.y, o.r, 0, TAU);
         ctx.fill();
         // Accretion ring.
+        const rx = o.r * 1.35;
+        const ry = o.r * 1.05;
+        const disc = this.glow(`hole|${o.r}`, rx * 2, ry * 2, 10, (g) => {
+          g.strokeStyle = alpha(color, 0.9);
+          g.lineWidth = 4;
+          g.beginPath();
+          g.ellipse(rx, ry, rx, ry, 0, 0, TAU);
+          g.stroke();
+        });
         ctx.save();
         ctx.translate(o.x, o.y);
         ctx.rotate(-time * 2.2);
-        this.neonShadow(ctx, alpha(color, 0.9), 10);
+        this.drawLight(ctx, disc, 0, 0);
         ctx.strokeStyle = alpha(tint(color, 0.25), 0.9 + pulse * 0.1);
         ctx.lineWidth = 1.6;
         ctx.setLineDash([o.r * 1.4, o.r * 0.6]);
         ctx.beginPath();
-        ctx.ellipse(0, 0, o.r * 1.35, o.r * 1.05, 0, 0, TAU);
+        ctx.ellipse(0, 0, rx, ry, 0, 0, TAU);
         ctx.stroke();
-        this.clearShadow(ctx);
         ctx.restore();
         break;
       }
@@ -720,13 +808,18 @@ export class BreakoutRenderer {
     // Dynamic extras.
     if (brick.kind === "explosive") {
       const k = 0.5 + 0.5 * Math.sin(time * 5 + brick.id);
+      const reach = brick.h * 1.4;
+      const fuse = this.light(`fuse|${brick.h}`, reach, (g, fx, fy) => {
+        const fill = g.createRadialGradient(fx, fy, 1, fx, fy, reach);
+        fill.addColorStop(0, alpha(p.neon.amber, 0.35));
+        fill.addColorStop(1, alpha(p.neon.amber, 0));
+        g.fillStyle = fill;
+        g.fillRect(0, 0, reach * 2, reach * 2);
+      });
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, brick.h * 1.4);
-      g.addColorStop(0, alpha(p.neon.amber, 0.35 * k));
-      g.addColorStop(1, alpha(p.neon.amber, 0));
-      ctx.fillStyle = g;
-      ctx.fillRect(cx - brick.h * 1.4, cy - brick.h * 1.4, brick.h * 2.8, brick.h * 2.8);
+      ctx.globalAlpha = k;
+      this.drawLight(ctx, fuse, cx, cy);
       ctx.restore();
     } else if (brick.kind === "magnet") {
       ctx.save();
@@ -1007,11 +1100,23 @@ export class BreakoutRenderer {
     const iced = s.paddleMod?.kind === "ice";
 
     ctx.save();
-    this.neonShadow(ctx, alpha(accent, 0.9), 14 + scene.paddleFlash * 18);
+    // The underglow is one sprite per accent, stretched to the paddle's width
+    // (a soft light stretches without showing it). A hit widens and brightens it.
+    const GLOW_W = 80;
+    const under = this.glow(`paddle|${accent}|${pd.height}`, GLOW_W, pd.height, 14, (g) => {
+      g.fillStyle = alpha(accent, 0.9);
+      this.roundRect(g, 3, pd.height - 4, GLOW_W - 6, 4, 2);
+      g.fill();
+    });
+    this.drawLight(ctx, under, s.paddleX, y + pd.height / 2, 1, width / GLOW_W);
+    if (scene.paddleFlash > 0.02) {
+      ctx.globalAlpha = scene.paddleFlash;
+      this.drawLight(ctx, under, s.paddleX, y + pd.height / 2, 1.6, (width / GLOW_W) * 1.1);
+      ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = alpha(accent, 0.9);
     this.roundRect(ctx, x + 3, y + pd.height - 3, width - 6, 3, 1.5);
     ctx.fill();
-    this.clearShadow(ctx);
 
     const g = ctx.createLinearGradient(0, y, 0, y + pd.height);
     g.addColorStop(0, iced ? "rgba(225, 250, 255, 0.98)" : "rgba(255, 255, 255, 0.96)");
@@ -1075,24 +1180,31 @@ export class BreakoutRenderer {
       ctx.restore();
     }
 
-    const ar = r * (2.6 + mul * 0.5);
-    const aura = ctx.createRadialGradient(ball.x, ball.y, r * 0.4, ball.x, ball.y, ar);
-    aura.addColorStop(0, alpha(accent, 0.55));
-    aura.addColorStop(1, alpha(accent, 0));
+    // Aura and core are two small sprites per accent; the aura grows with speed.
+    const ar0 = r * 3;
+    const aura = this.light(`aura|${accent}|${r}`, ar0, (g, cx, cy) => {
+      const fill = g.createRadialGradient(cx, cy, r * 0.4, cx, cy, ar0);
+      fill.addColorStop(0, alpha(accent, 0.55));
+      fill.addColorStop(1, alpha(accent, 0));
+      g.fillStyle = fill;
+      g.fillRect(0, 0, ar0 * 2, ar0 * 2);
+    });
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    ctx.fillStyle = aura;
-    ctx.fillRect(ball.x - ar, ball.y - ar, ar * 2, ar * 2);
+    this.drawLight(ctx, aura, ball.x, ball.y, (2.6 + mul * 0.5) / 3);
     ctx.restore();
 
-    const core = ctx.createRadialGradient(ball.x - r * 0.3, ball.y - r * 0.3, r * 0.1, ball.x, ball.y, r);
-    core.addColorStop(0, "#ffffff");
-    core.addColorStop(0.7, "#f4f6ff");
-    core.addColorStop(1, tint(accent, 0.35));
-    ctx.fillStyle = core;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, r, 0, TAU);
-    ctx.fill();
+    const core = this.light(`core|${accent}|${r}`, r + 1, (g, cx, cy) => {
+      const fill = g.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+      fill.addColorStop(0, "#ffffff");
+      fill.addColorStop(0.7, "#f4f6ff");
+      fill.addColorStop(1, tint(accent, 0.35));
+      g.fillStyle = fill;
+      g.beginPath();
+      g.arc(cx, cy, r, 0, TAU);
+      g.fill();
+    });
+    this.drawLight(ctx, core, ball.x, ball.y);
 
     // Clone: countdown ring.
     if (ball.ttl !== null) {
@@ -1241,22 +1353,55 @@ export class BreakoutRenderer {
   }
 
   /**
-   * A glow of `blurWorld` world units. Both engines blur in device space and
-   * ignore the transform, so the radius carries the scale; the hairline
-   * offset is there for older WebKit, which skips a shadow sitting exactly
-   * under its shape.
+   * A shape's glow, painted once at the current scale and reused: `paint`
+   * draws the silhouette in world units inside a `w × h` box at the origin;
+   * the sprite is that silhouette bloomed by `blur` world units.
+   *
+   * This replaces `shadowBlur`, which every engine re-blurs on every call —
+   * with a paddle, three zones and a bumper that was five full-resolution
+   * blur passes per frame, the single biggest cost on a phone.
    */
-  private neonShadow(ctx: Ctx, color: string, blurWorld: number): void {
-    ctx.shadowColor = color;
-    ctx.shadowBlur = blurWorld * this.scale;
-    ctx.shadowOffsetX = 0.01;
-    ctx.shadowOffsetY = 0.01;
+  private glow(key: string, w: number, h: number, blur: number, paint: (g: Ctx) => void): LightSprite {
+    const cached = this.lightCache.get(key);
+    if (cached) return cached;
+    const { scale } = this;
+    const pad = Math.ceil(blur * 1.6);
+    const silhouette = smoothCanvas((w + pad * 2) * scale, (h + pad * 2) * scale);
+    const g = silhouette.getContext("2d")!;
+    g.setTransform(scale, 0, 0, scale, pad * scale, pad * scale);
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    paint(g);
+    const sprite = { canvas: bloom(silhouette, blur * scale), w, h, pad };
+    this.lightCache.set(key, sprite);
+    return sprite;
   }
 
-  private clearShadow(ctx: Ctx): void {
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+  /**
+   * A soft light of `radius` world units painted once and reused: `paint`
+   * fills a `2·radius` square in world units, centred on (cx, cy). Halos,
+   * auras and the ball itself are gradients that used to be rebuilt every
+   * frame; drawn as sprites they cost one `drawImage` and allocate nothing.
+   */
+  private light(key: string, radius: number, paint: (g: Ctx, cx: number, cy: number) => void): LightSprite {
+    const cached = this.lightCache.get(key);
+    if (cached) return cached;
+    const { scale } = this;
+    const size = radius * 2;
+    const canvas = smoothCanvas(size * scale, size * scale);
+    const g = canvas.getContext("2d")!;
+    g.setTransform(scale, 0, 0, scale, 0, 0);
+    paint(g, radius, radius);
+    const sprite = { canvas, w: size, h: size, pad: 0 };
+    this.lightCache.set(key, sprite);
+    return sprite;
+  }
+
+  /** Draw a light centred on (cx, cy), scaled by `ky` (and `kx` across). */
+  private drawLight(ctx: Ctx, s: LightSprite, cx: number, cy: number, ky = 1, kx = ky): void {
+    const w = (s.w + s.pad * 2) * kx;
+    const h = (s.h + s.pad * 2) * ky;
+    ctx.drawImage(s.canvas, cx - w / 2, cy - h / 2, w, h);
   }
 
   private roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number): void {

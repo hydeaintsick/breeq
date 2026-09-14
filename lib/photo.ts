@@ -20,6 +20,11 @@ export function screenPhoto(url: string): string {
   return transformed(url, "w_1400,c_limit,q_auto:good,f_auto");
 }
 
+/** A journey node's medallion: a small square crop, drawn once into a sprite. */
+export function nodePhoto(url: string): string {
+  return transformed(url, "w_240,h_240,c_fill,g_auto,q_auto:good,f_auto");
+}
+
 /**
  * The bloom behind the shelf: a thumbnail blurred on the server, upscaled by
  * the browser. Replaces a 56px CSS blur over a full-screen image, which is the

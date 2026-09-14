@@ -22,6 +22,7 @@ const LOCK_MARK = (
 
 export function PlayCard({
   href,
+  onNavigate,
   onSelect,
   kicker,
   title,
@@ -42,6 +43,8 @@ export function PlayCard({
   preview = true,
 }: {
   href?: string;
+  /** Runs inside the click on a linked card, before the navigation (a gesture-gated request). */
+  onNavigate?: () => void;
   onSelect?: (card: HTMLElement) => void;
   kicker: string;
   title: string;
@@ -161,7 +164,7 @@ export function PlayCard({
           {copy}
         </button>
       ) : href ? (
-        <Link href={href} className={cardClass} aria-label={label}>
+        <Link href={href} className={cardClass} aria-label={label} onClick={onNavigate}>
           {copy}
         </Link>
       ) : null}

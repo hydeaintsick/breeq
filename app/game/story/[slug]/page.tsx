@@ -45,13 +45,13 @@ export default async function StoryEpisodePage({
       tutorial={tutorial.enabled ? { done: tutorial.done } : null}
       initialSlug={slug}
       discovered={discovered}
-      kicker="Story"
+      kicker="Story Journey"
       title={
         <>
-          Choose an <span className="text-neon">episode</span>.
+          The way <span className="text-neon">home</span>.
         </>
       }
-      body="Kal woke up on a world that is not his own. Each episode is a run of walls on his way home: finish one to unlock the next."
+      body="Kal woke up on a world that is not his own. Each zone on the route is an episode: clear one and the debris lifts off the next."
     />
   );
 }

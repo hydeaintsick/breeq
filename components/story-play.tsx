@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { markDiscovered } from "@/app/actions/discoveries";
 import { awardChapterClear, type ChapterClearResult } from "@/app/actions/progress";
 import { BreakoutPreview } from "@/components/breakout-preview";
@@ -18,6 +18,7 @@ export function StoryPlay({
   backgroundUrl,
   seed,
   paused,
+  chrome,
   discovered,
   onDiscovered,
   onCleared,
@@ -30,6 +31,8 @@ export function StoryPlay({
   backgroundUrl?: string | null;
   seed: number;
   paused: boolean;
+  /** Controls laid over the board's HUD band (the pause button). */
+  chrome?: ReactNode;
   /**
    * Piece ids the story has already explained. The first time the ball meets a
    * kind that is not in here, the run freezes and a card names it; then it is
@@ -186,6 +189,7 @@ export function StoryPlay({
         haptics
         showCaption={false}
         paused={paused || lesson !== null}
+        chrome={chrome}
         onCleared={handleCleared}
         onOver={handleOver}
         onEvent={onEvent}

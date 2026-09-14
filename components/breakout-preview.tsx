@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSwipe } from "@/components/swipe-provider";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
 import type { Level } from "@/game/breakout/engine/types";
@@ -45,6 +45,7 @@ export function BreakoutPreview({
   thumbRail = false,
   sound = false,
   haptics = false,
+  chrome,
   onCleared,
   onOver,
   onEvent,
@@ -70,6 +71,8 @@ export function BreakoutPreview({
   sound?: boolean;
   /** Vibrate on contact and big moments (real games only). */
   haptics?: boolean;
+  /** Full-screen boards: controls laid over the HUD band (a pause button). */
+  chrome?: ReactNode;
   onCleared?: MountOptions["onCleared"];
   onOver?: MountOptions["onOver"];
   /** Every game event, for guided runs. Keep the identity stable (a ref) or the game remounts. */
@@ -201,10 +204,11 @@ export function BreakoutPreview({
 
   if (contain) {
     // Full-screen board: the canvas is the whole stage (photo edge to edge);
-    // the field is fitted into the box left free by the chrome and the rail.
+    // the field is fitted into the box left free above the rail. The HUD band
+    // at the top of the field carries the score and the chrome.
     return (
-      <figure className="story-play-stage" role="img" aria-label={boardLabel}>
-        <canvas ref={canvasRef} className="story-play-canvas" />
+      <figure className="story-play-stage" aria-label={boardLabel}>
+        <canvas ref={canvasRef} className="story-play-canvas" role="img" aria-label={boardLabel} />
         <div className="story-play-slot">
           <div
             ref={fitRef}
@@ -212,6 +216,7 @@ export function BreakoutPreview({
             style={{ aspectRatio: `${first.width} / ${first.height}`, "--field-ratio": first.width / first.height } as React.CSSProperties}
           >
             {hudView}
+            {chrome}
           </div>
         </div>
         {railView}

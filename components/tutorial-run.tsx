@@ -368,6 +368,13 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
         haptics
         showCaption={false}
         paused={paused}
+        chrome={
+          cleared || lost ? null : (
+            <button type="button" className="story-pause" aria-label="Pause" onClick={() => setMenu(true)}>
+              <CloseGlyph />
+            </button>
+          )
+        }
         onCleared={onCleared}
         onOver={onOver}
         onEvent={onEvent}
@@ -392,12 +399,6 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
           </button>
         </div>
       ) : null}
-
-      {cleared || lost ? null : (
-        <button type="button" className="story-pause" aria-label="Pause" onClick={() => setMenu(true)}>
-          <CloseGlyph />
-        </button>
-      )}
 
       {cleared ? (
         <StoryClear

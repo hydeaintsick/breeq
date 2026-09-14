@@ -2,6 +2,7 @@
 
 import { PlayCard } from "@/components/play-card";
 import { LOCKDOWN, QUIET_START } from "@/game/breakout/levels";
+import { enterImmersive, wantsImmersive } from "@/game/breakout/preview";
 import { EARN_PATH, STORY_PATH } from "@/lib/auth/paths";
 import { EARN_UNLOCK_LEVEL } from "@/lib/progress";
 
@@ -28,6 +29,10 @@ export function GameModePicker({
         action={tutorialRequired ? "Learn to play" : "Play Story"}
         levels={STORY_LEVELS}
         seed={11}
+        // Phones and tablets: the tap that opens Story is the gesture full screen needs.
+        onNavigate={() => {
+          if (wantsImmersive()) void enterImmersive();
+        }}
       />
       <PlayCard
         href={EARN_PATH}
