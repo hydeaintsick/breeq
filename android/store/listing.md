@@ -6,15 +6,16 @@ Everything Play Console asks for, in the order it asks. Assets live next to this
 | --- | --- | --- |
 | App icon | `icon-512.png` | 512×512 PNG, 32-bit, ≤ 1 MB |
 | Feature graphic | `feature-1024x500.png` | 1024×500 PNG/JPEG, no alpha |
-| Phone screenshots (7) | `screenshots/phone/01…07.png` | 1080×1920, 9:16, 24-bit PNG |
-| 7-inch tablet (7) | `screenshots/tablet-7/01…07.png` | 1440×2560 |
-| 10-inch tablet (7) | `screenshots/tablet-10/01…07.png` | 2160×3840 |
+| Phone screenshots (8) | `screenshots/phone/01…08.png` | 1080×1920, 9:16, 24-bit PNG |
+| 7-inch tablet (8) | `screenshots/tablet-7/01…08.png` | 1440×2560 |
+| 10-inch tablet (8) | `screenshots/tablet-10/01…08.png` | 2160×3840 |
 | Release bundle | `../dist/breeq-<version>-<code>.aab` | built by `pnpm android:release` |
 
 Screenshots are composed from real captures of the release build on a Pixel-class
 emulator (1080×2400) signed in as the review account; the composer lives outside the
 repo (a one-off `sharp` script). Upload them in numeric order: the first three read as
-a triptych (Story → Build → Earn) and share one sky.
+a triptych (Story → Play → Build) and share one sky; 04–06 and 07–08 share theirs.
+Panels 01, 06 and 07 carry the story (the Book of Kal, an episode map, the galaxy map).
 
 ---
 
@@ -39,12 +40,12 @@ Break neon bricks on player-made walls. Clear them, earn gems, win pots in ETH.
 ### Full description (4000 characters max)
 
 ```
-Breeq is a brick breaker built by players, for players.
+Breeq is a brick breaker with a story to finish and walls built by players.
 
-Every wall is a photo someone chose, covered in glowing glass bricks and bonus rings that bend the ball. Take the paddle, clear the wall, and the next one is waiting.
+Every wall is glass: neon bricks over a photo, bonus rings that bend the ball, a paddle under your thumb. Clear it, and the next one is waiting.
 
-PLAY THE STORY
-Follow Kal, a galactic gecko, on the road home: 24 hand-built episodes, ten walls each. Every clear pays XP, three stars reward a clean run, and the level bar climbs.
+HELP KAL FIND HOME
+Kal is a galactic gecko who hatched alone on a grey moon, far from Vitra, the glass-sky world his egg left behind. All he has is a pod, a star chart with one star circled, and a heartbeat he remembers from inside the egg. Walk him home: 24 hand-built episodes and 240 walls across three seasons, past the Lanterns that guard his sky, the peoples of the Long Migration, and the Hush, the dark that eats light. Every clear pays XP and turns a page in the Book of Kal; the galaxy map fills in behind you, one world at a time.
 
 RINGS THAT BEND THE BALL
 Slow rings, ×2 and ×3 speed rings, split rings that spawn a second ball, portals that teleport it. Locks and keys, explosive bricks, regenerating bricks, bumpers, rails, fans and black holes. Each episode teaches one new piece and then makes you use it.
@@ -67,14 +68,14 @@ Sign in with Google or email. Your XP, gems, ETH balance and walls are the same 
 No ads. No subscription. Gems are optional; the story is free.
 ```
 
-About 1,750 characters. Plain text only: Play strips markdown, and emoji in
+About 2,150 characters. Plain text only: Play strips markdown, and emoji in
 descriptions read as spam to reviewers.
 
 ### What's new (500 characters max, per release)
 
 ```
 First release.
-• 24 story episodes, 240 walls, a new piece every episode.
+• Help Kal, a gecko hatched on the wrong moon, find his way home: 24 episodes, 240 walls, the Book of Kal and a galaxy map.
 • Wall editor with photo backgrounds, twenty skies and a robot proof.
 • Earn store: publish walls, buy tickets in gems, clear for pots in ETH.
 • Sound in each level's key, haptics, portrait one-thumb play.
@@ -194,7 +195,7 @@ website.
 2. Graphics:
    - App icon → `icon-512.png`
    - Feature graphic → `feature-1024x500.png`
-   - Phone screenshots → drag `screenshots/phone/01…07.png` in order (the uploader
+   - Phone screenshots → drag `screenshots/phone/01…08.png` in order (the uploader
      keeps drop order; if it doesn't, reorder by dragging the thumbnails).
    - 7-inch tablet → `screenshots/tablet-7/*`
    - 10-inch tablet → `screenshots/tablet-10/*`
