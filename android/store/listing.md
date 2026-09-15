@@ -214,10 +214,8 @@ open the opt-in link on a phone, install, and check:
 - Google sign-in completes inside the app (custom user agent, no "disallowed_useragent").
 - A story run: sound, haptics, pause, clear screen.
 - A referral link (`https://breeq.space/r/<code>`) opens the app, not Chrome. If it
-  opens Chrome, `assetlinks.json` is not yet served with the Play signing SHA-256: copy
-  the "App signing key certificate" fingerprint from **Test and release → Setup → App
-  signing** into `ANDROID_CERT_SHA256` (comma-separated with the upload key) and
-  redeploy the site.
+  opens Chrome, `assetlinks.json` does not yet list the Play signing SHA-256: see
+  step 7 below.
 
 Play requires a closed test with at least 12 testers for 14 days before a new personal
 developer account can apply for production. Organization accounts skip this.
@@ -233,8 +231,18 @@ one to seven days.
 ### 7. After approval
 
 - **Test and release → Setup → App signing:** copy the SHA-256 of the app signing key
-  into `ANDROID_CERT_SHA256` on Vercel and redeploy so App Links verify for the Play
-  build.
+  and append it to `ANDROID_CERT_SHA256` on Vercel (the upload key is already there,
+  comma-separate the two), then redeploy so App Links verify for the Play build:
+
+  ```sh
+  pnpm dlx vercel env rm ANDROID_CERT_SHA256 production
+  printf '29:84:…:E1:FA,<PLAY_SHA256>' | pnpm dlx vercel env add ANDROID_CERT_SHA256 production
+  pnpm dlx vercel redeploy https://www.breeq.space
+  ```
+
+  Check with `curl https://breeq.space/.well-known/assetlinks.json` (200, no redirect)
+  and Google's checker:
+  `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://breeq.space&relation=delegate_permission/common.handle_all_urls`.
 - **Grow → Store presence → Custom store listings:** optional, a listing per country.
 - **Monitor → Pre-launch report:** Google runs the build on real devices and posts
   crashes and accessibility findings; read it once per release.
