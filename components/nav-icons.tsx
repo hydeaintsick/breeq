@@ -250,6 +250,28 @@ export function ListIcon() {
   );
 }
 
+export function ShieldIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M8 2.4 13.2 4.4v4.1c0 3.1-2.1 5.2-5.2 6.1-3.1-.9-5.2-3-5.2-6.1V4.4L8 2.4Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.8 8.1 7.3 9.6 10.4 6.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function GemIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">

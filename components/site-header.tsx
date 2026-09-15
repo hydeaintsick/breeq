@@ -13,6 +13,7 @@ import {
   MailIcon,
   PageIcon,
   PlayIcon,
+  ShieldIcon,
   SignOutIcon,
 } from "@/components/nav-icons";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -21,6 +22,7 @@ import { ADMIN_DASHBOARD_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 const links = [
   { href: "/whitepaper", label: "Whitepaper", Icon: PageIcon },
   { href: "/terms", label: "Terms", Icon: ListIcon },
+  { href: "/privacy", label: "Privacy", Icon: ShieldIcon },
   { href: "/contact", label: "Contact", Icon: MailIcon },
 ] as const;
 

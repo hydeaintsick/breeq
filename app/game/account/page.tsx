@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AccountForm } from "@/components/account-form";
 import { PlaySettings } from "@/components/play-settings";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +66,14 @@ export default async function AccountPage() {
       <div className="mt-4">
         <PlaySettings />
       </div>
+      <p className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-muted">
+        <Link href="/terms" className="hover:text-ink">
+          Terms
+        </Link>
+        <Link href="/privacy" className="hover:text-ink">
+          Privacy
+        </Link>
+      </p>
       </div>
     </section>
   );
