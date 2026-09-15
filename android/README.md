@@ -58,9 +58,10 @@ The debug build has the id `com.breeq.breeq.debug`, allows cleartext HTTP, and e
 ## Play Console
 
 App: **Breeq: Brick Breaker & Earn**, package `com.breeq.breeq`. Listing copy and assets are
-in `store/`: `listing.md` (name, descriptions, category), `icon-512.png`,
-`feature-1024x500.png`. Enable Play App Signing on the first upload; the key committed here
-is the *upload* key.
+in `store/`: `listing.md` (copy, App content answers, data safety table and the upload
+walkthrough), `icon-512.png`, `feature-1024x500.png`, and `screenshots/{phone,tablet-7,tablet-10}/`
+(seven panels each, composed from real captures of the release build; the first three are a
+triptych). Play App Signing is on; the key committed here is the *upload* key.
 
 Gem packs are bought through Stripe Checkout inside the WebView. Play's payments policy
 expects Google Play Billing for digital goods sold inside an app: review this before the
