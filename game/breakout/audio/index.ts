@@ -1,7 +1,8 @@
 export { isSoundEnabled, isSoundSupported, setSoundEnabled, unlockSound } from "./bus";
 export { BreakoutSfx } from "./sfx";
 export { createPayoutSfx, type PayoutSfx } from "./payout";
-export { createEnergySfx, type EnergySfx } from "./energy";
+export { createEnergySfx, ENERGY_SURGE_MS, type EnergySfx } from "./energy";
+export { playSheetAppear, playSheetBack, playSheetBuy } from "./sheet";
 export { acquireStoryTheme, acquireTheme, storyThemeChord, type StoryThemeChord, type StoryThemeHandle, type ThemeHandle } from "./theme";
 export { arcade, pursuit, type ThemeScore } from "./themes";
 export { levelKey } from "./sfx";

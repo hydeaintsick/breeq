@@ -12,19 +12,23 @@ export function SoundToggle({ variant = "chip" }: { variant?: "chip" | "row" | "
   const label = enabled ? "Turn sound off" : "Turn sound on";
 
   if (variant === "menu") {
+    // A switch named by its visible label; the state is `aria-checked`, the
+    // "On / Off" text only repeats it for sighted players.
     return (
       <button
         type="button"
+        role="switch"
         className="nav-link flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-left"
-        aria-pressed={enabled}
-        aria-label={label}
+        aria-checked={enabled}
         onClick={toggle}
       >
         <span className="flex items-center gap-2.5">
           {enabled ? <SoundOnIcon /> : <SoundOffIcon />}
           Sound
         </span>
-        <span className="text-xs font-medium uppercase tracking-[0.12em]">{enabled ? "On" : "Off"}</span>
+        <span className="text-xs font-medium uppercase tracking-[0.12em]" aria-hidden="true">
+          {enabled ? "On" : "Off"}
+        </span>
       </button>
     );
   }

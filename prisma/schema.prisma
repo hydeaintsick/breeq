@@ -261,19 +261,25 @@ enum PurchaseStatus {
   FAILED
 }
 
-/// A gem pack bought through Stripe Checkout. Credited once, when the session is paid.
+/// A gem pack bought through Stripe. Credited once, when the PaymentIntent (the in-sheet
+/// payment) or the Checkout Session (the earlier redirect flow) is paid — the gate is the
+/// `PENDING → PAID` flip, not an index. The Stripe ids are plain indexes on purpose: a Mongo
+/// unique index counts a missing field as `null`, and every purchase lacks one of the two.
 model GemPurchase {
-  id              String         @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String         @db.ObjectId
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gems            Int
-  usdCents        Int
-  discountPct     Float          @default(0)
-  stripeSessionId String?        @unique
-  status          PurchaseStatus @default(PENDING)
-  createdAt       DateTime       @default(now())
-  paidAt          DateTime?
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String         @db.ObjectId
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gems                  Int
+  usdCents              Int
+  discountPct           Float          @default(0)
+  stripeSessionId       String?
+  stripePaymentIntentId String?
+  status                PurchaseStatus @default(PENDING)
+  createdAt             DateTime       @default(now())
+  paidAt                DateTime?
 
+  @@index([stripeSessionId])
+  @@index([stripePaymentIntentId])
   @@index([userId, createdAt])
   @@index([status, createdAt])
 }

@@ -224,6 +224,14 @@ html[data-theme="dark"] {
     color: var(--ink);
   }
 
+  /* Keyboard focus reads like hover, plus the ring every other control has. */
+  .nav-link:focus-visible {
+    color: var(--ink);
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 0.5rem;
+  }
+
   /* Neon gradient text for one word per headline. */
   .text-neon {
     background: linear-gradient(92deg, var(--neon-blue) 0%, var(--neon-violet) 45%, var(--neon-pink) 100%);
@@ -1115,28 +1123,29 @@ html[data-theme="dark"] {
 
 .header-menu {
   width: max-content;
+  min-width: 13.5rem;
   max-width: min(16.5rem, calc(100vw - 2 * var(--page-gutter)));
 }
 
-.header-menu-pane .nav-link {
+.header-menu .nav-link {
   white-space: nowrap;
 }
 
-.header-menu-doors,
-.header-menu-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.35rem;
+/* Rows fill the sheet: the ring sits inside the row, not on the sheet's edge. */
+.header-menu .nav-link:focus-visible {
+  outline-offset: -2px;
+  border-radius: 0.75rem;
 }
 
-.header-menu-doors .header-chip[aria-expanded="true"],
-.header-menu-chips .header-chip[aria-pressed="true"] {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--field) 70%, var(--ink) 14%);
+/* A hairline before the way out of a mode ("Leave the story"). */
+.header-menu-rule {
+  height: 1px;
+  margin: 0.25rem 0.75rem;
+  background: var(--hairline);
 }
 
 .header-menu-pane {
+  padding-left: 0.75rem;
   animation: pill-unfold 280ms var(--ease) both;
 }
 
@@ -4912,6 +4921,128 @@ html[data-theme="dark"] .lore-halo-photo {
   max-height: 84svh;
 }
 
+/* --- The payment step: the pack, the wallets, the card, one Pay button ------ */
+/* The card form is taller than the grid: the sheet may grow, still capped. */
+.gem-shop-sheet[data-step="pay"] {
+  height: auto;
+  min-height: 66svh;
+  max-height: 92svh;
+}
+
+.pay-step {
+  display: grid;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.pay-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.95rem 0.7rem 0.75rem;
+  border-radius: 1.1rem;
+}
+
+.pay-summary-art {
+  display: block;
+  width: 3.4rem;
+  flex: none;
+}
+
+.pay-summary-art .pack-art {
+  max-width: none;
+}
+
+.pay-summary-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.pay-summary-gems {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-summary-sub {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.pay-summary-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-summary-price s {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+/* Apple Pay / Google Pay: Stripe decides which the device has; none, and the row is gone. */
+.pay-express[data-available="true"] {
+  min-height: 3rem;
+}
+
+.pay-express[hidden] {
+  display: none;
+}
+
+.pay-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.pay-divider::before,
+.pay-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
+
+.pay-card {
+  min-height: 6rem;
+}
+
+.pay-cta {
+  width: 100%;
+  min-height: 3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pay-back {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: -0.35rem;
+}
+
+.pay-secure {
+  margin-top: -0.25rem;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
 /* --- The Earn manual ---------------------------------------------------- */
 .manual-steps {
   display: grid;
@@ -5818,9 +5949,12 @@ html[data-theme="dark"] .lore-halo-photo {
   --on-cta: #0f1117;
   position: relative;
   width: 100%;
-  max-width: 27rem;
+  /* Same footprint as the gem shop sheet. */
+  max-width: 48rem;
   max-height: 92svh;
   overflow-y: auto;
+  /* The wizard's steps slide in from the sides. */
+  overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding: 0.6rem 1.15rem max(1.15rem, env(safe-area-inset-bottom));
@@ -5848,15 +5982,8 @@ html[data-theme="dark"] .lore-halo-photo {
 }
 
 @media (min-width: 640px) {
-  .energy-sheet {
-    align-items: center;
-    padding: 1.5rem;
-  }
-
   .energy-sheet-body {
-    border-radius: 1.6rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-    padding: 0.7rem 1.5rem 1.5rem;
+    padding: 0.7rem 1.5rem max(1.5rem, env(safe-area-inset-bottom));
   }
 }
 
@@ -5872,6 +5999,321 @@ html[data-theme="dark"] .lore-halo-photo {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.07);
   color: #ffffff;
+}
+
+.energy-sheet-back {
+  margin-right: 0.15rem;
+  animation: wizard-in-fwd 320ms var(--ease) both;
+}
+
+/* --- The wizard: two steps that slide, a landing ------------------------- */
+.wizard-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: -0.2rem 0 0.55rem;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-dots li {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  transition:
+    width 320ms var(--ease),
+    background 320ms var(--ease);
+}
+
+.wizard-dots li[data-on="true"] {
+  width: 1.1rem;
+  background: linear-gradient(90deg, var(--energy), var(--energy-cool));
+}
+
+.energy-wizard[data-dir="fwd"] {
+  animation: wizard-in-fwd 420ms var(--ease) both;
+}
+
+.energy-wizard[data-dir="back"] {
+  animation: wizard-in-back 420ms var(--ease) both;
+}
+
+@keyframes wizard-in-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(3.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wizard-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-3.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The receipt: the recharge, the gem pack that pays for it, what stays in the bag. */
+.energy-receipt {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(80% 100% at 0% 0%, color-mix(in srgb, var(--energy) 10%, transparent), transparent 60%),
+    rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.energy-receipt-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.energy-receipt-row + .energy-receipt-row {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.energy-receipt-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+  text-align: left;
+}
+
+.energy-receipt-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.energy-receipt-sub {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.energy-receipt-bag {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: rgba(5, 6, 12, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.energy-receipt-bag .pack-art {
+  width: 2.5rem;
+  max-width: none;
+}
+
+.energy-receipt-amount {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.98rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.energy-receipt-amount s {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.energy-receipt-amount[data-debit="true"] {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--energy);
+}
+
+.energy-receipt-amount .gem-glyph {
+  font-size: 0.85em;
+}
+
+/* The other gem packs: one row of pills, the picked one lit. */
+.energy-gem-picks {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 -0.9rem;
+  padding: 0.1rem 0.9rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.energy-gem-picks::-webkit-scrollbar {
+  display: none;
+}
+
+.energy-gem-pick {
+  display: inline-flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  font: inherit;
+  line-height: 1.1;
+  transition:
+    border-color var(--duration) var(--ease),
+    background var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+.energy-gem-pick:disabled {
+  opacity: 0.4;
+}
+
+.energy-gem-pick[data-on="true"] {
+  border-color: color-mix(in srgb, var(--energy) 65%, transparent);
+  background: color-mix(in srgb, var(--energy) 14%, transparent);
+  color: #ffffff;
+  box-shadow: 0 0 18px -6px color-mix(in srgb, var(--energy) 60%, transparent);
+}
+
+.energy-gem-pick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.energy-gem-pick-gems {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.energy-gem-pick-gems .gem-glyph {
+  font-size: 0.75em;
+}
+
+.energy-gem-pick-price {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.energy-gem-pick[data-on="true"] .energy-gem-pick-price {
+  color: var(--energy);
+}
+
+.energy-receipt-left {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: -0.15rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.energy-receipt-left b {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The total: the one number the card is charged, last and largest. */
+.energy-receipt-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 -0.9rem -0.85rem;
+  padding: 0.8rem 0.9rem 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0 0 1.1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.energy-receipt-total-label {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.energy-receipt-total-label small {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.energy-receipt-total b {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--energy) 45%, transparent);
+}
+
+/* Stripe is being asked for the intent: two shimmering bars where the form will be. */
+.pay-loading {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+}
+
+.pay-loading-bar {
+  display: block;
+  height: 2.9rem;
+  border-radius: 12px;
+  background: linear-gradient(90deg, var(--field) 0%, color-mix(in srgb, var(--field) 50%, rgba(255, 255, 255, 0.14)) 50%, var(--field) 100%);
+  background-size: 200% 100%;
+  animation: pay-shimmer 1.4s ease-in-out infinite;
+}
+
+.pay-loading-line {
+  font-size: 0.74rem;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+@keyframes pay-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
 }
 
 /* The core: the gauge in a frame, glowing in its own light. */
@@ -6147,12 +6589,215 @@ html[data-theme="dark"] .lore-halo-photo {
 }
 
 .energy-landed-core {
+  position: relative;
   opacity: 0.55;
   transition: opacity 360ms var(--ease);
 }
 
 .energy-landed-core[data-live="true"] {
   opacity: 1;
+}
+
+.energy-landed-core > .energy-gauge,
+.energy-landed-core > .energy-core-line {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- The surge: the reactor spins up, then blows the cells alight ---------- */
+/* Spin-up: the core dims and tightens, the bolt gathers light, three rings close in. */
+.energy-landed[data-stage="charge"] .energy-landed-core {
+  opacity: 0.85;
+  animation: surge-gather 760ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.energy-landed[data-stage="charge"] .energy-gauge-bolt {
+  animation: surge-bolt 760ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Room to spill 5rem above and below the frame, clipped there. Never sideways:
+   the sheet body scrolls, and a spark past its edge would make it scroll. */
+.surge {
+  --spill: 5rem;
+  position: absolute;
+  inset: calc(var(--spill) * -1) 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.surge > i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  opacity: 0;
+}
+
+.surge-ring {
+  width: 5rem;
+  height: 5rem;
+  margin: -2.5rem 0 0 -2.5rem;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--energy) 80%, #ffffff);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--energy) 60%, transparent);
+}
+
+.energy-landed[data-stage="charge"] .surge-ring {
+  animation: surge-ring-in 720ms cubic-bezier(0.4, 0, 1, 1) calc(var(--k) * 120ms) both;
+}
+
+/* The blast: a flash across the core, three shockwaves, fourteen sparks, one shake. */
+.surge > .surge-flash {
+  inset: var(--spill) 0;
+  top: var(--spill);
+  left: 0;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(60% 80% at 50% 50%, #ffffff, color-mix(in srgb, var(--energy) 70%, #ffffff) 40%, transparent 75%);
+}
+
+.energy-landed[data-burst="true"] .surge-flash {
+  animation: surge-flash 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.surge-wave {
+  width: 4rem;
+  height: 4rem;
+  margin: -2rem 0 0 -2rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--energy) 85%, #ffffff);
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--energy) 65%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--energy-cool) 45%, transparent);
+}
+
+.energy-landed[data-burst="true"] .surge-wave {
+  animation: surge-wave 980ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--k) * 110ms) both;
+}
+
+.surge-spark {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: -0.25rem 0 0 -0.25rem;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffffff, var(--energy) 45%, var(--energy-cool));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--energy) 75%, transparent);
+  transform: rotate(var(--a)) translateX(0) scale(var(--s));
+}
+
+.energy-landed[data-burst="true"] .surge-spark {
+  animation: surge-spark 820ms cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both;
+}
+
+.energy-landed[data-burst="true"] .energy-landed-core {
+  animation: surge-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.energy-landed[data-burst="true"] .energy-gauge-bolt {
+  animation: surge-bolt-out 900ms var(--ease) both;
+}
+
+@keyframes surge-gather {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  100% {
+    transform: scale(0.965);
+    filter: brightness(0.7) saturate(1.2);
+  }
+}
+
+@keyframes surge-bolt {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  100% {
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 14px #ffffff) drop-shadow(0 0 28px var(--energy)) brightness(1.6);
+  }
+}
+
+@keyframes surge-bolt-out {
+  0% {
+    transform: scale(1.5);
+    filter: drop-shadow(0 0 20px #ffffff) drop-shadow(0 0 40px var(--energy)) brightness(2);
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--energy) 70%, transparent));
+  }
+}
+
+@keyframes surge-ring-in {
+  0% {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+@keyframes surge-flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes surge-wave {
+  0% {
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(4.2);
+  }
+}
+
+@keyframes surge-spark {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translateX(0.5rem) scale(var(--s));
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(var(--d)) scale(calc(var(--s) * 0.4));
+  }
+}
+
+@keyframes surge-shake {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  10% {
+    transform: translate(-3px, 2px) scale(1.03);
+  }
+  25% {
+    transform: translate(4px, -2px) scale(1.03);
+  }
+  40% {
+    transform: translate(-3px, 1px) scale(1.02);
+  }
+  55% {
+    transform: translate(2px, 2px) scale(1.01);
+  }
+  75% {
+    transform: translate(-1px, -1px);
+  }
 }
 
 .energy-landed-core .energy-core-line {
@@ -6202,9 +6847,20 @@ html[data-theme="dark"] .lore-halo-photo {
   .energy-core[data-depleted="true"],
   .energy-sheet,
   .energy-sheet-body,
+  .energy-sheet-back,
+  .energy-wizard,
+  .wizard-dots li,
+  .pay-loading-bar,
   .energy-landed-title,
+  .energy-landed .energy-landed-core,
+  .energy-landed .energy-gauge-bolt,
+  .surge > i,
   .story-clear-energy-stamp[data-show="true"] {
     animation: none !important;
+  }
+
+  .wizard-dots li {
+    transition: none;
   }
 
   .story-clear-energy-stamp[data-show="true"] {

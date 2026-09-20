@@ -12,7 +12,7 @@ import { SwipeToggle } from "@/components/swipe-toggle";
 import { useImmersive } from "@/components/use-immersive";
 import { useTheme } from "@/components/use-story-theme";
 import { applyBackgroundPhoto, parseStoredLevel, RULES, type GameEvent, type GameState } from "@/game/breakout/engine";
-import { createPayoutSfx, levelKey, pursuit, type PayoutSfx } from "@/game/breakout/audio";
+import { createPayoutSfx, levelKey, playSheetBack, playSheetBuy, pursuit, type PayoutSfx } from "@/game/breakout/audio";
 import { isHapticsEnabled, isHapticsSupported } from "@/game/breakout/haptics";
 import { enterImmersive, wantsImmersive } from "@/game/breakout/preview";
 import type { Balances, EarnMapCard } from "@/lib/earn";
@@ -87,6 +87,7 @@ export function EarnRun({
   );
 
   const buy = useCallback(async () => {
+    playSheetBuy();
     if (wantsImmersive()) void enterImmersive();
     setStarting(true);
     setError(null);
@@ -161,7 +162,10 @@ export function EarnRun({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (!run) onClose();
+      if (!run) {
+        playSheetBack();
+        onClose();
+      }
       else if (!end) setPaused(true);
     };
     document.addEventListener("keydown", onKey);
@@ -174,7 +178,7 @@ export function EarnRun({
     const canPlay = !card.won && !card.mine;
     const short = Math.max(0, card.ticketGems - balances.gems);
     return createPortal(
-      <div className="earn-sheet" role="dialog" aria-modal="true" aria-label={`Play ${card.title}`} onClick={onClose}>
+      <div className="earn-sheet" role="dialog" aria-modal="true" aria-label={`Play ${card.title}`} onClick={() => { playSheetBack(); onClose(); }}>
         <div className="earn-sheet-body glass-sheet" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -184,7 +188,7 @@ export function EarnRun({
                 by {card.author} · {card.difficulty}/100 {card.difficultyLabel}
               </p>
             </div>
-            <button type="button" className="header-chip" aria-label="Close" onClick={onClose}>
+            <button type="button" className="header-chip" aria-label="Close" onClick={() => { playSheetBack(); onClose(); }}>
               <CloseGlyph />
             </button>
           </div>
@@ -239,7 +243,7 @@ export function EarnRun({
                 )}
               </button>
             )}
-            <button type="button" className="btn-glass min-h-11 w-full" onClick={onClose}>
+            <button type="button" className="btn-glass min-h-11 w-full" onClick={() => { playSheetBack(); onClose(); }}>
               {canPlay ? "Not now" : "Close"}
             </button>
           </div>

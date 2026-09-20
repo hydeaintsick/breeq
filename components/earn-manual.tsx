@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { EthGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { CloseIcon } from "@/components/nav-icons";
+import { playSheetAppear, playSheetBack } from "@/game/breakout/audio";
 import { formatEth, formatGems, type Economy } from "@/lib/economy";
 
 function QuestionMark() {
@@ -68,13 +69,18 @@ export function EarnManual({ economy }: { economy: Pick<Economy, "winMultiplier"
   const titleId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  function close() {
+    playSheetBack();
+    setOpen(false);
+  }
+
   useEffect(() => {
     if (!open) return;
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
     sheetRef.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -94,13 +100,13 @@ export function EarnManual({ economy }: { economy: Pick<Economy, "winMultiplier"
 
   return (
     <>
-      <button type="button" className="btn-glass min-h-11 gap-2" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+      <button type="button" className="btn-glass min-h-11 gap-2" aria-haspopup="dialog" aria-expanded={open} onClick={() => { playSheetAppear(); setOpen(true); }}>
         <QuestionMark />
         How it works
       </button>
 
       {open ? (
-        <div className="gem-shop" onClick={() => setOpen(false)}>
+        <div className="gem-shop" onClick={close}>
           <div
             ref={sheetRef}
             className="gem-shop-sheet glass-sheet"
@@ -119,7 +125,7 @@ export function EarnManual({ economy }: { economy: Pick<Economy, "winMultiplier"
                   How it <span className="text-neon">works</span>
                 </h2>
               </div>
-              <button type="button" className="header-chip" aria-label="Close" onClick={() => setOpen(false)}>
+              <button type="button" className="header-chip" aria-label="Close" onClick={close}>
                 <span className="sr-only">Close</span>
                 <CloseIcon />
               </button>
@@ -146,7 +152,7 @@ export function EarnManual({ economy }: { economy: Pick<Economy, "winMultiplier"
                 Gems are a game currency with no cash value. You never win on your own map, and a pot is paid once per
                 wall.
               </p>
-              <button type="button" className="btn-play mt-5 min-h-12 w-full" onClick={() => setOpen(false)}>
+              <button type="button" className="btn-play mt-5 min-h-12 w-full" onClick={close}>
                 Got it
               </button>
             </div>

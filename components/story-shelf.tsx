@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBalances } from "@/components/balances-provider";
 import { BreakoutPreview } from "@/components/breakout-preview";
@@ -10,6 +11,7 @@ import { useEnergy } from "@/components/energy-provider";
 import type { EnergySheetReason } from "@/components/energy-sheet";
 import { useGemShop } from "@/components/gem-shop";
 import { HapticsToggle } from "@/components/haptics-toggle";
+import { LeaveIcon } from "@/components/nav-icons";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useStorySurface, type StoryZone } from "@/components/story-chrome";
 import { StoryClear, type ClearCost } from "@/components/story-clear";
@@ -24,10 +26,11 @@ import { useStoryTheme } from "@/components/use-story-theme";
 import { startStoryRun } from "@/app/actions/energy";
 import type { ChapterClearResult, ChapterSkipResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
+import { playSheetAppear } from "@/game/breakout/audio";
 import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
 import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
-import { STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { ENERGY_PLAY_COST, type EnergyState } from "@/lib/energy";
 import { ambientPhoto, boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
@@ -49,9 +52,10 @@ const EMPTY_DISCOVERIES: readonly string[] = [];
 const IRIS_MS = 440;
 
 /**
- * A skip that went to the shop for gems. Stripe Checkout leaves the page, so
- * the wall being skipped is kept here and the sheet comes back up over it when
- * the player returns — the pack lands, then the skip is one more tap.
+ * A skip that went to the shop for gems. The shop pays in its own sheet, but a
+ * bank that insists on its own page leaves the site: the wall being skipped is
+ * kept here and the sheet comes back up over it when the player returns — the
+ * pack lands, then the skip is one more tap.
  */
 const SKIP_INTENT_KEY = "breeq-skip-intent";
 const SKIP_INTENT_TTL_MS = 15 * 60 * 1000;
@@ -75,7 +79,16 @@ function writeSkipIntent(intent: Omit<SkipIntent, "at">) {
   try {
     window.sessionStorage.setItem(SKIP_INTENT_KEY, JSON.stringify({ ...intent, at: Date.now() }));
   } catch {
-    // Private mode without storage: the shop still opens, the sheet just will not come back after Stripe.
+    // Private mode without storage: the shop still opens, the sheet just will not come back after a bank page.
+  }
+}
+
+/** The shop closed back onto the sheet without leaving the page: nothing to come back to. */
+function clearSkipIntent() {
+  try {
+    window.sessionStorage.removeItem(SKIP_INTENT_KEY);
+  } catch {
+    // Nothing stored, nothing to clear.
   }
 }
 
@@ -178,6 +191,7 @@ export function StoryShelf({
 }) {
   const router = useRouter();
   const titleId = useId();
+  const pauseTitleId = `${titleId}-paused`;
   /** Slides ahead of the first episode. */
   const offset = tutorial ? 1 : 0;
   /** The story waits for the tutorial. */
@@ -378,6 +392,10 @@ export function StoryShelf({
     // Mount only: the intent is consumed as it is read.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // The shop paid in place and closed back onto the sheet: the note is stale.
+  useEffect(() => {
+    if (!shop.isOpen) clearSkipIntent();
+  }, [shop.isOpen]);
 
   // The iris has opened: the page under it is fully hidden, and its map and
   // sound can rest until the sheet comes down.
@@ -681,6 +699,7 @@ export function StoryShelf({
     const index = open.chapters.findIndex((item) => item.id === chapter.id);
     if (chapter.cleared || chapterIsLocked(open.chapters, index)) return;
     setChapterActive(index);
+    playSheetAppear();
     setSkipping(chapter);
   }
 
@@ -702,6 +721,7 @@ export function StoryShelf({
     if (!chapter || chapter.cleared) return;
     setSkipping(chapter);
     if (gems < SKIP_CHAPTER_GEMS) topUpForSkip(chapter);
+    else playSheetAppear();
   }
 
   /** The server took the gems and recorded the clear: the road moves on, the clear screen plays. */
@@ -972,20 +992,29 @@ export function StoryShelf({
                     />
                   ) : null}
                   {paused && !cleared && !lost ? (
-                    <div className="story-pause-menu">
+                    <div className="story-pause-menu" role="dialog" aria-modal="true" aria-labelledby={pauseTitleId}>
                       <div className="glass w-full max-w-sm p-6 sm:p-8">
                         <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Paused</p>
-                        <h3 className="mt-3 text-3xl font-semibold tracking-tight text-ink">{playing.title}</h3>
+                        <h3 id={pauseTitleId} className="mt-3 text-3xl font-semibold tracking-tight text-ink">
+                          {playing.title}
+                        </h3>
                         <div className="mt-8 grid gap-3">
-                          <button type="button" className="btn-play min-h-11 w-full" onClick={() => setPaused(false)}>
+                          <button type="button" className="btn-play min-h-11 w-full" autoFocus onClick={() => setPaused(false)}>
                             Resume
                           </button>
                           <SoundToggle variant="row" />
                           <HapticsToggle variant="row" />
                           <SwipeToggle variant="row" />
                           <button type="button" className="btn-glass min-h-11 w-full" onClick={quitRun}>
-                            Quit
+                            Quit to the episode
                           </button>
+                          <Link
+                            href={GAME_MENU_PATH}
+                            className="nav-link flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm"
+                          >
+                            <LeaveIcon />
+                            Leave the story
+                          </Link>
                         </div>
                       </div>
                     </div>

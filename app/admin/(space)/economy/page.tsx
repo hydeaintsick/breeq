@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { EconomyForm } from "@/components/economy-form";
 import { requireAdmin } from "@/lib/auth/session";
 import { getEconomy } from "@/lib/earn";
-import { stripeConfigured } from "@/lib/stripe";
+import { stripeReady } from "@/lib/stripe";
 
 export const metadata: Metadata = {
   title: "Economy — Admin",
@@ -20,7 +20,10 @@ export default async function AdminEconomyPage() {
       <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
         One gem has a USD price; packs discount it. A win pays the multiplier times the ticket&apos;s USD value,
         converted to ETH at the reference and locked in when the ticket is paid. Stripe is{" "}
-        {stripeConfigured() ? "connected" : "not configured — set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET"}.
+        {stripeReady()
+          ? "connected"
+          : "not configured — set STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY and STRIPE_WEBHOOK_SECRET"}
+        .
       </p>
       <EconomyForm initial={economy} />
     </section>

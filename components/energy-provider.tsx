@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { EnergySheet, type EnergySheetReason } from "@/components/energy-sheet";
+import { playSheetAppear } from "@/game/breakout/audio";
 import { rolledEnergy, type EnergyState } from "@/lib/energy";
 
 /** Why the recharge sheet came up: it picks the copy and the CTA after a purchase. */
@@ -25,9 +26,10 @@ interface EnergyContext {
 const Ctx = createContext<EnergyContext | null>(null);
 
 /**
- * The gem shop leaves the page for Stripe. When the recharge sheet sent the
- * player there, it is remembered here so it comes back up over the page once
- * the pack has landed — the cells are one more tap.
+ * The gem shop pays inside its own sheet, over this one — but a bank that
+ * insists on its own page takes the player away. When the recharge sheet sent
+ * the player to the shop, it is remembered here so it comes back up over the
+ * page once the pack has landed — the cells are one more tap.
  */
 const INTENT_KEY = "breeq-energy-intent";
 const INTENT_TTL_MS = 15 * 60 * 1000;
@@ -36,7 +38,16 @@ export function writeEnergyIntent(): void {
   try {
     window.sessionStorage.setItem(INTENT_KEY, String(Date.now()));
   } catch {
-    // Private mode without storage: the shop still opens, the sheet just will not come back after Stripe.
+    // Private mode without storage: the shop still opens, the sheet just will not come back after a bank page.
+  }
+}
+
+/** The shop closed back onto the recharge sheet without leaving the page: nothing to come back to. */
+export function clearEnergyIntent(): void {
+  try {
+    window.sessionStorage.removeItem(INTENT_KEY);
+  } catch {
+    // Nothing stored, nothing to clear.
   }
 }
 
@@ -70,6 +81,7 @@ export function EnergyProvider({ initial, children }: { initial: EnergyState; ch
   const onReadyRef = useRef<(() => void) | undefined>(undefined);
 
   const open = useCallback((options: EnergyOpen = {}) => {
+    playSheetAppear();
     onReadyRef.current = options.onReady;
     setSheet({ reason: options.reason ?? "browse", hasReady: options.onReady !== undefined });
   }, []);

@@ -26,16 +26,18 @@ export function HapticsToggle({ variant = "row" }: { variant?: "row" | "menu" | 
     return (
       <button
         type="button"
-        className="nav-link flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 text-left"
-        aria-pressed={enabled}
-        aria-label={label}
+        role="switch"
+        className="nav-link flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-left"
+        aria-checked={enabled}
         onClick={toggle}
       >
         <span className="flex items-center gap-2.5">
           <VibrationIcon off={!enabled} />
           Vibration
         </span>
-        <span className="text-xs font-medium uppercase tracking-[0.12em]">{enabled ? "On" : "Off"}</span>
+        <span className="text-xs font-medium uppercase tracking-[0.12em]" aria-hidden="true">
+          {enabled ? "On" : "Off"}
+        </span>
       </button>
     );
   }

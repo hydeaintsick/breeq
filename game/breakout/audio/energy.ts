@@ -13,6 +13,10 @@
  * - `empty`: the last run was paid, nothing is left. A low D, a slow fall, a
  *   hollow of air: not a punishment, a door closing.
  * - `stamp`: the "+N" or "−N" pill lands.
+ * - `surge`: a bought recharge hits the core. A reactor spinning up — a
+ *   swept band and a riser climbing for `ENERGY_SURGE_MS`, then the blast: a
+ *   sub thump, a low-passed burst, a bright wash of air and the root-fifth-
+ *   octave stab. The cells land on `charge` right after.
  *
  * Every call is a no-op while sound is off or no gesture has opened the bus.
  */
@@ -27,6 +31,8 @@ const SCALE = [0, 2, 4, 7, 9, 11] as const;
 const CHARGE_GAP = 0.05;
 /** Tails to let ring after the last call before the layer goes, ms. */
 const LINGER_MS = 2600;
+/** From `surge()` to the blast: the reactor's spin-up, the same beat the screen flashes on. */
+export const ENERGY_SURGE_MS = 720;
 
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
@@ -50,6 +56,8 @@ export interface EnergySfx {
   empty(): void;
   /** The "+N" / "−N" pill lands. */
   stamp(): void;
+  /** A recharge hits the core: spin-up for `ENERGY_SURGE_MS`, then the blast. */
+  surge(): void;
   /** Lets the tails ring, then frees the voices. */
   destroy(): void;
 }
@@ -138,6 +146,40 @@ class Energy implements EnergySfx {
     L.bell({ freq: note(0, 24), gain: 0.18, decay: 0.85, at, send: 0.75 });
     L.bell({ freq: note(4, 24), gain: 0.09, decay: 0.7, at: at + 0.04, pan: 0.2, send: 0.8 });
     L.noise({ gain: 0.035, attack: 0.01, decay: 0.22, filter: "bandpass", freq: 2200, to: 4800, q: 1.2, at, send: 0.7 });
+  }
+
+  surge(): void {
+    const L = this.ensure();
+    if (!L) return;
+    const at = L.now + 0.01;
+    const rise = ENERGY_SURGE_MS / 1000;
+    const blast = at + rise;
+    // Spin-up: a band of air sweeping up and a riser climbing two octaves, both cut at the blast.
+    L.noise({ gain: 0.06, attack: rise * 0.55, hold: rise * 0.4, decay: 0.08, filter: "bandpass", freq: 240, to: 3800, q: 1.6, at, send: 0.5 });
+    L.tone({
+      freq: hz(ROOT - 24),
+      to: hz(ROOT),
+      glide: rise,
+      type: "triangle",
+      lowpass: 1800,
+      gain: 0.07,
+      attack: rise * 0.5,
+      hold: rise * 0.45,
+      decay: 0.06,
+      at,
+      send: 0.4,
+    });
+    L.tone({ freq: hz(ROOT - 12), to: hz(ROOT + 12), glide: rise, type: "sine", gain: 0.05, attack: rise * 0.6, hold: rise * 0.35, decay: 0.05, at, send: 0.5 });
+    // The blast: a sub thump, a low burst, a wash of bright air.
+    L.tone({ freq: 62, to: 28, glide: 0.45, type: "sine", gain: 0.22, attack: 0.004, hold: 0.05, decay: 0.55, at: blast, send: 0.2 });
+    L.tone({ freq: hz(ROOT - 12), type: "triangle", lowpass: 420, gain: 0.12, attack: 0.004, hold: 0.04, decay: 0.5, at: blast, send: 0.5 });
+    L.noise({ gain: 0.14, attack: 0.004, hold: 0.02, decay: 0.42, filter: "lowpass", freq: 5200, to: 240, q: 0.7, at: blast, send: 0.55 });
+    L.noise({ gain: 0.05, attack: 0.02, hold: 0.1, decay: 1.1, filter: "highpass", freq: 4800, at: blast + 0.02, send: 0.95 });
+    // Root, fifth, octave: the reactor sings.
+    [0, 3, 6].forEach((deg, i) => {
+      L.bell({ freq: note(deg, 12), gain: 0.15 - 0.02 * i, decay: 1.5 + 0.15 * i, at: blast + 0.02 + 0.03 * i, pan: -0.4 + 0.4 * i, send: 0.9 });
+    });
+    L.bell({ freq: note(0, 36), gain: 0.05, decay: 1.6, at: blast + 0.12, send: 0.95 });
   }
 
   destroy(): void {

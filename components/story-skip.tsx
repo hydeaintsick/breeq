@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { skipChapter, type ChapterSkipResult } from "@/app/actions/progress";
 import { useBalances } from "@/components/balances-provider";
 import { GemGlyph } from "@/components/currency-glyphs";
+import { playSheetBack, playSheetBuy } from "@/game/breakout/audio";
 import { formatGems } from "@/lib/economy";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 import type { StoryChapterCard } from "@/lib/story";
@@ -43,6 +44,7 @@ export function StorySkipSheet({
   }, []);
 
   async function confirm() {
+    playSheetBuy();
     setBusy(true);
     setError(null);
     try {
@@ -60,7 +62,7 @@ export function StorySkipSheet({
   }
 
   return (
-    <div className="earn-sheet story-skip-sheet" onClick={onClose}>
+    <div className="earn-sheet story-skip-sheet" onClick={() => { playSheetBack(); onClose(); }}>
       <div
         ref={sheetRef}
         className="earn-sheet-body glass-sheet"
@@ -80,7 +82,7 @@ export function StorySkipSheet({
               The wall counts as cleared with one star and pays its {formatGems(chapter.xpReward)} XP. Replay it any time for the full grade.
             </p>
           </div>
-          <button type="button" className="header-chip" aria-label="Close" onClick={onClose}>
+          <button type="button" className="header-chip" aria-label="Close" onClick={() => { playSheetBack(); onClose(); }}>
             <CloseGlyph />
           </button>
         </div>
@@ -117,7 +119,7 @@ export function StorySkipSheet({
               <p className="text-sm leading-6 text-ink-muted">
                 You are {formatGems(short)} gems short. Fill the bag and the skip is one more tap.
               </p>
-              <button type="button" className="btn-play min-h-11 w-full" onClick={onTopUp}>
+              <button type="button" className="btn-play min-h-11 w-full" onClick={() => { playSheetBuy(); onTopUp(); }}>
                 Top up gems
               </button>
             </>
@@ -132,7 +134,7 @@ export function StorySkipSheet({
               )}
             </button>
           )}
-          <button type="button" className="btn-glass min-h-11 w-full" onClick={onClose}>
+          <button type="button" className="btn-glass min-h-11 w-full" onClick={() => { playSheetBack(); onClose(); }}>
             Not now
           </button>
         </div>

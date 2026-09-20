@@ -16,8 +16,12 @@ export const ENERGY_MAX = 6;
 export const ENERGY_PLAY_COST = 2;
 /** Cells a clear gives back (only while the gauge is under the max). */
 export const ENERGY_CLEAR_REFUND = 1;
-/** A sanity ceiling on bought cells: nothing a player can do reaches it in a day. */
-export const ENERGY_CEIL = 99;
+/**
+ * A sanity ceiling on the gauge, far above anything a player buys: bought
+ * cells always land (clamped here, never refused), so a recharge can never
+ * take gems and give nothing back.
+ */
+export const ENERGY_CEIL = 9999;
 
 /** What every surface reads: the cells now, the max, and when the free recharge lands. */
 export type EnergyState = {

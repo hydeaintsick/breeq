@@ -10,7 +10,7 @@ import { EarnManual } from "@/components/earn-manual";
 import { EarnMapCard } from "@/components/earn-map-card";
 import { EarnRun } from "@/components/earn-run";
 import { useTheme } from "@/components/use-story-theme";
-import { arcade } from "@/game/breakout/audio";
+import { arcade, playSheetAppear } from "@/game/breakout/audio";
 import { EARN_CREATE_PATH, EARN_WALLET_PATH } from "@/lib/auth/paths";
 import { EARN_SORTS, type Balances, type EarnMapCard as Card, type EarnSort, type EarnStore as Store } from "@/lib/earn";
 import { formatEth } from "@/lib/economy";
@@ -78,6 +78,10 @@ export function EarnStore({ store, sort }: { store: Store; sort: EarnSort }) {
   }, [cursor, loadMore]);
 
   const decorate = (card: Card): Card => (won.has(card.id) && !card.won ? { ...card, won: true } : card);
+  const onPlay = useCallback((card: Card) => {
+    playSheetAppear();
+    setSelected(card);
+  }, []);
   const onWon = useCallback((mapId: string) => {
     setWon((current) => new Set(current).add(mapId));
   }, []);
@@ -138,7 +142,7 @@ export function EarnStore({ store, sort }: { store: Store; sort: EarnSort }) {
         <Shelf title="Featured" kicker="Picked by Breeq">
           <div className="earn-row" data-size="lg">
             {store.featured.map((card, index) => (
-              <EarnMapCard key={card.id} card={decorate(card)} featured seed={11 + index} onPlay={setSelected} />
+              <EarnMapCard key={card.id} card={decorate(card)} featured seed={11 + index} onPlay={onPlay} />
             ))}
           </div>
         </Shelf>
@@ -148,7 +152,7 @@ export function EarnStore({ store, sort }: { store: Store; sort: EarnSort }) {
         <Shelf title="Most played" kicker="Where the crowd is">
           <div className="earn-row">
             {store.mostPlayed.map((card, index) => (
-              <EarnMapCard key={card.id} card={decorate(card)} seed={31 + index} onPlay={setSelected} />
+              <EarnMapCard key={card.id} card={decorate(card)} seed={31 + index} onPlay={onPlay} />
             ))}
           </div>
         </Shelf>
@@ -173,7 +177,7 @@ export function EarnStore({ store, sort }: { store: Store; sort: EarnSort }) {
           </div>
           <div className="earn-grid mt-4">
             {items.map((card, index) => (
-              <EarnMapCard key={card.id} card={decorate(card)} seed={53 + index} onPlay={setSelected} />
+              <EarnMapCard key={card.id} card={decorate(card)} seed={53 + index} onPlay={onPlay} />
             ))}
           </div>
           <div ref={sentinelRef} className="h-px" aria-hidden="true" />

@@ -1,12 +1,13 @@
 import type Stripe from "stripe";
-import { fulfilPurchase } from "@/lib/purchases";
+import { fulfilPaymentIntent, fulfilPurchase } from "@/lib/purchases";
 import { stripe, stripeConfigured } from "@/lib/stripe";
 
 /**
- * Stripe → Breeq. Only `checkout.session.completed` matters: the pack is
- * credited once, whichever of this hook or the success page gets there first.
- * Point Stripe at `/api/stripe/webhook` and put the signing secret in
- * `STRIPE_WEBHOOK_SECRET`.
+ * Stripe → Breeq. `payment_intent.succeeded` is the in-sheet payment;
+ * `checkout.session.completed` covers sessions opened before payments moved
+ * into the sheet. Either way the pack is credited once, whichever of this
+ * hook or the shop sheet gets there first. Point Stripe at
+ * `/api/stripe/webhook` and put the signing secret in `STRIPE_WEBHOOK_SECRET`.
  */
 export async function POST(request: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -27,7 +28,14 @@ export async function POST(request: Request) {
     return new Response("Bad signature.", { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+  if (event.type === "payment_intent.succeeded") {
+    try {
+      await fulfilPaymentIntent(event.data.object.id);
+    } catch (error) {
+      console.error("stripe fulfilment failed", error);
+      return new Response("Fulfilment failed.", { status: 500 });
+    }
+  } else if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const session = event.data.object;
     if (session.payment_status === "paid") {
       try {

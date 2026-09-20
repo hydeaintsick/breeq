@@ -219,7 +219,38 @@ export function RouteIcon() {
   );
 }
 
+/** Leave a mode (the story) for the game menu: the mirror of sign out, the arrow goes back. */
+export function LeaveIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M9.6 3.4h2.1A1.3 1.3 0 0 1 13 4.7v6.6c0 .72-.58 1.3-1.3 1.3H9.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8.4 8H3M5.2 5.6 2.8 8l2.4 2.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Put a sheet away: it slides back down. */
+export function ChevronLeftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path d="M10 3.5L5.5 8 10 12.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">

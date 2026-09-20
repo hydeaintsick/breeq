@@ -3,10 +3,9 @@
 import { randomInt } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { requireEarn, requireUser } from "@/lib/auth/session";
-import { EARN_PATH, EARN_TOPUP_PATH, EARN_WALLET_PATH, GAME_MENU_PATH, GAME_ROOT_PATH } from "@/lib/auth/paths";
+import { EARN_PATH, EARN_TOPUP_PATH, EARN_WALLET_PATH, GAME_ROOT_PATH } from "@/lib/auth/paths";
 import { ensureBalanceFields } from "@/lib/balances";
 import { uploadEarnBackground } from "@/lib/cloudinary";
 import {
@@ -30,9 +29,9 @@ import {
   type EarnSort,
 } from "@/lib/earn";
 import { findGradient } from "@/lib/gradients";
-import { creditGems, fulfilPurchase } from "@/lib/purchases";
+import { creditGems, fulfilPaymentIntent, fulfilPurchase } from "@/lib/purchases";
 import { slugify } from "@/lib/slug";
-import { earnSandbox, stripe, stripeConfigured } from "@/lib/stripe";
+import { earnSandbox, stripe, stripeConfigured, stripeReady } from "@/lib/stripe";
 import { parseStoredLevel, rateDifficulty, serializeLevel, validateLevel } from "@/game/breakout/engine";
 
 /** A run left open longer than this counts as abandoned. */
@@ -328,28 +327,24 @@ export async function publishEarnMap(formData: FormData): Promise<PublishResult 
 
 // --- Top-up (Stripe) ---------------------------------------------------------
 
-async function siteOrigin() {
-  const list = await headers();
-  const origin = list.get("origin");
-  if (origin) return origin;
-  const host = list.get("x-forwarded-host") ?? list.get("host");
-  const proto = list.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  if (host) return `${proto}://${host}`;
-  return process.env.AUTH_URL ?? "http://localhost:3333";
-}
+export type GemPayment = {
+  /** The PaymentIntent's client secret: Stripe Elements confirms it in the sheet. */
+  clientSecret: string;
+  paymentIntentId: string;
+  gems: number;
+  cents: number;
+};
 
-/** Open a Stripe Checkout Session for one pack. The client follows `url`. */
-/** Where Stripe sends the player back: the game page the shop was opened from, never anywhere else. */
-function checkoutReturnPath(candidate: string | undefined) {
-  if (candidate && /^\/game(\/[A-Za-z0-9_-]+)*\/?$/.test(candidate)) return candidate.replace(/\/$/, "") || GAME_MENU_PATH;
-  return EARN_PATH;
-}
-
-export async function createGemCheckout(packGems: number, returnTo?: string): Promise<{ url: string } | Fail> {
+/**
+ * Start paying for one pack inside the shop sheet: a `PENDING` purchase and a
+ * PaymentIntent for it (card, Apple Pay, Google Pay — the wallets tokenize to
+ * cards, so `card` alone serves all three and nothing needs a redirect). The
+ * client confirms it with Stripe Elements and then asks `claimPayment`.
+ */
+export async function createGemPayment(packGems: number): Promise<GemPayment | Fail> {
   // Gems pay for story skips and energy long before Earn unlocks: any signed-in player can fill the bag.
   const user = await requireUser();
-  const back = checkoutReturnPath(returnTo);
-  if (!stripeConfigured()) return fail("Payments are not set up yet.");
+  if (!stripeReady()) return fail("Payments are not set up yet.");
   const economy = await getEconomy();
   const pack = economy.packs.find((item) => item.gems === packGems);
   if (!pack) return fail("That pack is not on sale.");
@@ -360,48 +355,76 @@ export async function createGemCheckout(packGems: number, returnTo?: string): Pr
     select: { id: true },
   });
 
-  const origin = await siteOrigin();
   const account = await prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
   try {
-    const session = await stripe().checkout.sessions.create({
-      mode: "payment",
-      client_reference_id: purchase.id,
-      customer_email: account?.email ?? undefined,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: cents,
-            product_data: {
-              name: `${formatGems(pack.gems)} gems`,
-              description:
-                pack.discountPct > 0
-                  ? `Breeq gem pack · ${pack.discountPct}% off the list price`
-                  : "Breeq gem pack",
-            },
-          },
-        },
-      ],
-      metadata: { purchaseId: purchase.id, userId: user.id, gems: String(pack.gems) },
-      success_url: `${origin}${back}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}${back}?checkout=canceled`,
-    });
-    if (!session.url) throw new Error("Stripe returned no checkout URL.");
-    await prisma.gemPurchase.update({ where: { id: purchase.id }, data: { stripeSessionId: session.id } });
-    return { url: session.url };
+    const intent = await stripe().paymentIntents.create(
+      {
+        amount: cents,
+        currency: "usd",
+        payment_method_types: ["card"],
+        description: `${formatGems(pack.gems)} gems${pack.discountPct > 0 ? ` · ${pack.discountPct}% off the list price` : ""}`,
+        receipt_email: account?.email ?? undefined,
+        metadata: { purchaseId: purchase.id, userId: user.id, gems: String(pack.gems) },
+      },
+      // One intent per purchase, even if the action is retried.
+      { idempotencyKey: `gem-purchase-${purchase.id}` },
+    );
+    if (!intent.client_secret) throw new Error("Stripe returned no client secret.");
+    await prisma.gemPurchase.update({ where: { id: purchase.id }, data: { stripePaymentIntentId: intent.id } });
+    return { clientSecret: intent.client_secret, paymentIntentId: intent.id, gems: pack.gems, cents };
   } catch (error) {
     await prisma.gemPurchase.update({ where: { id: purchase.id }, data: { status: "FAILED" } });
-    console.error("stripe checkout failed", error);
-    return fail("Could not open the checkout. Try again in a moment.");
+    console.error("stripe payment intent failed", error);
+    return fail("Could not start the payment. Try again in a moment.");
   }
 }
 
-/** Back from Checkout: credit the pack if Stripe says it is paid (idempotent). */
+/** Stripe confirmed the payment in the sheet (or on the way back from a bank page): credit the pack, once. */
+export async function claimPayment(paymentIntentId: string): Promise<{ credited: boolean; gems: number; balances: Balances } | Fail> {
+  const user = await requireUser();
+  if (!stripeConfigured()) return fail("Payments are not set up yet.");
+  const purchase = await prisma.gemPurchase.findFirst({
+    where: { stripePaymentIntentId: paymentIntentId },
+    select: { userId: true },
+  });
+  if (!purchase || purchase.userId !== user.id) return fail("Purchase not found.");
+  const result = await fulfilPaymentIntent(paymentIntentId);
+  if (!result) return fail("Purchase not found.");
+  revalidateEarn();
+  return { ...result, balances: await getBalances(user.id) };
+}
+
+/**
+ * The player backed out of the payment step: cancel the intent so it never
+ * charges later and close the purchase. A payment that already went through
+ * is left alone — `claimPayment` / the webhook credit it.
+ */
+export async function abandonGemPayment(paymentIntentId: string): Promise<{ ok: true } | Fail> {
+  const user = await requireUser();
+  if (!stripeConfigured()) return fail("Payments are not set up yet.");
+  const purchase = await prisma.gemPurchase.findFirst({
+    where: { stripePaymentIntentId: paymentIntentId },
+    select: { id: true, userId: true, status: true },
+  });
+  if (!purchase || purchase.userId !== user.id) return fail("Purchase not found.");
+  if (purchase.status !== "PENDING") return { ok: true };
+  try {
+    const intent = await stripe().paymentIntents.retrieve(paymentIntentId);
+    if (intent.status === "succeeded" || intent.status === "processing") return { ok: true };
+    if (intent.status !== "canceled") await stripe().paymentIntents.cancel(paymentIntentId);
+  } catch (error) {
+    console.error("stripe payment intent cancel failed", error);
+    return fail("Could not cancel the payment.");
+  }
+  await prisma.gemPurchase.updateMany({ where: { id: purchase.id, status: "PENDING" }, data: { status: "FAILED" } });
+  return { ok: true };
+}
+
+/** Back from a Checkout Session opened before payments moved into the sheet: credit it if paid (idempotent). */
 export async function claimCheckout(sessionId: string): Promise<{ credited: boolean; gems: number; balances: Balances } | Fail> {
   const user = await requireUser();
   if (!stripeConfigured()) return fail("Payments are not set up yet.");
-  const purchase = await prisma.gemPurchase.findUnique({
+  const purchase = await prisma.gemPurchase.findFirst({
     where: { stripeSessionId: sessionId },
     select: { userId: true },
   });

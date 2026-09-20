@@ -87,13 +87,23 @@ export async function refundEnergy(userId: string, cells: number): Promise<{ bef
   return credit.count === 0 ? { before, after: before } : { before, after: before + gain };
 }
 
-/** Bought cells: stack past the max, under the ceiling. Returns the gauge after. */
+/**
+ * Bought cells: stack past the max, always land. One pipeline update —
+ * `energy = min(energy + cells, ENERGY_CEIL)` — so the credit is atomic and
+ * never skipped: a gauge near the ceiling is clamped, not refused (the gems
+ * were already taken). Returns the gauge after.
+ */
 export async function creditEnergy(userId: string, cells: number): Promise<EnergyState> {
   const at = new Date();
   await settleEnergy(userId, at);
-  await prisma.user.updateMany({
-    where: { id: userId, energy: { lte: ENERGY_CEIL - cells } },
-    data: { energy: { increment: cells } },
+  await prisma.$runCommandRaw({
+    update: "User",
+    updates: [
+      {
+        q: { _id: { $oid: userId } },
+        u: [{ $set: { energy: { $min: [{ $add: [{ $ifNull: ["$energy", ENERGY_MAX] }, cells] }, ENERGY_CEIL] } } }],
+      },
+    ],
   });
   const row = await prisma.user.findUnique({ where: { id: userId }, select: { energy: true } });
   return toEnergyState(row?.energy, at);

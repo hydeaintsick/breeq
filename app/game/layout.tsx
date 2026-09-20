@@ -7,7 +7,7 @@ import { requireProgress } from "@/lib/auth/session";
 import { getBalances, getEconomy } from "@/lib/earn";
 import { getEnergy } from "@/lib/energy-store";
 import { canPlayEarn } from "@/lib/progress";
-import { earnSandbox, stripeConfigured } from "@/lib/stripe";
+import { earnSandbox, stripePublishableKey, stripeReady } from "@/lib/stripe";
 import { getSiteSettings } from "@/lib/tutorial";
 
 export default async function GameLayout({
@@ -27,7 +27,11 @@ export default async function GameLayout({
   return (
     <StoryChromeProvider>
       <BalancesProvider initial={balances}>
-        <GemShopProvider economy={economy} stripeReady={stripeConfigured()} sandbox={earnSandbox()}>
+        <GemShopProvider
+          economy={economy}
+          publishableKey={stripeReady() ? stripePublishableKey() : null}
+          sandbox={earnSandbox()}
+        >
           <EnergyProvider initial={energy}>
             <GameHeader progress={progress} stars={stars} isAdmin={user.role === "ADMIN"} earn={earn} />
             <div className="flex min-h-0 flex-1 flex-col overflow-x-clip">
