@@ -390,7 +390,7 @@ export function GameHeader({
       onBlur={onHeaderBlur}
     >
       <HeaderMenuBackdrop open={open} onClose={closeMenu} onEscape={escapeMenu} />
-      <div className="story-chrome pointer-events-auto relative z-10 mx-auto flex max-w-6xl items-center justify-between gap-2">
+      <div className="story-chrome pointer-events-auto relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between gap-2">
         <nav
           className="site-nav story-pill story-pill-main rounded-full backdrop-blur-[28px] backdrop-saturate-150"
           aria-label="Game"
@@ -406,7 +406,7 @@ export function GameHeader({
               Breeq
             </span>
           </Link>
-          <div className="header-pills relative z-10 mx-2 flex min-w-0 flex-1 items-center justify-start gap-2 sm:mx-3" data-swapped={swapped}>
+          <div className="header-pills relative z-10 ml-2 mr-0 flex min-w-0 flex-1 items-center justify-start gap-2 sm:ml-3" data-swapped={swapped}>
             {pills}
           </div>
         </nav>

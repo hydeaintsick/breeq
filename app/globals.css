@@ -771,7 +771,7 @@ html[data-theme="dark"] {
     }
 
     .rank-meter {
-      width: 8.5rem;
+      min-width: 8.5rem;
     }
 
     .rank-xp {
@@ -818,6 +818,13 @@ html[data-theme="dark"] {
     transition:
       transform var(--duration) var(--ease),
       opacity var(--duration) var(--ease);
+  }
+
+  /* The open pill eats the leftover glass: level, energy or bag, whichever
+     is unfolded. The folded chip stays a 44px round beside the logo. */
+  .header-pills > .rank-chip {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .rank-folded,
@@ -871,6 +878,10 @@ html[data-theme="dark"] {
     gap: 0.55rem;
     padding: 0 0.3rem 0 0.8rem;
     text-decoration: none;
+  }
+
+  .header-pills > .wallet-chip .wallet-plus {
+    margin-left: auto;
   }
 
   .wallet-chip:hover .wallet-plus {
@@ -1262,6 +1273,11 @@ html[data-theme="dark"] {
   .story-pill-main {
     padding-inline: 1.25rem;
   }
+}
+
+/* Energy sits in the pill's own padding, same inset as the logo. */
+.story-pill-main .header-pills {
+  margin-right: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5956,6 +5972,27 @@ html[data-theme="dark"] .lore-halo-photo {
   gap: 0.6rem;
   padding: 0 0.3rem 0 0.75rem;
   text-decoration: none;
+}
+
+/* Stretched header: the six cells become the bar and eat the leftover glass. */
+.header-pills > .energy-chip .energy-gauge {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-pills > .energy-chip .energy-cells {
+  flex: 1 1 auto;
+  min-width: 2.75rem;
+  height: calc(var(--cell-h) + 0.3rem);
+  padding: 0.15rem 0.18rem;
+  border-radius: 999px;
+  background: var(--hairline);
+}
+
+.header-pills > .energy-chip .energy-cell {
+  flex: 1 1 0;
+  min-width: var(--cell-w);
 }
 
 .energy-chip:hover .energy-plus {
