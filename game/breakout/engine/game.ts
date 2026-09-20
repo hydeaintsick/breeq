@@ -67,7 +67,7 @@ export const RULES = {
   /** Piece behavior. */
   ghostPeriod: 4,
   ghostOpenFraction: 0.4,
-  regenDelay: 6,
+  regenDelay: 60,
   explosionReach: 1.15,
   magnetRadius: 72,
   magnetPull: 3.2,

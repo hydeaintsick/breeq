@@ -8,7 +8,7 @@
  * scaling.
  */
 import { alpha, tint } from "../../shared/color";
-import { Game, serveDirection } from "../engine/game";
+import { Game, RULES, serveDirection } from "../engine/game";
 import { LEVEL_DEFAULTS, paddleZoneTop } from "../engine/level";
 import type { Ball, Brick, Level, Obstacle, Zone } from "../engine/types";
 import { MOD_TINT, ZONE_LABEL, ZONE_TINT, tintOf, type NeonPalette, type Tint } from "./palette";
@@ -297,7 +297,7 @@ export class BreakoutRenderer {
     }
 
     for (const pending of game.pending) {
-      this.pendingBrick(ctx, pending.brick, Math.max(0, Math.min(1, 1 - (pending.at - state.time) / 6)));
+      this.pendingBrick(ctx, pending.brick, Math.max(0, Math.min(1, 1 - (pending.at - state.time) / RULES.regenDelay)));
     }
     for (const brick of game.bricks) {
       this.brick(ctx, brick, game, scene, t);

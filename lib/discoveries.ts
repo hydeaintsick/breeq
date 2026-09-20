@@ -61,7 +61,7 @@ const BRICK_COPY: Record<BrickKind, string> = {
   steel: "It never breaks. Steel shapes the path; you do not need to clear it.",
   explosive: "Break it and it takes its neighbors with it. Explosives chain into each other.",
   ghost: "It fades in and out. While it is faint the ball passes straight through, so hit it while it is solid.",
-  regen: "It comes back a few seconds after you break it. It scores again, but it never blocks your clear.",
+  regen: "It comes back a minute after you break it. It scores again, but it never blocks your clear.",
   magnet: "It bends the ball toward itself while it stands. Break it to straighten the path.",
   rotor: "A slow blade. It sends the ball off at odd angles and takes two hits.",
   key: "Break every key on the wall to open the locks.",

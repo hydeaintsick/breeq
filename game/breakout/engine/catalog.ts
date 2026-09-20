@@ -28,7 +28,7 @@ export const BRICKS: Record<BrickKind, CatalogEntry> = {
   steel: { id: "steel", family: "brick", name: "Steel", blurb: "Never breaks. Shapes the path.", glyph: "", cost: 3, tint: "steel" },
   explosive: { id: "explosive", family: "brick", name: "Explosive", blurb: "Takes its neighbors with it. Chains.", glyph: "✸", cost: 6, tint: "amber" },
   ghost: { id: "ghost", family: "brick", name: "Ghost", blurb: "Fades out; the ball passes while it is open.", glyph: "◌", cost: 3, tint: "cyan" },
-  regen: { id: "regen", family: "brick", name: "Regen", blurb: "Comes back six seconds later. Scores again, never blocks the clear.", glyph: "↻", cost: 5, tint: "lime" },
+  regen: { id: "regen", family: "brick", name: "Regen", blurb: "Comes back a minute later. Scores again, never blocks the clear.", glyph: "↻", cost: 5, tint: "lime" },
   magnet: { id: "magnet", family: "brick", name: "Magnet", blurb: "Bends the ball toward it.", glyph: "∪", cost: 5, tint: "blue" },
   rotor: { id: "rotor", family: "brick", name: "Rotor", blurb: "A slow blade. Unpredictable angles.", glyph: "✕", cost: 6, tint: "amber" },
   key: { id: "key", family: "brick", name: "Key", blurb: "Break every key to open the locks.", glyph: "⚿", cost: 4, tint: "amber" },

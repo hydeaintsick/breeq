@@ -30,7 +30,7 @@ export type BrickKind =
   | "explosive"
   /** Fades in and out; the ball passes through while it is open. */
   | "ghost"
-  /** Comes back a few seconds after breaking, unless the wall is already clear. */
+  /** Comes back a minute after breaking, unless the wall is already clear. */
   | "regen"
   /** Pulls the ball toward it while it stands. */
   | "magnet"
