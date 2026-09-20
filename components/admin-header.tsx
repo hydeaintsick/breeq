@@ -13,11 +13,9 @@ import {
   PeopleIcon,
   PlayIcon,
   SettingsIcon,
-  SignOutIcon,
   WallIcon,
   WithdrawIcon,
 } from "@/components/nav-icons";
-import { SignOutButton } from "@/components/sign-out-button";
 import {
   ADMIN_DASHBOARD_PATH,
   ADMIN_EARN_PATH,
@@ -99,10 +97,6 @@ export function AdminHeader() {
                 {link.label}
               </Link>
             ))}
-            <SignOutButton className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left">
-              <SignOutIcon />
-              Sign out
-            </SignOutButton>
             <Link
               href={GAME_MENU_PATH}
               className="btn-play play-shimmer mt-1 min-h-11 w-full gap-2"

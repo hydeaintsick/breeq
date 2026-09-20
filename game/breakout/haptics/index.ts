@@ -41,6 +41,16 @@ export function playHapticCheck(): void {
   navigator.vibrate([12, 60, 18]);
 }
 
+/**
+ * A pulse for the UI outside a run (the dock, the shop): follows the same
+ * preference, does nothing where vibration is not supported. Keep it short —
+ * a tab is 6 ms, a purchase a three-beat pattern at most.
+ */
+export function pulseUi(pattern: Pattern): void {
+  if (!wanted || !isHapticsSupported()) return;
+  navigator.vibrate(pattern as number | number[]);
+}
+
 function total(pattern: Pattern): number {
   return typeof pattern === "number" ? pattern : pattern.reduce((sum, n) => sum + n, 0);
 }

@@ -14,9 +14,7 @@ import {
   PageIcon,
   PlayIcon,
   ShieldIcon,
-  SignOutIcon,
 } from "@/components/nav-icons";
-import { SignOutButton } from "@/components/sign-out-button";
 import { ADMIN_DASHBOARD_PATH, GAME_MENU_PATH } from "@/lib/auth/paths";
 
 const links = [
@@ -85,9 +83,6 @@ export function SiteHeader() {
               Admin
             </Link>
           ) : null}
-          {session?.user ? (
-            <SignOutButton className="nav-link" />
-          ) : null}
           <Link href={GAME_MENU_PATH} className="btn-play play-shimmer gap-2">
             <PlayIcon />
             Play
@@ -136,12 +131,6 @@ export function SiteHeader() {
               <DashboardIcon />
               Admin
             </Link>
-          ) : null}
-          {session?.user ? (
-            <SignOutButton className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left">
-              <SignOutIcon />
-              Sign out
-            </SignOutButton>
           ) : null}
           <Link
             href={GAME_MENU_PATH}

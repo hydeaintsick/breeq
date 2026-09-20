@@ -3,6 +3,7 @@ export { BreakoutSfx } from "./sfx";
 export { createPayoutSfx, type PayoutSfx } from "./payout";
 export { createEnergySfx, ENERGY_SURGE_MS, type EnergySfx } from "./energy";
 export { playSheetAppear, playSheetBack, playSheetBuy } from "./sheet";
+export { playDockTap, playShopTab, playSkinEquip, playSkinReveal, playSkinStamp, playSkinUnlock, SKIN_REVEAL_MS } from "./hub";
 export { acquireStoryTheme, acquireTheme, storyThemeChord, type StoryThemeChord, type StoryThemeHandle, type ThemeHandle } from "./theme";
 export { arcade, pursuit, type ThemeScore } from "./themes";
 export { levelKey } from "./sfx";

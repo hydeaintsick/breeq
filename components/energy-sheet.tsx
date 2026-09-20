@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { abandonGemPayment, createGemPayment, sandboxTopUp, type GemPayment } from "@/app/actions/earn";
 import { buyEnergy, claimEnergyPayment, type EnergyBought } from "@/app/actions/energy";
@@ -11,13 +12,16 @@ import { GemBag, bagTierFor } from "@/components/gem-bag";
 import { GemPay } from "@/components/gem-pay";
 import { useGemShop } from "@/components/gem-shop";
 import { ChevronLeftIcon, CloseIcon } from "@/components/nav-icons";
+import { useSheetSwipe } from "@/components/use-sheet-swipe";
 import { createEnergySfx, ENERGY_SURGE_MS, playSheetBack, playSheetBuy, type EnergySfx } from "@/game/breakout/audio";
 import { isHapticsEnabled, isHapticsSupported } from "@/game/breakout/haptics";
+import { STORY_PATH } from "@/lib/auth/paths";
 import { formatCents, formatGems, packListCents, packPriceCents, type GemPack } from "@/lib/economy";
 import {
   ENERGY_CLEAR_REFUND,
   ENERGY_PACKS,
   ENERGY_PLAY_COST,
+  energyPack,
   formatEnergyClock,
   runsLeft,
   type EnergyPack,
@@ -112,12 +116,15 @@ function gemPackFor(packs: GemPack[], shortfall: number): GemPack {
 export function EnergySheet({
   reason,
   hasReady,
+  initialPack,
   onReady,
   onClose,
 }: {
   reason: EnergySheetReason;
   /** A run is waiting on the other side: the landing's primary button serves it. */
   hasReady: boolean;
+  /** A recharge already picked (the shop page): the sheet opens buying it — charging, or straight to the checkout. */
+  initialPack?: EnergyPack["id"];
   onReady: () => void;
   onClose: () => void;
 }) {
@@ -175,9 +182,10 @@ export function EnergySheet({
     onClose();
   }, [leaveCheckout, onClose]);
 
-  // Escape: back one step from the checkout, closed from the packs; the landing is left alone.
+  const swipe = useSheetSwipe(sheetRef, dismiss);
+
+  // Escape: back one step from the checkout, closed from the packs and the landing.
   useEffect(() => {
-    if (step === "landed") return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.stopImmediatePropagation();
@@ -254,6 +262,18 @@ export function EnergySheet({
     }
   }
 
+  // Opened with a pack already picked (the shop page): buy it as if it had
+  // just been tapped, once the sheet is on screen. The timer's cleanup keeps
+  // it to one purchase when effects run twice in development.
+  useEffect(() => {
+    const pack = energyPack(initialPack);
+    if (!pack) return;
+    const id = window.setTimeout(() => void buy(pack), 160);
+    return () => window.clearTimeout(id);
+    // Runs once, on mount, with the pack the sheet was opened for.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /** Another gem pack: a new intent for the new amount, the old one canceled. */
   function pickGemPack(gemPack: GemPack) {
     if (!checkout || checkout.gemPack.gems === gemPack.gems) return;
@@ -314,7 +334,7 @@ export function EnergySheet({
     <div
       className="energy-sheet"
       data-depleted={depleted ? "true" : undefined}
-      onClick={step === "landed" ? undefined : step === "pay" ? back : dismiss}
+      onClick={step === "pay" ? back : dismiss}
     >
       <div
         ref={sheetRef}
@@ -325,22 +345,32 @@ export function EnergySheet({
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
+        onPointerDown={swipe.onPointerDown}
+        onPointerMove={swipe.onPointerMove}
+        onPointerUp={swipe.onPointerUp}
+        onPointerCancel={swipe.onPointerCancel}
       >
         <div className="gem-shop-handle" aria-hidden="true" />
         {step === "landed" && landed ? (
-          <EnergyLanded
-            bought={landed}
-            hasReady={hasReady}
-            onReady={onReady}
-            onDone={dismiss}
-            onMore={() => {
-              playSheetBuy();
-              energy?.setState(landed.energy);
-              setLanded(null);
-              go("packs", "back");
-            }}
-            onCount={() => energy?.setState(landed.energy)}
-          />
+          <>
+            <button type="button" className="header-chip energy-sheet-close energy-sheet-close-abs" aria-label="Close" onClick={dismiss}>
+              <span className="sr-only">Close</span>
+              <CloseIcon />
+            </button>
+            <EnergyLanded
+              bought={landed}
+              hasReady={hasReady}
+              onReady={onReady}
+              onDone={dismiss}
+              onMore={() => {
+                playSheetBuy();
+                energy?.setState(landed.energy);
+                setLanded(null);
+                go("packs", "back");
+              }}
+              onCount={() => energy?.setState(landed.energy)}
+            />
+          </>
         ) : (
           <>
             <ol className="wizard-dots" aria-label={`Step ${paying ? 2 : 1} of 2`}>
@@ -469,7 +499,7 @@ export function EnergySheet({
 }
 
 /** The pack's art: a stack of cells the size of the pack, the bolt riding it. */
-function EnergyPackArt({ pack }: { pack: EnergyPack }) {
+export function EnergyPackArt({ pack }: { pack: EnergyPack }) {
   return (
     <span className="energy-pack-art" aria-hidden="true" data-cells={pack.cells}>
       {Array.from({ length: Math.min(6, pack.cells) }, (_, i) => (
@@ -655,6 +685,8 @@ function EnergyLanded({
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     [],
   );
+  // Bought from the shop page, the way back is just the page underneath.
+  const inStory = usePathname().startsWith(STORY_PATH);
   const from = bought.before.energy.energy;
   const to = bought.energy.energy;
   const max = bought.energy.max;
@@ -833,7 +865,7 @@ function EnergyLanded({
               onDone();
             }}
           >
-            Back to the story
+            {inStory ? "Back to the story" : "Done"}
           </button>
         )}
         <button

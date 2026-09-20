@@ -15,6 +15,7 @@ import type { GameEvent, GameInput, GamePhase, GameState, Level, PaddleModKind, 
 import { readNeonPalette } from "../render/palette";
 import { BreakoutRenderer, type CssRect } from "../render/renderer";
 import { SceneFx, createScene } from "../render/scene";
+import { DEFAULT_SKIN_SET, type SkinSet } from "../render/skins";
 import { isSwipeAnywhereEnabled } from "./swipe";
 
 export interface HudState {
@@ -113,10 +114,17 @@ export interface MountOptions {
    * without aiming for a pixel.
    */
   railGain?: number;
+  /**
+   * The paddle and ball looks (`render/skins.ts`). Cosmetic only: the game
+   * plays the same. Swap them live with `setSkins`.
+   */
+  skins?: SkinSet;
 }
 
 export interface BreakoutHandle {
   destroy(): void;
+  /** Wear another paddle or ball without restarting the game. */
+  setSkins(skins: SkinSet): void;
   /** Swap the background photo of the current level (editor use). */
   setBackground(src: string): void;
   /** Replace the current level and redraw (editor use). */
@@ -175,6 +183,7 @@ export function mountBreakout(
   const fit = options.fit ?? null;
   const railGain = Math.max(1, options.railGain ?? 1.25);
   const forceFrozen = Boolean(options.frozen);
+  let skins = options.skins ?? DEFAULT_SKIN_SET;
   let seed = options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
   let paused = false;
@@ -220,7 +229,7 @@ export function mountBreakout(
   let level = rotation[levelIndex];
   let game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
   let pilot = new Autopilot(level, { seed: seed * 7 });
-  let renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
+  let renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode, skins);
 
   let hud: HudState = {
     levelName: level.name,
@@ -344,7 +353,7 @@ export function mountBreakout(
     if (bumpSeed) seed += 1;
     game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
     pilot = new Autopilot(level, { seed: seed * 7 });
-    renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode);
+    renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode, skins);
     if (cssWidth > 0) renderer.view(viewport());
     scene.trail.length = 0;
     scene.particles.length = 0;
@@ -790,6 +799,11 @@ export function mountBreakout(
     },
     setBackground(src) {
       renderer.setBackground(src);
+    },
+    setSkins(next) {
+      skins = next;
+      renderer.setSkins(next);
+      if (!destroyed && !live()) draw();
     },
     setLevel(next) {
       rotation[levelIndex] = next;

@@ -13,6 +13,7 @@ import { LEVEL_DEFAULTS, paddleZoneTop } from "../engine/level";
 import type { Ball, Brick, Level, Obstacle, Zone } from "../engine/types";
 import { MOD_TINT, ZONE_LABEL, ZONE_TINT, tintOf, type NeonPalette, type Tint } from "./palette";
 import type { BreakoutScene, FxColor, Particle } from "./scene";
+import { DEFAULT_SKIN_SET, skinColor, type SkinSet } from "./skins";
 
 const TAU = Math.PI * 2;
 const BRICK_RADIUS = 4;
@@ -72,19 +73,34 @@ export class BreakoutRenderer {
   /** Glows, halos and auras at the current scale (see `glow` and `light`). */
   private readonly lightCache = new Map<string, LightSprite>();
 
+  /** The paddle and ball looks (`skins.ts`); swapped live by `setSkins`. */
+  private skins: SkinSet;
+
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly level: Level,
     private palette: NeonPalette,
     private readonly onPhoto?: () => void,
     private readonly guides = false,
+    skins: SkinSet = DEFAULT_SKIN_SET,
   ) {
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) {
       throw new Error("Canvas 2D is not available");
     }
     this.ctx = ctx;
+    this.skins = skins;
     this.loadPhoto(level.background.src);
+  }
+
+  /** Wear another paddle or ball; the next frame draws it. */
+  setSkins(skins: SkinSet): void {
+    if (skins === this.skins) return;
+    this.skins = skins;
+    // The paddle's and ball's sprites are keyed on their colors; the old look's are dropped so trying skins on never grows the cache.
+    for (const key of Array.from(this.lightCache.keys())) {
+      if (key.startsWith("paddle|") || key.startsWith("aura|") || key.startsWith("core|")) this.lightCache.delete(key);
+    }
   }
 
   get ready(): boolean {
@@ -1096,7 +1112,9 @@ export class BreakoutRenderer {
     const pd = level.paddle;
     const x = s.paddleX - width / 2;
     const y = pd.y;
-    const accent = s.paddleMod ? tintOf(this.palette, MOD_TINT[s.paddleMod.kind]) : this.speedColor(game);
+    const look = this.skins.paddle;
+    // A paddle mod owns the color while it lasts; otherwise the skin's glow, which may follow the speed.
+    const accent = s.paddleMod ? tintOf(this.palette, MOD_TINT[s.paddleMod.kind]) : skinColor(look.glow, this.palette, this.speedColor(game));
     const iced = s.paddleMod?.kind === "ice";
 
     ctx.save();
@@ -1119,12 +1137,39 @@ export class BreakoutRenderer {
     ctx.fill();
 
     const g = ctx.createLinearGradient(0, y, 0, y + pd.height);
-    g.addColorStop(0, iced ? "rgba(225, 250, 255, 0.98)" : "rgba(255, 255, 255, 0.96)");
-    g.addColorStop(1, iced ? alpha(this.palette.neon.cyan, 0.6) : "rgba(225, 230, 245, 0.88)");
+    g.addColorStop(0, iced ? "rgba(225, 250, 255, 0.98)" : look.top);
+    g.addColorStop(1, iced ? alpha(this.palette.neon.cyan, 0.6) : look.bottom);
     ctx.fillStyle = g;
     this.roundRect(ctx, x, y, width, pd.height, pd.height / 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    if (look.stripes && look.stripes.length > 0 && !iced) {
+      // Diagonal bands clipped to the glass: one every ~9 units, cycling the skin's colors.
+      ctx.save();
+      ctx.clip();
+      const step = 9;
+      const h = pd.height;
+      let i = 0;
+      for (let bx = x - h; bx < x + width + h; bx += step, i += 1) {
+        ctx.fillStyle = look.stripes[i % look.stripes.length];
+        ctx.beginPath();
+        ctx.moveTo(bx, y + h);
+        ctx.lineTo(bx + 2.6, y + h);
+        ctx.lineTo(bx + 2.6 + h, y);
+        ctx.lineTo(bx + h, y);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+      // A sheen so the bands read as being under the glass, not painted on it.
+      const sheen = ctx.createLinearGradient(0, y, 0, y + pd.height);
+      sheen.addColorStop(0, "rgba(255, 255, 255, 0.55)");
+      sheen.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
+      sheen.addColorStop(1, "rgba(255, 255, 255, 0.25)");
+      ctx.fillStyle = sheen;
+      this.roundRect(ctx, x, y, width, pd.height, pd.height / 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = look.rim;
     ctx.lineWidth = 0.8;
     ctx.stroke();
 
@@ -1161,31 +1206,25 @@ export class BreakoutRenderer {
   private ball(ctx: Ctx, ball: Ball, game: Game, scene: BreakoutScene): void {
     const s = game.state;
     const r = this.level.ball.r * (ball.ttl !== null ? 0.85 : 1);
-    const accent = ball.ttl !== null ? this.palette.neon.pink : this.speedColor(game);
+    const look = this.skins.ball;
+    const speed = this.speedColor(game);
+    // Clones are always pink so a player can tell them from the real ball whatever the skin.
+    const clone = ball.ttl !== null;
+    const edge = clone ? this.palette.neon.pink : skinColor(look.edge, this.palette, speed);
+    const auraColor = clone ? this.palette.neon.pink : skinColor(look.aura, this.palette, speed);
+    const trailColor = clone ? this.palette.neon.pink : skinColor(look.trailTint, this.palette, speed);
     const mul = s.speed.total;
 
-    if (s.phase === "play" && ball.stuck === null) {
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      for (const pt of scene.trail) {
-        if (pt.id !== ball.id) continue;
-        const age = scene.time - pt.t;
-        const k = 1 - Math.min(1, age / 0.14);
-        if (k <= 0 || game.inFog(pt.x, pt.y)) continue;
-        ctx.fillStyle = alpha(accent, 0.35 * k * k * Math.min(1.6, 0.6 + mul * 0.4));
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, r * (0.25 + 0.75 * k), 0, TAU);
-        ctx.fill();
-      }
-      ctx.restore();
+    if (s.phase === "play" && ball.stuck === null && look.trail !== "none") {
+      this.trail(ctx, ball, game, scene, r, trailColor, mul, look.trail);
     }
 
-    // Aura and core are two small sprites per accent; the aura grows with speed.
-    const ar0 = r * 3;
-    const aura = this.light(`aura|${accent}|${r}`, ar0, (g, cx, cy) => {
+    // Aura and core are two small sprites per color; the aura grows with speed.
+    const ar0 = r * 3 * (look.auraScale ?? 1);
+    const aura = this.light(`aura|${auraColor}|${r}|${ar0}`, ar0, (g, cx, cy) => {
       const fill = g.createRadialGradient(cx, cy, r * 0.4, cx, cy, ar0);
-      fill.addColorStop(0, alpha(accent, 0.55));
-      fill.addColorStop(1, alpha(accent, 0));
+      fill.addColorStop(0, alpha(auraColor, 0.55));
+      fill.addColorStop(1, alpha(auraColor, 0));
       g.fillStyle = fill;
       g.fillRect(0, 0, ar0 * 2, ar0 * 2);
     });
@@ -1194,26 +1233,106 @@ export class BreakoutRenderer {
     this.drawLight(ctx, aura, ball.x, ball.y, (2.6 + mul * 0.5) / 3);
     ctx.restore();
 
-    const core = this.light(`core|${accent}|${r}`, r + 1, (g, cx, cy) => {
+    const coreColor = clone ? "#ffffff" : look.core;
+    const core = this.light(`core|${coreColor}|${edge}|${r}`, r + 1, (g, cx, cy) => {
       const fill = g.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-      fill.addColorStop(0, "#ffffff");
-      fill.addColorStop(0.7, "#f4f6ff");
-      fill.addColorStop(1, tint(accent, 0.35));
+      fill.addColorStop(0, tint(coreColor, 0.25));
+      fill.addColorStop(0.7, coreColor);
+      fill.addColorStop(1, tint(edge, 0.35));
       g.fillStyle = fill;
       g.beginPath();
       g.arc(cx, cy, r, 0, TAU);
       g.fill();
+      // A hairline so a dark heart still reads as a ball on a dark photo.
+      g.strokeStyle = alpha(edge, 0.85);
+      g.lineWidth = 0.7;
+      g.stroke();
     });
     this.drawLight(ctx, core, ball.x, ball.y);
 
     // Clone: countdown ring.
     if (ball.ttl !== null) {
-      ctx.strokeStyle = alpha(accent, 0.8);
+      ctx.strokeStyle = alpha(edge, 0.8);
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, r + 2.5, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, ball.ttl / 6));
       ctx.stroke();
     }
+  }
+
+  /**
+   * The ball's tail, in the skin's style. Every style reads the same trail
+   * points the scene keeps; only the paint differs. `sparks` scatter with a
+   * hash of each point's time so the pattern is deterministic — no random.
+   */
+  private trail(ctx: Ctx, ball: Ball, game: Game, scene: BreakoutScene, r: number, color: string, mul: number, style: "comet" | "ribbon" | "sparks" | "embers"): void {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const life = style === "ribbon" ? 0.2 : style === "embers" ? 0.22 : 0.14;
+    const heat = Math.min(1.6, 0.6 + mul * 0.4);
+    if (style === "ribbon") {
+      // One polyline through the points, fading toward the tail; two passes, a soft wide one and a bright thin one.
+      const pts: { x: number; y: number; k: number }[] = [];
+      for (const pt of scene.trail) {
+        if (pt.id !== ball.id) continue;
+        const k = 1 - Math.min(1, (scene.time - pt.t) / life);
+        if (k <= 0 || game.inFog(pt.x, pt.y)) continue;
+        pts.push({ x: pt.x, y: pt.y, k });
+      }
+      pts.push({ x: ball.x, y: ball.y, k: 1 });
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        ctx.strokeStyle = alpha(color, 0.18 * b.k * heat);
+        ctx.lineWidth = r * 0.9 * b.k + 0.6;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        ctx.strokeStyle = alpha("#ffffff", 0.35 * b.k * b.k);
+        ctx.lineWidth = Math.max(0.5, r * 0.28 * b.k);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+    for (const pt of scene.trail) {
+      if (pt.id !== ball.id) continue;
+      const age = scene.time - pt.t;
+      const k = 1 - Math.min(1, age / life);
+      if (k <= 0 || game.inFog(pt.x, pt.y)) continue;
+      if (style === "comet") {
+        ctx.fillStyle = alpha(color, 0.35 * k * k * heat);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, r * (0.25 + 0.75 * k), 0, TAU);
+        ctx.fill();
+      } else if (style === "embers") {
+        // Small motes that sink and shrink as they go out.
+        const drop = (1 - k) * (1 - k) * r * 3.2;
+        ctx.fillStyle = alpha(color, 0.5 * k * heat);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y + drop, r * (0.12 + 0.42 * k), 0, TAU);
+        ctx.fill();
+      } else {
+        // Sparks: two motes per point, thrown to either side by a hash of the point's time.
+        const h = Math.sin(pt.t * 1731.7) * 43758.5453;
+        const u = h - Math.floor(h);
+        const spread = r * 1.6 * (1 - k);
+        const dx = (u - 0.5) * 2 * spread;
+        const dy = ((u * 7.13) % 1 - 0.5) * 2 * spread;
+        ctx.fillStyle = alpha(color, 0.55 * k * heat);
+        ctx.beginPath();
+        ctx.arc(pt.x + dx, pt.y + dy, r * (0.1 + 0.28 * k), 0, TAU);
+        ctx.arc(pt.x - dy, pt.y + dx, r * (0.08 + 0.22 * k), 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   /** Dotted serve ray: where the ball will fly if the player launches now. */

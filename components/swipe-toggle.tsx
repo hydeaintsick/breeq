@@ -1,5 +1,6 @@
 "use client";
 
+import { MenuSwitch } from "@/components/menu-switch";
 import { useSwipe } from "@/components/swipe-provider";
 
 /**
@@ -12,21 +13,13 @@ export function SwipeToggle({ variant = "row" }: { variant?: "row" | "menu" }) {
 
   if (variant === "menu") {
     return (
-      <button
-        type="button"
-        role="switch"
-        className="nav-link flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-left"
-        aria-checked={anywhere}
-        onClick={toggle}
-      >
-        <span className="flex items-center gap-2.5">
-          <SwipeIcon off={!anywhere} />
-          Swipe anywhere
-        </span>
-        <span className="text-xs font-medium uppercase tracking-[0.12em]" aria-hidden="true">
-          {anywhere ? "On" : "Off"}
-        </span>
-      </button>
+      <MenuSwitch
+        icon={<SwipeIcon off={!anywhere} />}
+        label="Swipe anywhere"
+        hint={anywhere ? "The whole screen steers" : "Only the rail steers"}
+        checked={anywhere}
+        onToggle={toggle}
+      />
     );
   }
 

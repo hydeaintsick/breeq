@@ -17,26 +17,33 @@ import {
   GalaxyIcon,
   LeaveIcon,
   PlayIcon,
-  RouteIcon,
   SettingsIcon,
-  SignOutIcon,
 } from "@/components/nav-icons";
 import { RankMeter } from "@/components/rank-meter";
-import { SignOutButton } from "@/components/sign-out-button";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useStoryChrome } from "@/components/story-chrome";
 import { SwipeToggle } from "@/components/swipe-toggle";
 import { WalletChip } from "@/components/wallet-chip";
-import { ACCOUNT_PATH, ADMIN_DASHBOARD_PATH, EARN_PATH, GAME_MENU_PATH, STORY_PATH } from "@/lib/auth/paths";
+import { ACCOUNT_PATH, ADMIN_DASHBOARD_PATH, EARN_PATH, GAME_MENU_PATH, SHOP_PATH, STORY_PATH } from "@/lib/auth/paths";
 import type { Progress, StarTally } from "@/lib/progress";
 
 type Pill = "rank" | "wallet" | "energy";
-type MenuDoor = "profile" | "controls" | "story";
+type MenuDoor = "settings" | "story";
 
 /** The rows a keyboard can land on inside the menu sheet, top to bottom. */
 function menuItems(root: HTMLElement | null): HTMLElement[] {
   if (!root) return [];
   return Array.from(root.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'));
+}
+
+let dismissMenu = () => {};
+
+/**
+ * The dock sits above the menu backdrop, so a Play ↔ Shop tap never hits it.
+ * The tab calls this so the sheet does not travel with the layout.
+ */
+export function closeGameMenu() {
+  dismissMenu();
 }
 
 export function GameHeader({
@@ -56,8 +63,7 @@ export function GameHeader({
   const [door, setDoor] = useState<MenuDoor | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
-  const profileId = `${menuId}-profile`;
-  const controlsId = `${menuId}-controls`;
+  const settingsId = `${menuId}-settings`;
   const storyId = `${menuId}-story`;
   const chrome = useStoryChrome();
   const story = pathname.startsWith(STORY_PATH);
@@ -69,9 +75,9 @@ export function GameHeader({
   const focusFirst = useRef(false);
 
   // Two pills, one unfolded at a time: the energy gauge in Story, the bag in
-  // Earn, the level elsewhere. A tap on the folded one swaps them; a route
-  // change goes back to the default.
-  const inEarn = pathname.startsWith(EARN_PATH);
+  // Earn and the shop, the level elsewhere. A tap on the folded one swaps
+  // them; a route change goes back to the default.
+  const inEarn = pathname.startsWith(EARN_PATH) || pathname.startsWith(SHOP_PATH);
   const second: Pill | null = story ? "energy" : earn ? "wallet" : null;
   const defaultPill: Pill = story ? "energy" : earn && inEarn ? "wallet" : "rank";
   const [pick, setPick] = useState<{ path: string; pill: Pill } | null>(null);
@@ -98,7 +104,28 @@ export function GameHeader({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const closeMenu = () => setMenuPath(null);
+  const closeMenu = () => {
+    setMenuPath(null);
+    setDoor(null);
+  };
+
+  useEffect(() => {
+    dismissMenu = () => {
+      setMenuPath(null);
+      setDoor(null);
+    };
+    return () => {
+      dismissMenu = () => {};
+    };
+  }, []);
+
+  // The header lives in the game layout, so it keeps its state across Play ↔
+  // Shop. A route change puts the disclosure away.
+  useEffect(() => {
+    setMenuPath(null);
+    setDoor(null);
+  }, [pathname]);
+
   /** Escape: the menu goes, focus comes back to the button that opened it. */
   const escapeMenu = () => {
     closeMenu();
@@ -184,8 +211,8 @@ export function GameHeader({
         aria-label="Menu"
         onKeyDown={onMenuKeyDown}
       >
-        {/* Top to bottom: where to go, what is around, the controls, the
-            account, and the way out. Sign out and Leave sit last, as exits do. */}
+        {/* Top to bottom: where to go, the settings, the account, the admin
+            space, and Leave the story last when this is a story surface. */}
         {story ? (
           <>
             <button
@@ -197,7 +224,9 @@ export function GameHeader({
               data-active={door === "story"}
               onClick={() => toggleDoor("story")}
             >
-              <RouteIcon />
+              <span className="menu-emoji" aria-hidden="true">
+                🦎
+              </span>
               Story
             </button>
             {door === "story" ? (
@@ -240,74 +269,51 @@ export function GameHeader({
 
         <button
           type="button"
-          id={`${controlsId}-door`}
+          id={`${settingsId}-door`}
           className="nav-link flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-left"
-          aria-expanded={door === "controls"}
-          aria-controls={controlsId}
-          data-active={door === "controls"}
-          onClick={() => toggleDoor("controls")}
+          aria-expanded={door === "settings"}
+          aria-controls={settingsId}
+          data-active={door === "settings"}
+          onClick={() => toggleDoor("settings")}
         >
           <SettingsIcon />
-          Controls
+          Settings
         </button>
-        {door === "controls" ? (
-          <div id={controlsId} role="group" aria-labelledby={`${controlsId}-door`} className="header-menu-pane flex flex-col gap-1">
+        {door === "settings" ? (
+          <div id={settingsId} role="group" aria-labelledby={`${settingsId}-door`} className="header-menu-pane header-menu-switches flex flex-col gap-1">
             <SoundToggle variant="menu" />
             <HapticsToggle variant="menu" />
             <SwipeToggle variant="menu" />
           </div>
         ) : null}
 
-        <button
-          type="button"
-          id={`${profileId}-door`}
-          className="nav-link flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-left"
-          aria-expanded={door === "profile"}
-          aria-controls={profileId}
-          data-active={door === "profile"}
-          onClick={() => toggleDoor("profile")}
+        <Link
+          href={ACCOUNT_PATH}
+          className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
+          data-active={pathname === ACCOUNT_PATH}
+          aria-current={pathname === ACCOUNT_PATH ? "page" : undefined}
+          onClick={closeMenu}
         >
           <AccountIcon />
           Profile
-        </button>
-        {door === "profile" ? (
-          <div id={profileId} role="group" aria-labelledby={`${profileId}-door`} className="header-menu-pane flex flex-col gap-1">
-            <Link
-              href={ACCOUNT_PATH}
-              className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
-              data-active={pathname === ACCOUNT_PATH}
-              aria-current={pathname === ACCOUNT_PATH ? "page" : undefined}
-              onClick={closeMenu}
-            >
-              <AccountIcon />
-              Account settings
-            </Link>
-            {isAdmin ? (
-              <Link
-                href={ADMIN_DASHBOARD_PATH}
-                className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
-                data-active={pathname.startsWith("/admin")}
-                onClick={closeMenu}
-              >
-                <DashboardIcon />
-                Admin space
-              </Link>
-            ) : null}
-            <SignOutButton className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left">
-              <SignOutIcon />
-              Sign out
-            </SignOutButton>
-          </div>
+        </Link>
+
+        {isAdmin ? (
+          <Link
+            href={ADMIN_DASHBOARD_PATH}
+            className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
+            data-active={pathname.startsWith("/admin")}
+            onClick={closeMenu}
+          >
+            <DashboardIcon />
+            Admin
+          </Link>
         ) : null}
 
         {story ? (
           <>
             <div className="header-menu-rule" role="separator" />
-            <Link
-              href={GAME_MENU_PATH}
-              className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3"
-              onClick={closeMenu}
-            >
+            <Link href={GAME_MENU_PATH} className="nav-link flex min-h-11 items-center gap-2.5 rounded-xl px-3" onClick={closeMenu}>
               <LeaveIcon />
               Leave the story
             </Link>
@@ -351,6 +357,7 @@ export function GameHeader({
             href={GAME_MENU_PATH}
             aria-label="Breeq"
             className="relative z-10 flex shrink-0 items-center gap-2.5 text-sm font-semibold tracking-tight text-ink"
+            onClick={closeMenu}
           >
             <LogoMark />
             <span aria-hidden="true" className="hidden sm:inline">
@@ -392,6 +399,7 @@ export function GameHeader({
             href={GAME_MENU_PATH}
             aria-label="Breeq"
             className="relative z-10 flex shrink-0 items-center gap-2.5 text-sm font-semibold tracking-tight text-ink"
+            onClick={closeMenu}
           >
             <LogoMark />
             <span aria-hidden="true" className="hidden sm:inline">

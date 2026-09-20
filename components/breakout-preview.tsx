@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCosmetics } from "@/components/cosmetics-provider";
 import { useSwipe } from "@/components/swipe-provider";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
 import type { Level } from "@/game/breakout/engine/types";
-import { mountBreakout, type BreakoutHandle, type HudState, type MountOptions } from "@/game/breakout/preview";
+import { mountBreakout, type BreakoutHandle, type HudState, type MountOptions, type SkinSet } from "@/game/breakout/preview";
 
 const DEFAULT_LEVELS = SHOWCASE_LEVELS;
 
@@ -46,6 +47,7 @@ export function BreakoutPreview({
   sound = false,
   haptics = false,
   chrome,
+  skins: skinsProp,
   onCleared,
   onOver,
   onEvent,
@@ -73,6 +75,8 @@ export function BreakoutPreview({
   haptics?: boolean;
   /** Full-screen boards: controls laid over the HUD band (a pause button). */
   chrome?: ReactNode;
+  /** Paddle and ball looks. Defaults to what the player wears (the game layout's wardrobe), then to the free skins. */
+  skins?: SkinSet;
   onCleared?: MountOptions["onCleared"];
   onOver?: MountOptions["onOver"];
   /** Every game event, for guided runs. Keep the identity stable (a ref) or the game remounts. */
@@ -92,6 +96,15 @@ export function BreakoutPreview({
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+  // The skins ride a ref into the mount and are swapped live after: a new
+  // paddle must never restart the game under the player.
+  const shared = useCosmetics();
+  const skins = skinsProp ?? shared?.skins;
+  const skinsRef = useRef(skins);
+  useEffect(() => {
+    skinsRef.current = skins;
+    if (skins) handleRef.current?.setSkins(skins);
+  }, [skins]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -115,6 +128,7 @@ export function BreakoutPreview({
       haptics,
       rail: thumbRail ? railRef.current : null,
       fit: contain ? fitRef.current : null,
+      skins: skinsRef.current,
     });
     handleRef.current = handle;
     if (pausedRef.current) handle.pause();

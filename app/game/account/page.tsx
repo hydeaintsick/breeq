@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountForm } from "@/components/account-form";
+import { SignOutIcon } from "@/components/nav-icons";
 import { PlaySettings } from "@/components/play-settings";
+import { SignOutButton } from "@/components/sign-out-button";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 
@@ -39,7 +41,7 @@ export default async function AccountPage() {
     (user && hasPassword ? user.updatedAt.toISOString() : null);
 
   return (
-    <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-20 pt-28">
+    <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-32 pt-28">
       <div className="mx-auto flex w-full max-w-xl flex-col justify-center">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
         Account
@@ -48,7 +50,7 @@ export default async function AccountPage() {
         Settings
       </h1>
       <p className="mt-4 text-base leading-7 text-ink-muted">
-        How you show up on the shelf, and how the paddle follows your finger. Sign out lives in the menu.
+        How you show up on the shelf, and how the paddle follows your finger.
       </p>
 
       <AccountForm
@@ -63,8 +65,19 @@ export default async function AccountPage() {
         )}
       />
 
-      <div className="mt-4">
+      <div className="mt-4 grid gap-4">
         <PlaySettings />
+        <div className="glass grid gap-4 p-6 sm:p-8">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Session</p>
+          <h2 className="text-xl font-semibold tracking-tight text-ink">Sign out</h2>
+          <p className="text-sm leading-6 text-ink-muted">
+            Leave this device. Your walls, gems and progress stay on the account.
+          </p>
+          <SignOutButton className="btn-glass w-fit">
+            <SignOutIcon />
+            Sign out
+          </SignOutButton>
+        </div>
       </div>
       <p className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-muted">
         <Link href="/terms" className="hover:text-ink">

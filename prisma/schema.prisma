@@ -36,6 +36,11 @@ model User {
   energy         Int            @default(6)
   /// The UTC day (`YYYY-MM-DD`) the gauge was last settled on; `settleEnergy` recharges when it is not today.
   energyDay      String?
+  /// Cosmetics: skin ids bought with gems (`lib/cosmetics.ts`). Free skins are never stored here.
+  skins          String[]       @default([])
+  /// Cosmetics: the equipped paddle and ball skin ids; null means the free default.
+  paddleSkin     String?
+  ballSkin       String?
   /// The short code in this player's share links (`/r/<code>`). Minted the first time it is
   /// needed. Not `@unique`: Mongo would file every player without a code under one null key.
   /// `lib/referrals.ts` checks for a clash before writing.
@@ -298,6 +303,8 @@ enum LedgerKind {
   REFERRAL
   /// Story: gems spent on an energy recharge.
   ENERGY
+  /// Shop: gems spent on a cosmetic skin.
+  SKIN
 }
 
 /// One sign-up through a share link. `referredId` is unique: an account is

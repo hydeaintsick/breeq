@@ -4,6 +4,8 @@ export const AFTER_AUTH_PATH = "/auth/continue";
 /** The game layout: every signed-in game page hangs under it. */
 export const GAME_ROOT_PATH = "/game";
 export const GAME_MENU_PATH = "/game/menu";
+/** The shop tab of the dock: gems, energy recharges, skins. */
+export const SHOP_PATH = "/game/shop";
 export const STORY_PATH = "/game/story";
 export const TUTORIAL_PATH = "/game/tutorial";
 /** Landing on the shelf straight from the tutorial: it swipes on to episode one. */

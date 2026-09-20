@@ -4,13 +4,15 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { EnergySheet, type EnergySheetReason } from "@/components/energy-sheet";
 import { playSheetAppear } from "@/game/breakout/audio";
-import { rolledEnergy, type EnergyState } from "@/lib/energy";
+import { rolledEnergy, type EnergyPack, type EnergyState } from "@/lib/energy";
 
 /** Why the recharge sheet came up: it picks the copy and the CTA after a purchase. */
 export type EnergyOpen = {
   reason?: EnergySheetReason;
   /** The gauge can pay again: the sheet's primary button serves the run the player was after. */
   onReady?: () => void;
+  /** A recharge already picked (the shop page's list): the sheet opens buying it. */
+  pack?: EnergyPack["id"];
 };
 
 interface EnergyContext {
@@ -77,13 +79,13 @@ export function EnergyProvider({ initial, children }: { initial: EnergyState; ch
     setSeen(initial);
     setState(initial);
   }
-  const [sheet, setSheet] = useState<{ reason: EnergySheetReason; hasReady: boolean } | null>(null);
+  const [sheet, setSheet] = useState<{ reason: EnergySheetReason; hasReady: boolean; pack?: EnergyPack["id"] } | null>(null);
   const onReadyRef = useRef<(() => void) | undefined>(undefined);
 
   const open = useCallback((options: EnergyOpen = {}) => {
     playSheetAppear();
     onReadyRef.current = options.onReady;
-    setSheet({ reason: options.reason ?? "browse", hasReady: options.onReady !== undefined });
+    setSheet({ reason: options.reason ?? "browse", hasReady: options.onReady !== undefined, pack: options.pack });
   }, []);
   const close = useCallback(() => {
     onReadyRef.current = undefined;
@@ -134,7 +136,7 @@ export function EnergyProvider({ initial, children }: { initial: EnergyState; ch
   return (
     <Ctx.Provider value={value}>
       {children}
-      {sheet ? <EnergySheet reason={sheet.reason} hasReady={sheet.hasReady} onReady={ready} onClose={close} /> : null}
+      {sheet ? <EnergySheet reason={sheet.reason} hasReady={sheet.hasReady} initialPack={sheet.pack} onReady={ready} onClose={close} /> : null}
     </Ctx.Provider>
   );
 }
