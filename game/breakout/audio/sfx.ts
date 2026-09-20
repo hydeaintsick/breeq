@@ -472,6 +472,20 @@ export class BreakoutSfx {
         return;
       }
 
+      case "revive": {
+        // A heart starts again: two soft beats under a warm rising triad in the
+        // level's key, and a breath of bright air as the ball lands on the paddle.
+        const pan = this.pan(e.x);
+        L.tone({ freq: this.note(0, -12), type: "sine", lowpass: 220, gain: 0.2, attack: 0.006, hold: 0.04, decay: 0.32, send: 0.2 });
+        L.tone({ freq: this.note(0, -12), type: "sine", lowpass: 220, gain: 0.15, attack: 0.006, hold: 0.03, decay: 0.3, at: now + 0.2, send: 0.2 });
+        [0, 2, 3].forEach((deg, i) => {
+          L.bell({ freq: this.note(deg, 24), gain: 0.16 - 0.02 * i, decay: 1.1 + 0.1 * i, at: now + 0.1 + 0.085 * i, pan: pan * 0.5 - 0.2 + 0.2 * i, send: 0.85 });
+        });
+        L.tone({ freq: this.note(0, 12), type: "triangle", lowpass: 1100, gain: 0.07, attack: 0.08, hold: 0.3, decay: 1.1, pan, send: 0.85 });
+        L.noise({ gain: 0.04, attack: 0.06, hold: 0.05, decay: 0.6, filter: "bandpass", freq: 900, to: 4800, q: 1.1, at: now + 0.08, pan, send: 0.8 });
+        return;
+      }
+
       case "cleared": {
         [0, 2, 3, 6, 8].forEach((deg, i) => {
           L.bell({ freq: this.note(deg, 24), gain: 0.19, decay: 1.4, at: now + 0.09 * i, pan: -0.4 + 0.2 * i, send: 0.85 });

@@ -7,9 +7,10 @@ import { ENERGY_MAX, ENERGY_PLAY_COST } from "@/lib/energy";
 /**
  * The gauge: `max` cells in a row, lit up to `energy`, with the bolt ahead of
  * them. Cells that just lit or went dark carry `data-lit` / `data-dark` for a
- * beat so the stylesheet can flash them; cells banked past the max show as a
- * "+N" reserve after the row. `data-low` marks a gauge that cannot pay for a
- * run, `data-empty` one with nothing left.
+ * beat so the stylesheet can flash them; once cells are banked past the max,
+ * the count folds into a single gold badge with the full total (the plain
+ * "x/y" would be redundant next to it). `data-low` marks a gauge that cannot
+ * pay for a run, `data-empty` one with nothing left.
  */
 export function EnergyGauge({
   energy,
@@ -78,11 +79,12 @@ export function EnergyGauge({
         })}
       </span>
       {banked > 0 ? (
+        // Past the max, the total already says it all: the badge carries the
+        // whole count and the "x/y" beside it would be redundant clutter.
         <span className="energy-banked" aria-hidden="true">
-          +{banked}
+          {Math.floor(energy)}
         </span>
-      ) : null}
-      {showCount ? (
+      ) : showCount ? (
         <span className="energy-count" aria-hidden="true">
           {Math.floor(energy)}
           <span className="energy-count-sep">/</span>

@@ -305,6 +305,8 @@ enum LedgerKind {
   ENERGY
   /// Shop: gems spent on a cosmetic skin.
   SKIN
+  /// Story: gems spent on a heart after the last ball.
+  REVIVE
 }
 
 /// One sign-up through a share link. `referredId` is unique: an account is

@@ -1093,7 +1093,7 @@ html[data-theme="dark"] {
 }
 
 .story-pill-main {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   justify-content: flex-start;
   gap: 0.5rem;
@@ -1733,27 +1733,145 @@ html[data-theme="dark"] {
   color: rgba(255, 255, 255, 0.55);
 }
 
+/* Lives: a row of hearts, white glass while they beat, a hairline once lost.
+   The heart that just changed carries `data-beat`: "broke" shakes and empties
+   it, "lit" (a revive) blooms it back. */
 .board-hud-lives {
   display: inline-flex;
-  gap: 0.3rem;
+  align-items: center;
+  gap: 0.22rem;
 }
 
 .board-hud-life {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  display: inline-grid;
+  width: 0.72rem;
+  height: 0.72rem;
+  place-items: center;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.75));
   transition:
-    background var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease),
+    filter var(--duration) var(--ease),
     transform var(--duration) var(--ease);
 }
 
+.board-hud-life svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.board-hud-life-fill {
+  fill: #ffffff;
+  transform-origin: 50% 55%;
+  transition:
+    fill var(--duration) var(--ease),
+    opacity var(--duration) var(--ease);
+}
+
+.board-hud-life-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  transition: stroke var(--duration) var(--ease);
+}
+
 .board-hud-life[data-lost="true"] {
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: none;
-  transform: scale(0.85);
+  filter: none;
+  transform: scale(0.9);
+}
+
+.board-hud-life[data-lost="true"] .board-hud-life-fill {
+  fill: rgba(255, 255, 255, 0.06);
+}
+
+.board-hud-life[data-lost="true"] .board-hud-life-line {
+  stroke: rgba(255, 255, 255, 0.34);
+}
+
+.board-hud-life[data-beat="broke"] {
+  animation: heart-break 640ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.board-hud-life[data-beat="broke"] .board-hud-life-fill {
+  fill: var(--danger);
+  animation: heart-break-fill 640ms var(--ease) both;
+}
+
+.board-hud-life[data-beat="lit"] {
+  animation: heart-lit 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.board-hud-life[data-beat="lit"] .board-hud-life-fill {
+  animation: heart-lit-fill 900ms var(--ease) both;
+}
+
+@keyframes heart-break {
+  0% {
+    transform: scale(1.35);
+    filter: drop-shadow(0 0 8px var(--danger));
+  }
+  20% {
+    transform: scale(1.3) translate(-1px, 0) rotate(-10deg);
+  }
+  40% {
+    transform: scale(1.2) translate(1px, 0) rotate(8deg);
+  }
+  60% {
+    transform: scale(1.05) translate(-1px, 0) rotate(-5deg);
+  }
+  100% {
+    transform: scale(0.9);
+    filter: none;
+  }
+}
+
+@keyframes heart-break-fill {
+  0% {
+    fill: var(--danger);
+    opacity: 1;
+  }
+  55% {
+    fill: var(--danger);
+    opacity: 0.7;
+  }
+  100% {
+    fill: rgba(255, 255, 255, 0.06);
+    opacity: 1;
+  }
+}
+
+@keyframes heart-lit {
+  0% {
+    transform: scale(0.6);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  45% {
+    transform: scale(1.7);
+    filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 0 18px var(--neon-pink));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.75));
+  }
+}
+
+@keyframes heart-lit-fill {
+  0% {
+    fill: var(--neon-pink);
+  }
+  60% {
+    fill: #ffffff;
+  }
+  100% {
+    fill: #ffffff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-hud-life,
+  .board-hud-life .board-hud-life-fill {
+    animation: none !important;
+  }
 }
 
 .board-hud-stats {
@@ -5778,7 +5896,8 @@ html[data-theme="dark"] .lore-halo-photo {
   color: var(--danger);
 }
 
-/* Cells bought past the max: a small reserve after the row. */
+/* Cells bought past the max: the full total in one gold badge, replacing the
+   plain "x/y" count so the row stays compact. */
 .energy-banked {
   display: inline-flex;
   align-items: center;
@@ -5863,9 +5982,17 @@ html[data-theme="dark"] .lore-halo-photo {
     0 4px 12px -4px var(--danger);
 }
 
+/* Unlike the rank / wallet folds (one glyph, fits the 44px circle), the energy
+   fold carries the bolt AND a count that can run to four digits — forcing
+   `.header-chip`'s fixed 44px width made the flex item outgrow it with no
+   padding, so the rounded ends clipped the content into a lopsided blob.
+   Let it grow into a proper capsule instead: auto width, real side padding. */
 .energy-folded {
   position: relative;
-  gap: 0.15rem;
+  width: auto;
+  min-width: 2.75rem;
+  padding: 0 0.7rem;
+  gap: 0.3rem;
   cursor: pointer;
 }
 
@@ -8331,4 +8458,329 @@ html[data-theme="dark"] .lore-halo-photo {
   .shop-bag {
     transition: none !important;
   }
+}
+
+/* --- Revive: a second chance after the last ball --------------------------
+   Story only. The game over screen's primary button is a heart for gems; the
+   run goes on from the frame it ended on, wall and score kept. `--energy` /
+   `--energy-cool` are rebound to the heart's pink and the danger red on the
+   sheet and the burst so the recharge sheet's glass, wizard, receipt and
+   surge land in the heart's neon without a second stylesheet. */
+.heart-glyph {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.12em;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--neon-pink) 60%, transparent));
+}
+
+.heart-glyph[data-hollow="true"] {
+  filter: none;
+}
+
+/* The primary button on the game over screen: the heart beats, the price sits in a pill. */
+.story-clear-revive {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding-inline: 1.1rem;
+  box-shadow:
+    0 12px 34px -12px color-mix(in srgb, var(--neon-pink) 70%, transparent),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.story-clear-revive:disabled {
+  opacity: 0.7;
+}
+
+.story-clear-revive-heart {
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.story-clear-actions[data-show="true"] .story-clear-revive-heart .heart-glyph {
+  animation: heart-pulse 1800ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.story-clear-revive-label {
+  font-weight: 600;
+}
+
+/* The gem price on the heart, the `.play-cost` pill's twin. */
+.revive-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.18rem 0.55rem 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(15, 17, 23, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(15, 17, 23, 0.1);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.revive-cost .gem-glyph {
+  font-size: 0.95rem;
+}
+
+.revive-cost[data-short="true"] {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+
+/* "Try again" steps back to glass when a heart is on offer: its energy pill reads on the dark. */
+.story-clear-glass .play-cost {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+@keyframes heart-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--neon-pink) 60%, transparent));
+  }
+  10% {
+    transform: scale(1.22);
+    filter: drop-shadow(0 0 9px color-mix(in srgb, var(--neon-pink) 90%, transparent));
+  }
+  20% {
+    transform: scale(1.02);
+  }
+  30% {
+    transform: scale(1.16);
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--neon-pink) 80%, transparent));
+  }
+  45% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--neon-pink) 60%, transparent));
+  }
+}
+
+/* --- The revive sheet: the heart large, then the checkout, then Continue -- */
+.revive-sheet-hero {
+  margin-top: 1rem;
+  padding: 1.1rem 0.85rem 0.95rem;
+}
+
+.revive-sheet-heart {
+  display: inline-grid;
+  place-items: center;
+  font-size: 4.25rem;
+  line-height: 1;
+}
+
+.revive-sheet-heart .heart-glyph {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--neon-pink) 65%, transparent)) drop-shadow(0 10px 24px rgba(0, 0, 0, 0.4));
+}
+
+.revive-sheet-hero .revive-sheet-heart .heart-glyph {
+  animation: heart-pulse 1800ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.revive-sheet-keep {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.revive-receipt-heart {
+  display: inline-grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--neon-pink) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--neon-pink) 35%, transparent);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.revive-sheet-cta {
+  box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--neon-pink) 70%, transparent);
+}
+
+/* The landing: the heart in the reactor's place, gathering then lit. */
+.revive-landed-heart {
+  position: relative;
+  z-index: 1;
+  opacity: 0.6;
+  transition: opacity 360ms var(--ease);
+}
+
+.revive-landed-core[data-live="true"] .revive-landed-heart {
+  opacity: 1;
+}
+
+.revive-landed[data-stage="charge"] .revive-landed-heart .heart-glyph {
+  animation: surge-heart 560ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.revive-landed[data-burst="true"] .revive-landed-heart .heart-glyph {
+  animation: surge-heart-out 900ms var(--ease) both;
+}
+
+.revive-landed-stamp {
+  gap: 0.45rem;
+  font-size: 1.15rem;
+}
+
+.revive-landed-stamp .heart-glyph {
+  font-size: 1.05rem;
+}
+
+@keyframes surge-heart {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  100% {
+    transform: scale(1.3);
+    filter: drop-shadow(0 0 14px #ffffff) drop-shadow(0 0 30px var(--neon-pink)) brightness(1.6);
+  }
+}
+
+@keyframes surge-heart-out {
+  0% {
+    transform: scale(1.45);
+    filter: drop-shadow(0 0 20px #ffffff) drop-shadow(0 0 44px var(--neon-pink)) brightness(2);
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 14px color-mix(in srgb, var(--neon-pink) 65%, transparent));
+  }
+}
+
+/* --- The burst over the board: the game over glass lifts, the heart lands --
+   Sits over the full-screen board (`.story-play`), above the HUD and the
+   pause chrome, under every sheet. Never takes a tap: the ball is back on
+   the paddle underneath and the first tap after the beat launches it. */
+.revive-burst {
+  --beat: 560ms;
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* The game over screen's glass, handed over and lifted as the heart gathers. */
+.revive-burst-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 6, 12, 0.72);
+  @apply backdrop-blur-[18px] backdrop-saturate-150;
+  animation: revive-veil calc(var(--beat) + 240ms) cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.revive-burst-core {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: 6rem;
+  height: 6rem;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+}
+
+/* Sparks may fly in every direction here: the stage clips them, nothing scrolls. */
+.revive-burst .surge {
+  --spill: 9rem;
+  inset: calc(var(--spill) * -1);
+  overflow: visible;
+}
+
+.revive-burst-heart {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.revive-burst-heart .heart-glyph {
+  animation:
+    surge-heart var(--beat) cubic-bezier(0.4, 0, 1, 1) both,
+    revive-heart-out 900ms cubic-bezier(0.16, 1, 0.3, 1) var(--beat) both;
+}
+
+.revive-burst .surge-ring {
+  animation: surge-ring-in var(--beat) cubic-bezier(0.4, 0, 1, 1) calc(var(--k) * 110ms) both;
+}
+
+.revive-burst .surge-flash {
+  inset: calc(var(--spill) - 3.5rem);
+  top: calc(var(--spill) - 3.5rem);
+  left: calc(var(--spill) - 3.5rem);
+  border-radius: 999px;
+  animation: surge-flash 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--beat) both;
+}
+
+.revive-burst .surge-wave {
+  animation: surge-wave 1100ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--beat) + var(--k) * 110ms) both;
+}
+
+.revive-burst .surge-spark {
+  animation: surge-spark 900ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--beat) + var(--delay)) both;
+}
+
+@keyframes revive-veil {
+  0%,
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes revive-heart-out {
+  0% {
+    opacity: 1;
+    transform: scale(1.5);
+    filter: drop-shadow(0 0 22px #ffffff) drop-shadow(0 0 48px var(--neon-pink)) brightness(2);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7) translateY(-0.5rem);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/* Reduced motion: the glass lifts in a breath, no heart in the air; the sheet's
+   heart holds still and the button's heart does not beat. */
+@media (prefers-reduced-motion: reduce) {
+  .story-clear-revive-heart .heart-glyph,
+  .revive-sheet-heart .heart-glyph,
+  .revive-landed-heart .heart-glyph,
+  .revive-burst .surge > i {
+    animation: none !important;
+  }
+
+  .revive-burst-core {
+    display: none;
+  }
+
+  .revive-burst-veil {
+    animation: revive-veil 240ms linear both;
+  }
+}
+
+.revive-burst[data-reduced="true"] .revive-burst-core {
+  display: none;
 }

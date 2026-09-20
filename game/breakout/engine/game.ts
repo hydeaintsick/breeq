@@ -138,6 +138,40 @@ export class Game {
     this.serveBall();
   }
 
+  /**
+   * A second chance after the last ball: `lives` back, the wall as it stands,
+   * the score kept, the speed model cold, a fresh serve. Only a game that
+   * ended on lives can be revived — a clock that ran out or a wall that came
+   * down is final. Returns false when there was nothing to revive.
+   */
+  revive(lives = 1): boolean {
+    const s = this.state;
+    if (s.phase !== "over" || s.ending !== "lives") return false;
+    s.lives = Math.max(1, Math.floor(lives));
+    s.ending = null;
+    s.phase = "serve";
+    s.phaseLeft = RULES.serveDelay;
+    s.paddleHits = 0;
+    s.speed = { bonusMul: 1, bonusLeft: 0, bonusKind: null, rampMul: 1, heat: 0, total: 1 };
+    if (s.paddleMod) {
+      s.paddleMod = null;
+      s.paddleWidth = this.level.paddle.width;
+    }
+    this.zoneCooldown.clear();
+    this.fieldsIn.clear();
+    this.serveBall();
+    this.events = [];
+    this.emit({ t: s.time, type: "revive", lives: s.lives, x: s.paddleX, y: this.level.paddle.y });
+    return true;
+  }
+
+  /** Events produced outside `step` (a revive), drained by the caller. */
+  drain(): GameEvent[] {
+    const out = this.events;
+    this.events = [];
+    return out;
+  }
+
   /** Advance one fixed step. Returns the events it produced. */
   step(input: GameInput): GameEvent[] {
     this.events = [];

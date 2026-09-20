@@ -131,6 +131,12 @@ export interface BreakoutHandle {
   setLevel(next: Level): void;
   /** Restart the current level. */
   restart(): void;
+  /**
+   * A second chance after the last ball: `lives` back (one by default), the
+   * wall as it stands, the score kept, a fresh serve. False when the game did
+   * not end on lives (a clock, a wall coming down) or is not over at all.
+   */
+  revive(lives?: number): boolean;
   /** Jump to the next level in the rotation. */
   next(): void;
   pause(): void;
@@ -384,6 +390,22 @@ export function mountBreakout(
     pointerAimX = null;
     pointerAimY = null;
     playDrag = null;
+  };
+
+  const revive = (lives = 1): boolean => {
+    if (destroyed || !game.revive(lives)) return false;
+    // The run goes on: the end frame's hold is dropped, the trail and the aim
+    // start clean, and the observers hear the moment like any other event.
+    endHold = 0;
+    accumulator = 0;
+    scene.trail.length = 0;
+    pointerAimX = null;
+    pointerAimY = null;
+    playDrag = null;
+    applyEvents(game.drain());
+    syncHud();
+    draw();
+    return true;
   };
 
   const tick = (dt: number) => {
@@ -810,6 +832,7 @@ export function mountBreakout(
       applyLevel(next, { bumpSeed: false });
     },
     restart,
+    revive,
     next() {
       loadLevel(levelIndex + 1);
     },

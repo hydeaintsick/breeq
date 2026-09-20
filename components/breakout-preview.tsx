@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useCosmetics } from "@/components/cosmetics-provider";
+import { HEART_PATH } from "@/components/currency-glyphs";
 import { useSwipe } from "@/components/swipe-provider";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
 import type { Level } from "@/game/breakout/engine/types";
@@ -152,6 +153,23 @@ export function BreakoutPreview({
   const author = hud?.author ?? first.author;
   const maxLives = hud?.maxLives ?? first.lives;
   const lives = hud?.lives ?? maxLives;
+
+  // The heart that just changed carries a beat: `broke` when a life went, `lit`
+  // when one came back (a revive). Only changes animate, never the first paint.
+  const livesRef = useRef(lives);
+  const [beat, setBeat] = useState<{ index: number; kind: "broke" | "lit" } | null>(null);
+  useEffect(() => {
+    const before = livesRef.current;
+    livesRef.current = lives;
+    if (lives === before) return;
+    // A revive lights one heart back from none; a fresh board (restart, next
+    // level) fills every heart at once and gets no beat.
+    if (lives < before) setBeat({ index: lives, kind: "broke" });
+    else if (before === 0 && lives < maxLives) setBeat({ index: lives - 1, kind: "lit" });
+    else return;
+    const id = window.setTimeout(() => setBeat(null), 1100);
+    return () => window.clearTimeout(id);
+  }, [lives, maxLives]);
   const score = (hud?.score ?? 0).toLocaleString("en-US");
   const speed = hud?.bonus ? SPEED_LABEL[hud.bonus] : `×${(hud?.speed ?? 1).toFixed(1)}`;
   const caption = hud?.caption ?? "Autoplay. Move over the board to take the paddle.";
@@ -168,7 +186,12 @@ export function BreakoutPreview({
       </div>
       <div className="board-hud-lives">
         {Array.from({ length: maxLives }, (_, i) => (
-          <span key={i} className="board-hud-life" data-lost={i >= lives} />
+          <span key={i} className="board-hud-life" data-lost={i >= lives} data-beat={beat?.index === i ? beat.kind : undefined}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path className="board-hud-life-fill" d={HEART_PATH} />
+              <path className="board-hud-life-line" d={HEART_PATH} />
+            </svg>
+          </span>
         ))}
       </div>
       <div className="board-hud-stats">

@@ -197,6 +197,13 @@ export class SceneFx {
         s.shake = Math.max(s.shake, 4);
         s.trail.length = 0;
         break;
+      case "revive":
+        // The heart lands on the paddle: a wide pink ring and a shower of sparks.
+        s.trail.length = 0;
+        this.ring(event.x, event.y, 6, 120, 0.7, "pink", 2.5);
+        this.ring(event.x, event.y, 2, 60, 0.45, "white", 1.5);
+        this.sparks(event.x, event.y, 22, "pink", 280);
+        break;
       case "cleared":
         s.clearFlash = 1;
         break;

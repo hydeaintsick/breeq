@@ -2,6 +2,7 @@ export { isSoundEnabled, isSoundSupported, setSoundEnabled, unlockSound } from "
 export { BreakoutSfx } from "./sfx";
 export { createPayoutSfx, type PayoutSfx } from "./payout";
 export { createEnergySfx, ENERGY_SURGE_MS, type EnergySfx } from "./energy";
+export { createReviveSfx, REVIVE_SURGE_MS, type ReviveSfx } from "./revive";
 export { playSheetAppear, playSheetBack, playSheetBuy } from "./sheet";
 export { playDockTap, playShopTab, playSkinEquip, playSkinReveal, playSkinStamp, playSkinUnlock, SKIN_REVEAL_MS } from "./hub";
 export { acquireStoryTheme, acquireTheme, storyThemeChord, type StoryThemeChord, type StoryThemeHandle, type ThemeHandle } from "./theme";

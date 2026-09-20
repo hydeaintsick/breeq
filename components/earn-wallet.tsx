@@ -22,6 +22,8 @@ const KIND_LABEL: Record<string, string> = {
   SKIP: "Chapter skipped",
   REFERRAL: "Friend joined",
   ENERGY: "Energy recharge",
+  SKIN: "Skin unlocked",
+  REVIVE: "Revive",
 };
 
 const STATUS_LABEL: Record<string, string> = {

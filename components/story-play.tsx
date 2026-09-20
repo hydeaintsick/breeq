@@ -24,6 +24,7 @@ export function StoryPlay({
   onCleared,
   onAwarded,
   onOver,
+  onHandle,
 }: {
   chapterId: string;
   title: string;
@@ -47,6 +48,8 @@ export function StoryPlay({
   onAwarded?: (result: ChapterClearResult) => void;
   /** Lives, time, or the descending wall ended the run. */
   onOver?: (info: { score: number; reason: "lives" | "timeout" | "crushed" }) => void;
+  /** The board's handle once it is live (the parent revives through it), `null` when it goes away. */
+  onHandle?: (handle: BreakoutHandle | null) => void;
 }) {
   const levels = useMemo(
     () => [
@@ -68,11 +71,13 @@ export function StoryPlay({
   const onAwardedRef = useRef(onAwarded);
   const onOverRef = useRef(onOver);
   const onDiscoveredRef = useRef(onDiscovered);
+  const onHandleRef = useRef(onHandle);
   useEffect(() => {
     onClearedRef.current = onCleared;
     onAwardedRef.current = onAwarded;
     onOverRef.current = onOver;
     onDiscoveredRef.current = onDiscovered;
+    onHandleRef.current = onHandle;
   });
 
   // What the player already knows. The set only grows; a new id is added the
@@ -94,16 +99,22 @@ export function StoryPlay({
     lessonRef.current = lesson;
   }, [lesson]);
 
-  const onHandle = useCallback((handle: BreakoutHandle | null) => {
+  const takeHandle = useCallback((handle: BreakoutHandle | null) => {
     handleRef.current = handle;
     // A fresh board (retry, next chapter) is a fresh run; the card is already down.
     if (handle) endedRef.current = false;
     setReady(handle !== null);
+    onHandleRef.current?.(handle);
   }, []);
 
   // Freeze the world on the spot the first time a kind of piece shows up.
   const onEvent = useCallback(
     (event: GameEvent) => {
+      // A revive: the run that ended goes on, and so do its lessons.
+      if (event.type === "revive") {
+        endedRef.current = false;
+        return;
+      }
       if (lessonRef.current || endedRef.current) return;
       const next = discoveriesFromEvent(event, level).find((item) => !knownRef.current.has(item.lesson.id));
       if (!next) return;
@@ -193,7 +204,7 @@ export function StoryPlay({
         onCleared={handleCleared}
         onOver={handleOver}
         onEvent={onEvent}
-        onHandle={onHandle}
+        onHandle={takeHandle}
       />
 
       <div

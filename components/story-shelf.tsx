@@ -16,6 +16,8 @@ import { SoundToggle } from "@/components/sound-toggle";
 import { useStorySurface, type StoryZone } from "@/components/story-chrome";
 import { StoryClear, type ClearCost } from "@/components/story-clear";
 import { StoryJourney, type JourneyCard, type StoryJourneyHandle } from "@/components/story-journey";
+import { ReviveBurst } from "@/components/revive-burst";
+import { ReviveSheet } from "@/components/revive-sheet";
 import { StoryLose } from "@/components/story-lose";
 import { StoryPlay } from "@/components/story-play";
 import { StorySkipSheet } from "@/components/story-skip";
@@ -25,8 +27,11 @@ import { useImmersive } from "@/components/use-immersive";
 import { useStoryTheme } from "@/components/use-story-theme";
 import { startStoryRun } from "@/app/actions/energy";
 import type { ChapterClearResult, ChapterSkipResult } from "@/app/actions/progress";
+import { buyRevive, type ReviveBought } from "@/app/actions/revive";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
-import { playSheetAppear } from "@/game/breakout/audio";
+import { playSheetAppear, playSheetBuy } from "@/game/breakout/audio";
+import { pulseUi } from "@/game/breakout/haptics";
+import type { BreakoutHandle } from "@/game/breakout/preview";
 import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
 import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
@@ -34,6 +39,7 @@ import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { ENERGY_PLAY_COST, type EnergyState } from "@/lib/energy";
 import { ambientPhoto, boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
+import { canOfferRevive, REVIVE_GEMS, REVIVE_LIVES } from "@/lib/revive";
 import {
   chapterIsLocked,
   continueChapterIndex,
@@ -234,6 +240,17 @@ export function StoryShelf({
   } | null>(null);
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
   const [runId, setRunId] = useState(0);
+  /** The live board, to revive it in place. */
+  const boardRef = useRef<BreakoutHandle | null>(null);
+  /** Hearts bought in this run; the offer stops at `REVIVE_MAX_PER_RUN`. */
+  const [revives, setRevives] = useState(0);
+  /** The revive sheet is up over the game over screen (the bag could not pay). */
+  const [reviving, setReviving] = useState(false);
+  /** The server is taking the gems for a heart. */
+  const [reviveBusy, setReviveBusy] = useState(false);
+  const [reviveError, setReviveError] = useState<string | null>(null);
+  /** The heart is landing over the board; the engine is revived on its beat. */
+  const [burst, setBurst] = useState(false);
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   /** The wall the trail's dock shows. */
@@ -525,8 +542,8 @@ export function StoryShelf({
       if (event.key !== "Escape") {
         return;
       }
-      if (shop.isOpen || energyOpen) {
-        // The shop's (or the recharge sheet's) own handler closes it; the sheet under it stays.
+      if (shop.isOpen || energyOpen || reviving) {
+        // The shop's (or the recharge / revive sheet's) own handler closes it; the sheet under it stays.
         return;
       }
       if (skipping) {
@@ -623,6 +640,62 @@ export function StoryShelf({
     setCleared(null);
     setLost(null);
     setPlaying(null);
+    resetRevive();
+  }
+
+  /** A run starts, retries or ends: no heart is landing, no sheet is up, the count starts over. */
+  function resetRevive() {
+    setRevives(0);
+    setReviving(false);
+    setReviveBusy(false);
+    setReviveError(null);
+    setBurst(false);
+  }
+
+  /**
+   * "Revive" on the game over screen. The bag pays at once and the heart
+   * lands over the board; short on gems (here, or as the server sees it),
+   * the revive sheet comes up over the screen with the checkout, and its
+   * Continue lands the same heart.
+   */
+  async function reviveRun() {
+    if (!playing || !lost || reviveBusy) return;
+    playSheetBuy();
+    pulseUi(6);
+    setReviveError(null);
+    if (gems < REVIVE_GEMS) {
+      setReviving(true);
+      return;
+    }
+    setReviveBusy(true);
+    try {
+      const result = await buyRevive(playing.id);
+      if ("error" in result) {
+        if (result.need !== undefined && result.need > 0) setReviving(true);
+        else setReviveError(result.error);
+        return;
+      }
+      heartLanded(result);
+      startRevive();
+    } catch {
+      setReviveError("Could not reach the shop. Try again.");
+    } finally {
+      setReviveBusy(false);
+    }
+  }
+
+  /** The server took the gems: the bag pill follows. */
+  function heartLanded(result: ReviveBought) {
+    publishBalances?.(result.balances);
+  }
+
+  /** The heart is paid: the game over screen goes, the light gathers over the board, the engine is revived on the beat. */
+  function startRevive() {
+    setReviving(false);
+    setReviveError(null);
+    setRevives((n) => n + 1);
+    setLost(null);
+    setBurst(true);
   }
 
   /**
@@ -676,6 +749,7 @@ export function StoryShelf({
       setPaused(false);
       setCleared(null);
       setLost(null);
+      resetRevive();
       setRunId(0);
       // The story beat opens the run; a tap dismisses it and serves the ball.
       setIntro(Boolean(chapter.intro));
@@ -689,6 +763,7 @@ export function StoryShelf({
       setPaused(false);
       setCleared(null);
       setLost(null);
+      resetRevive();
       setRunId((n) => n + 1);
     });
   }
@@ -735,6 +810,7 @@ export function StoryShelf({
     setPaused(false);
     setCleared(null);
     setLost(null);
+    resetRevive();
     setSkipping(null);
     setSkipped({ chapter, index, result });
   }
@@ -946,7 +1022,18 @@ export function StoryShelf({
                       setCleared(null);
                       setLost({ score, reason });
                     }}
+                    onHandle={(handle) => {
+                      boardRef.current = handle;
+                    }}
                   />
+                  {burst ? (
+                    <ReviveBurst
+                      onBeat={() => {
+                        boardRef.current?.revive(REVIVE_LIVES);
+                      }}
+                      onDone={() => setBurst(false)}
+                    />
+                  ) : null}
                   {intro && playing.intro && !cleared && !lost ? (
                     <button
                       type="button"
@@ -986,9 +1073,24 @@ export function StoryShelf({
                       reason={lost.reason}
                       onRetry={retryRun}
                       onSkip={playingCleared ? undefined : skipFromLose}
+                      revive={
+                        canOfferRevive(lost.reason, revives)
+                          ? { cost: REVIVE_GEMS, gems, busy: reviveBusy, error: reviveError, onRevive: () => void reviveRun() }
+                          : null
+                      }
                       energy={energyState}
-                      veiled={skipping !== null || energyOpen}
+                      veiled={skipping !== null || energyOpen || reviving}
                       onClose={quitRun}
+                    />
+                  ) : null}
+                  {reviving && lost ? (
+                    <ReviveSheet
+                      key={`revive-${runId}-${revives}`}
+                      chapterId={playing.id}
+                      title={playing.title}
+                      onLanded={heartLanded}
+                      onContinue={startRevive}
+                      onClose={() => setReviving(false)}
                     />
                   ) : null}
                   {paused && !cleared && !lost ? (

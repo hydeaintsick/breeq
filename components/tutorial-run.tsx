@@ -120,7 +120,7 @@ function lifeStep(lives: number): Step {
     id: "life",
     kicker: "Lives",
     title: "Ball lost.",
-    body: `The dots up top are your lives. When the last one goes, the run is over. ${left}.`,
+    body: `The hearts up top are your lives. When the last one goes, the run is over. ${left}.`,
     action: "Continue",
     targets: [{ kind: "dom", selector: ".board-hud-lives" }],
   };

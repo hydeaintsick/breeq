@@ -69,6 +69,8 @@ const HEAVY: Record<string, readonly number[]> = {
   swallow: [20, 40, 40],
   descend: [30, 40, 30],
   life: [40, 60, 40],
+  /** A heartbeat: lub-dub, then the ball lands. */
+  revive: [30, 90, 45, 160, 20],
   cleared: [15, 40, 15, 40, 15, 40, 60],
   over: [70, 80, 90],
 };
@@ -155,6 +157,8 @@ function patternFor(e: GameEvent): Pattern | null {
     case "life":
       // The last life is told by `over`.
       return e.lives > 0 ? HEAVY.life : null;
+    case "revive":
+      return HEAVY.revive;
     case "cleared":
       return HEAVY.cleared;
     case "over":

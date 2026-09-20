@@ -264,6 +264,8 @@ export type GameEvent =
   | { t: number; type: "heat"; heat: number }
   | { t: number; type: "descend"; rows: number }
   | { t: number; type: "life"; lives: number; x: number }
+  /** A second chance after the last ball: `lives` back on the paddle at `x`, `y`. */
+  | { t: number; type: "revive"; lives: number; x: number; y: number }
   | { t: number; type: "cleared"; score: number }
   | { t: number; type: "over"; score: number; reason: "lives" | "timeout" | "crushed" };
 

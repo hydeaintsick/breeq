@@ -55,6 +55,32 @@ export function BoltGlyph({ className = "bolt-glyph", style }: { className?: str
   );
 }
 
+/** The heart's outline, shared by the HUD lives and the revive mark. */
+export const HEART_PATH =
+  "M12 20.6c-.3 0-.6-.1-.8-.3C7.2 17 2.5 13.2 2.5 8.6 2.5 5.8 4.7 3.6 7.4 3.6c1.8 0 3.5 1 4.6 2.5 1.1-1.5 2.8-2.5 4.6-2.5 2.7 0 4.9 2.2 4.9 5 0 4.6-4.7 8.4-8.7 11.7-.2.2-.5.3-.8.3z";
+
+/**
+ * The heart: a life. Plasma glass like the bolt — white at the highlight,
+ * pink through the body, the danger red at the tip — with a white hairline.
+ * `hollow` draws the outline only (a life lost). Sized by `font-size`.
+ */
+export function HeartGlyph({ className = "heart-glyph", style, hollow = false }: { className?: string; style?: CSSProperties; hollow?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} style={style} data-hollow={hollow ? "true" : undefined} aria-hidden="true">
+      <defs>
+        <linearGradient id="heart-body" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="30%" stopColor="var(--neon-pink)" />
+          <stop offset="100%" stopColor="var(--danger)" />
+        </linearGradient>
+      </defs>
+      <path d={HEART_PATH} fill={hollow ? "none" : "url(#heart-body)"} />
+      {hollow ? null : <path d="M7.4 5.6c-1.4 0-2.6.9-3 2.2 1.1-.6 2.4-.7 3.6-.1.8-1 1.8-1.7 2.9-1.9-1-.2-2.2-.2-3.5-.2z" fill="#ffffff" opacity="0.35" />}
+      <path d={HEART_PATH} fill="none" stroke="#ffffff" strokeOpacity={hollow ? 0.55 : 0.7} strokeWidth={hollow ? 1.2 : 0.8} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** The Ethereum diamond, in ink, for balances and payouts. */
 export function EthGlyph({ className = "eth-glyph", style }: { className?: string; style?: CSSProperties }) {
   return (
