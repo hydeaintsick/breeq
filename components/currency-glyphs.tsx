@@ -27,6 +27,34 @@ export function GemGlyph({ className = "gem-glyph", style }: { className?: strin
   );
 }
 
+/**
+ * The energy bolt: a shard of plasma, amber at the tip cooling to pink, a
+ * white facet down its edge. Sized by `font-size` like an icon.
+ */
+export function BoltGlyph({ className = "bolt-glyph", style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} style={style} aria-hidden="true">
+      <defs>
+        <linearGradient id="bolt-body" x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="28%" stopColor="var(--neon-amber)" />
+          <stop offset="100%" stopColor="var(--neon-pink)" />
+        </linearGradient>
+      </defs>
+      <path d="M13.6 1.8 4.6 13.4h6.2L9.4 22.2l10-12.4h-6.3z" fill="url(#bolt-body)" />
+      <path d="M13.6 1.8 4.6 13.4h6.2l-.7 3.2 3.1-6.8h-3.6z" fill="#ffffff" opacity="0.28" />
+      <path
+        d="M13.6 1.8 4.6 13.4h6.2L9.4 22.2l10-12.4h-6.3z"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.65"
+        strokeWidth="0.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** The Ethereum diamond, in ink, for balances and payouts. */
 export function EthGlyph({ className = "eth-glyph", style }: { className?: string; style?: CSSProperties }) {
   return (

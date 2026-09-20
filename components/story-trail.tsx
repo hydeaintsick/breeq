@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { BreakoutPreview } from "@/components/breakout-preview";
-import { GemGlyph } from "@/components/currency-glyphs";
+import { BoltGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { StarRating } from "@/components/star-rating";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { layoutTrail, type JourneyHue } from "@/game/journey";
 import { formatGems } from "@/lib/economy";
+import { ENERGY_PLAY_COST } from "@/lib/energy";
 import { boardPhoto } from "@/lib/photo";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 import { chapterIsLocked, chapterLockHint, continueChapterIndex, type StoryChapterCard } from "@/lib/story";
@@ -39,6 +40,7 @@ export function StoryTrail({
   live,
   snap,
   keyboard = true,
+  energy,
 }: {
   chapters: readonly StoryChapterCard[];
   backgroundUrl: string | null;
@@ -48,6 +50,8 @@ export function StoryTrail({
   onPlay: (chapter: StoryChapterCard) => void;
   /** Buy past the wall for gems. Offered under Play on the next open wall only. */
   onSkip?: (chapter: StoryChapterCard) => void;
+  /** Cells in the gauge: Play shows its price and reads short when they will not cover it. */
+  energy?: number;
   /** The sheet has finished opening: the board in the dock may run. */
   live: boolean;
   /** Bumps when the road should re-centre on the selected wall at once (open, back from a run). */
@@ -65,6 +69,8 @@ export function StoryTrail({
   const chapter = chapters[selected] ?? chapters[0];
   const selectedLocked = chapter ? chapterIsLocked(chapters, selected) : true;
   const skippable = Boolean(onSkip && chapter && !selectedLocked && !chapter.cleared);
+  /** The gauge cannot pay for the run: Play still answers, with the recharge sheet. */
+  const short = energy !== undefined && energy < ENERGY_PLAY_COST;
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -206,7 +212,12 @@ export function StoryTrail({
       </div>
 
       {chapter ? (
-        <div className="trail-dock" data-locked={selectedLocked ? "true" : undefined} data-skip={skippable ? "true" : undefined}>
+        <div
+          className="trail-dock"
+          data-locked={selectedLocked ? "true" : undefined}
+          data-skip={skippable ? "true" : undefined}
+          data-short={short && !selectedLocked ? "true" : undefined}
+        >
           <div className="trail-dock-board" aria-hidden="true">
             {live ? (
               <div className="pointer-events-none absolute inset-0 [&_*]:pointer-events-none" inert>
@@ -238,12 +249,27 @@ export function StoryTrail({
             type="button"
             className={selectedLocked ? "btn-glass trail-dock-cta" : "btn-play play-shimmer trail-dock-cta"}
             disabled={selectedLocked}
-            aria-label={selectedLocked ? `Locked. ${chapter.title}. ${hint ?? ""}` : `${chapter.cleared ? "Replay" : "Play"} ${chapter.title}`}
+            aria-label={
+              selectedLocked
+                ? `Locked. ${chapter.title}. ${hint ?? ""}`
+                : `${chapter.cleared ? "Replay" : "Play"} ${chapter.title} for ${ENERGY_PLAY_COST} energy${short ? ". Out of energy: recharge" : ""}`
+            }
             onClick={() => {
               if (!selectedLocked) onPlay(chapter);
             }}
           >
-            {selectedLocked ? "Locked" : chapter.cleared ? "Replay" : "Play"}
+            {selectedLocked ? (
+              "Locked"
+            ) : (
+              <>
+                {chapter.cleared ? "Replay" : "Play"}
+                {energy !== undefined ? (
+                  <span className="play-cost" data-short={short ? "true" : undefined} aria-hidden="true">
+                    <BoltGlyph /> {ENERGY_PLAY_COST}
+                  </span>
+                ) : null}
+              </>
+            )}
           </button>
           {skippable ? (
             <button

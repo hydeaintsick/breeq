@@ -346,7 +346,8 @@ function checkoutReturnPath(candidate: string | undefined) {
 }
 
 export async function createGemCheckout(packGems: number, returnTo?: string): Promise<{ url: string } | Fail> {
-  const { user } = await requireEarn();
+  // Gems pay for story skips and energy long before Earn unlocks: any signed-in player can fill the bag.
+  const user = await requireUser();
   const back = checkoutReturnPath(returnTo);
   if (!stripeConfigured()) return fail("Payments are not set up yet.");
   const economy = await getEconomy();
@@ -414,7 +415,7 @@ export async function claimCheckout(sessionId: string): Promise<{ credited: bool
 
 /** Local development only: gems without a card. */
 export async function sandboxTopUp(packGems: number): Promise<{ gems: number; balances: Balances } | Fail> {
-  const { user } = await requireEarn();
+  const user = await requireUser();
   if (!earnSandbox()) return fail("The sandbox is off.");
   const economy = await getEconomy();
   const pack = economy.packs.find((item) => item.gems === packGems);

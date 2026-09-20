@@ -10,6 +10,8 @@ import { campaignPercent } from "@/lib/campaign";
 import { getBalances, toBalances, type Balances } from "@/lib/earn";
 import { formatGems } from "@/lib/economy";
 import { parseStoredLevel, starsForClear, clampStar, type StarCount } from "@/game/breakout/engine";
+import { ENERGY_CLEAR_REFUND, ENERGY_MAX, nextEnergyReset } from "@/lib/energy";
+import { refundEnergy } from "@/lib/energy-store";
 import { progressFromXp, xpAfter, SKIP_CHAPTER_GEMS, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
 
 export type ClearRunInput = {
@@ -35,6 +37,18 @@ export type ChapterClearResult = {
   bestStars?: StarCount;
   /** True when this run raised the stored grade. */
   improved?: boolean;
+  /** The gauge before and after the clear's refund (`ENERGY_CLEAR_REFUND`, never past the max). Omitted for a skip or the tutorial. */
+  energy?: ClearEnergy;
+};
+
+export type ClearEnergy = {
+  before: number;
+  after: number;
+  max: number;
+  /** Cells the clear gave back: 0 when the gauge was already full. */
+  gained: number;
+  /** ISO time of the next free recharge. */
+  resetAt: string;
 };
 
 function clampInt(value: unknown, lo: number, hi: number, fallback: number) {
@@ -75,12 +89,19 @@ async function chapterLocked(userId: string, chapter: { id: string; episodeId: s
   return clearedPrev < previousIds.length;
 }
 
+/** A human clear gives a cell back; the gauge before and after ride along for the clear screen. */
+async function clearEnergy(userId: string): Promise<ClearEnergy> {
+  const { before, after } = await refundEnergy(userId, ENERGY_CLEAR_REFUND);
+  return { before, after, max: ENERGY_MAX, gained: after - before, resetAt: nextEnergyReset().toISOString() };
+}
+
 async function paidResult(
   userId: string,
   stars: StarCount,
   bestStars: StarCount,
   improved: boolean,
   xp?: { before: number; after: number; gained: number },
+  energy?: ClearEnergy,
 ): Promise<ChapterClearResult> {
   const row = xp
     ? null
@@ -101,6 +122,7 @@ async function paidResult(
     stars,
     bestStars,
     improved,
+    ...(energy ? { energy } : {}),
   };
 }
 
@@ -135,11 +157,11 @@ export async function awardChapterClear(
         where: { id: existing.id },
         data: { stars: bestStars, hits: grade.hits, score: grade.score },
       });
-      if (improved) {
-        revalidatePath(GAME_ROOT_PATH, "layout");
-      }
     }
-    return paidResult(user.id, grade.stars, bestStars, improved);
+    // A replay pays no XP, but the wall came down: the cell comes back.
+    const energy = await clearEnergy(user.id);
+    revalidatePath(GAME_ROOT_PATH, "layout");
+    return paidResult(user.id, grade.stars, bestStars, improved, undefined, energy);
   }
 
   if (await chapterLocked(user.id, chapter)) {
@@ -171,13 +193,21 @@ export async function awardChapterClear(
       }),
     ]);
 
+    const energy = await clearEnergy(user.id);
     revalidatePath(GAME_ROOT_PATH, "layout");
 
-    return paidResult(user.id, grade.stars, grade.stars, true, {
-      before: xpBefore,
-      after: updated.xp,
-      gained: xpGained,
-    });
+    return paidResult(
+      user.id,
+      grade.stars,
+      grade.stars,
+      true,
+      {
+        before: xpBefore,
+        after: updated.xp,
+        gained: xpGained,
+      },
+      energy,
+    );
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const row = await prisma.chapterClear.findUnique({

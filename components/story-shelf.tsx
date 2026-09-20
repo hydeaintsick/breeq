@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useBalances } from "@/components/balances-provider";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { EnergyBarChip } from "@/components/energy-chip";
+import { useEnergy } from "@/components/energy-provider";
+import type { EnergySheetReason } from "@/components/energy-sheet";
 import { useGemShop } from "@/components/gem-shop";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
@@ -18,12 +21,14 @@ import { HUE_VAR, StoryTrail } from "@/components/story-trail";
 import { SwipeToggle } from "@/components/swipe-toggle";
 import { useImmersive } from "@/components/use-immersive";
 import { useStoryTheme } from "@/components/use-story-theme";
+import { startStoryRun } from "@/app/actions/energy";
 import type { ChapterClearResult, ChapterSkipResult } from "@/app/actions/progress";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
 import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
 import { STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { ENERGY_PLAY_COST, type EnergyState } from "@/lib/energy";
 import { ambientPhoto, boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 import {
@@ -229,6 +234,15 @@ export function StoryShelf({
   const balances = useBalances();
   const publishBalances = balances?.setBalances;
   const gems = balances?.balances.gems ?? 0;
+  /** The gauge: every run is paid from it before the ball is served. */
+  const energyCtx = useEnergy();
+  const energyState = energyCtx?.state ?? null;
+  // Read through a ref by the run payer, which may be called from a callback made renders ago.
+  const energyRef = useRef<EnergyState | null>(energyState);
+  useEffect(() => {
+    energyRef.current = energyState;
+  }, [energyState]);
+  const energyOpen = energyCtx?.isOpen ?? false;
 
   // The theme plays under the map and the episode sheet, and steps aside for a run or a skip's clear screen.
   useStoryTheme(playing !== null || skipped !== null);
@@ -493,8 +507,8 @@ export function StoryShelf({
       if (event.key !== "Escape") {
         return;
       }
-      if (shop.isOpen) {
-        // The shop's own handler closes it; the sheet under it stays.
+      if (shop.isOpen || energyOpen) {
+        // The shop's (or the recharge sheet's) own handler closes it; the sheet under it stays.
         return;
       }
       if (skipping) {
@@ -593,6 +607,44 @@ export function StoryShelf({
     setPlaying(null);
   }
 
+  /**
+   * Pay for a run, then serve it. The gauge is read now, not from the render
+   * this was called from: the recharge sheet's "Play now" comes back here.
+   * With cells to spare the board goes up at once and the gauge drains
+   * optimistically while the server takes the cells; a refusal (two devices,
+   * a stale gauge) takes the board down and opens the recharge sheet on the
+   * truth. Without cells, straight to the sheet — with this run waiting.
+   */
+  function payRun(chapter: StoryChapterCard, reason: EnergySheetReason, serve: () => void) {
+    const ctx = energyCtx;
+    const state = energyRef.current;
+    if (!ctx || !state) {
+      serve();
+      return;
+    }
+    const again = () => payRun(chapter, reason, serve);
+    if (state.energy < ENERGY_PLAY_COST) {
+      ctx.open({ reason, onReady: again });
+      return;
+    }
+    ctx.setState({ ...state, energy: state.energy - ENERGY_PLAY_COST });
+    serve();
+    void startStoryRun(chapter.id)
+      .then((result) => {
+        ctx.setState(result.energy);
+        if ("error" in result && result.error === "Out of energy.") {
+          setPaused(false);
+          setCleared(null);
+          setLost(null);
+          setPlaying(null);
+          ctx.open({ reason, onReady: again });
+        }
+      })
+      .catch(() => {
+        // Offline: the run plays on the cells drained here; the next server render is the truth.
+      });
+  }
+
   function startChapter(chapter: StoryChapterCard) {
     if (!open) {
       return;
@@ -602,20 +654,25 @@ export function StoryShelf({
       return;
     }
     setChapterActive(index);
-    setPaused(false);
-    setCleared(null);
-    setLost(null);
-    setRunId(0);
-    // The story beat opens the run; a tap dismisses it and serves the ball.
-    setIntro(Boolean(chapter.intro));
-    setPlaying(chapter);
+    payRun(chapter, "play", () => {
+      setPaused(false);
+      setCleared(null);
+      setLost(null);
+      setRunId(0);
+      // The story beat opens the run; a tap dismisses it and serves the ball.
+      setIntro(Boolean(chapter.intro));
+      setPlaying(chapter);
+    });
   }
 
   function retryRun() {
-    setPaused(false);
-    setCleared(null);
-    setLost(null);
-    setRunId((n) => n + 1);
+    if (!playing) return;
+    payRun(playing, "retry", () => {
+      setPaused(false);
+      setCleared(null);
+      setLost(null);
+      setRunId((n) => n + 1);
+    });
   }
 
   /** "Skip for 50" under Play: the confirmation sheet comes up over the road. */
@@ -765,6 +822,7 @@ export function StoryShelf({
                         ) : null}
                       </p>
                     </div>
+                    <EnergyBarChip live={grown && !closing} />
                     <button type="button" className="story-close" aria-label="Back to the route" onClick={closeSheet}>
                       <CloseGlyph />
                     </button>
@@ -777,9 +835,10 @@ export function StoryShelf({
                     onSelect={setChapterActive}
                     onPlay={startChapter}
                     onSkip={askSkip}
+                    energy={energyState?.energy}
                     live={covered}
                     snap={trailSnap}
-                    keyboard={!playing && !closing && !skipping && !skipped}
+                    keyboard={!playing && !closing && !skipping && !skipped && !energyOpen}
                   />
                 </div>
               </div>
@@ -851,6 +910,10 @@ export function StoryShelf({
                     }}
                     onAwarded={(result) => {
                       const best = result.bestStars ?? result.stars ?? 1;
+                      // The cell the clear gave back: the pills follow the server's gauge.
+                      if (result.energy && energyCtx) {
+                        energyCtx.setState({ energy: result.energy.after, max: result.energy.max, resetAt: result.energy.resetAt });
+                      }
                       setCleared((current) =>
                         current
                           ? { ...current, result, stars: result.stars ?? current.stars }
@@ -903,7 +966,8 @@ export function StoryShelf({
                       reason={lost.reason}
                       onRetry={retryRun}
                       onSkip={playingCleared ? undefined : skipFromLose}
-                      veiled={skipping !== null}
+                      energy={energyState}
+                      veiled={skipping !== null || energyOpen}
                       onClose={quitRun}
                     />
                   ) : null}

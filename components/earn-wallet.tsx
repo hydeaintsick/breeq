@@ -21,6 +21,7 @@ const KIND_LABEL: Record<string, string> = {
   GRANT: "Gems from Breeq",
   SKIP: "Chapter skipped",
   REFERRAL: "Friend joined",
+  ENERGY: "Energy recharge",
 };
 
 const STATUS_LABEL: Record<string, string> = {

@@ -6,8 +6,8 @@ import { ChevronDownIcon } from "@/components/nav-icons";
 /**
  * A story sheet under the header pills: the book, the galaxy map. Rises from
  * the bottom of the screen and is sent back down with the chevron in its bar
- * (one glyph for "put it away"; the cross above it already means "leave the
- * story"). Escape does the same. The parent unmounts it once it has gone.
+ * (one glyph for "put it away"). Escape does the same. The parent unmounts
+ * it once it has gone.
  */
 export function StoryPanel({
   title,

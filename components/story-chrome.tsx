@@ -21,16 +21,12 @@ export interface StorySurface {
   goTo(index: number): void;
 }
 
-export type StoryChromeFocus = "main" | "story";
 export type StoryChromePanel = "book" | "map" | null;
 
 interface StoryChromeValue {
   surface: StorySurface | null;
   register(surface: StorySurface): () => void;
-  /** Which header pill is unrolled: the game's, or the story's. */
-  focus: StoryChromeFocus;
-  setFocus(focus: StoryChromeFocus): void;
-  /** The sheet the story pill opened, if any. */
+  /** The sheet the Story door opened, if any. */
   panel: StoryChromePanel;
   setPanel(panel: StoryChromePanel): void;
   /** The way in from the Story card: the galaxy opens from the card and dives toward Kal's zone. */
@@ -44,13 +40,11 @@ const StoryChromeContext = createContext<StoryChromeValue | null>(null);
 
 /**
  * Coordinates the game header and a mounted story surface. The surface
- * registers its zones and a `goTo`; the header renders the story pill (book,
- * map, sound, vibration, exit) from them and tells the surface when one of its
- * sheets covers the map so it can rest.
+ * registers its zones and a `goTo`; the header's Story door (book, map) reads
+ * them and tells the surface when one of its sheets covers the map so it can rest.
  */
 export function StoryChromeProvider({ children }: { children: ReactNode }) {
   const [surface, setSurface] = useState<StorySurface | null>(null);
-  const [focus, setFocus] = useState<StoryChromeFocus>("story");
   const [panel, setPanel] = useState<StoryChromePanel>(null);
   const [dive, setDive] = useState<StoryDiveStart | null>(null);
   const [arrived, setArrived] = useState(false);
@@ -68,10 +62,8 @@ export function StoryChromeProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback((next: StorySurface) => {
     const mine = {};
-    const fresh = token.current === null;
     token.current = mine;
     setSurface(next);
-    if (fresh) setFocus("story");
     return () => {
       // A re-publish (new zones) unregisters and registers in the same commit:
       // only a release nobody follows tears the chrome down.
@@ -88,8 +80,8 @@ export function StoryChromeProvider({ children }: { children: ReactNode }) {
   // can slide down before it goes.
 
   const value = useMemo<StoryChromeValue>(
-    () => ({ surface, register, focus, setFocus, panel, setPanel, dive, startDive, arrive }),
-    [arrive, dive, focus, panel, register, startDive, surface],
+    () => ({ surface, register, panel, setPanel, dive, startDive, arrive }),
+    [arrive, dive, panel, register, startDive, surface],
   );
 
   return (

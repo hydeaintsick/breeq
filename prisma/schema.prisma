@@ -32,6 +32,10 @@ model User {
   gems           Int            @default(0)
   /// Earn: the ETH balance in gwei (1 ETH = 1e9 gwei). Wins credit it; withdrawals debit it.
   ethGwei        BigInt         @default(0)
+  /// Story: energy cells (`lib/energy.ts`). A run takes two, a clear gives one back, full at 00:00 UTC.
+  energy         Int            @default(6)
+  /// The UTC day (`YYYY-MM-DD`) the gauge was last settled on; `settleEnergy` recharges when it is not today.
+  energyDay      String?
   /// The short code in this player's share links (`/r/<code>`). Minted the first time it is
   /// needed. Not `@unique`: Mongo would file every player without a code under one null key.
   /// `lib/referrals.ts` checks for a clash before writing.
@@ -286,6 +290,8 @@ enum LedgerKind {
   SKIP
   /// A friend signed up through the player's share link.
   REFERRAL
+  /// Story: gems spent on an energy recharge.
+  ENERGY
 }
 
 /// One sign-up through a share link. `referredId` is unique: an account is

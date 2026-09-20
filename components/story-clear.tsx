@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ChapterClearResult } from "@/app/actions/progress";
-import { GemGlyph } from "@/components/currency-glyphs";
+import { BoltGlyph, GemGlyph } from "@/components/currency-glyphs";
+import { EnergyGauge } from "@/components/energy-gauge";
 import { ShareRow } from "@/components/share-row";
 import { StarRating } from "@/components/star-rating";
-import { createPayoutSfx, type PayoutSfx } from "@/game/breakout/audio";
+import { createEnergySfx, createPayoutSfx, type EnergySfx, type PayoutSfx } from "@/game/breakout/audio";
 import { isHapticsEnabled, isHapticsSupported } from "@/game/breakout/haptics";
 import type { StarCount } from "@/game/breakout/engine/stars";
 import { formatGems } from "@/lib/economy";
@@ -29,6 +30,11 @@ const T = {
   costCount: 760,
   costDur: 900,
   costSettle: 260,
+  /** After the level bar locks: the energy row shows, the "+1" stamps, the cell lights. */
+  energyShow: 220,
+  energyStamp: 420,
+  energyFill: 760,
+  energySettle: 320,
 } as const;
 
 /** Counter steps that tick, spread over the XP gained. */
@@ -120,18 +126,25 @@ export function StoryClear({
   const [shownAnim, setShown] = useState<Progress | null>(null);
   const [levelUpsAnim, setLevelUps] = useState(0);
   const [buttonsTimed, setButtons] = useState(false);
+  const [energyStageAnim, setEnergyStage] = useState<"hidden" | "show" | "stamp" | "done">("hidden");
+  const [energyShownAnim, setEnergyShown] = useState<number | null>(null);
 
   const xpRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const intoRef = useRef<HTMLSpanElement>(null);
   const bagRef = useRef<HTMLSpanElement>(null);
   const sfxRef = useRef<PayoutSfx | null>(null);
+  const energySfxRef = useRef<EnergySfx | null>(null);
   const countingRef = useRef(false);
   const countedCost = useRef(false);
 
   const skip = reduced || skipped;
   const replay = result !== null && result.xpGained === 0;
   const paid = cost !== undefined;
+  /** The clear's refund: one cell back, unless the gauge was already full. */
+  const energy = result?.energy ?? null;
+  const energyStage = !energy ? "done" : skip ? "done" : energyStageAnim;
+  const energyShown = energy ? (skip ? energy.after : (energyShownAnim ?? energy.before)) : 0;
   const costStage = !paid || skip ? "done" : costStageAnim;
   /** With a cost, the stars and XP wait for the bag to settle. */
   const starsAt = paid ? T.costCount + T.costDur + T.costSettle : T.starsStart;
@@ -151,10 +164,14 @@ export function StoryClear({
 
   useEffect(() => {
     const sfx = createPayoutSfx();
+    const energySfx = createEnergySfx();
     sfxRef.current = sfx;
+    energySfxRef.current = energySfx;
     return () => {
       sfxRef.current = null;
+      energySfxRef.current = null;
       sfx.destroy();
+      energySfx.destroy();
     };
   }, []);
 
@@ -317,11 +334,49 @@ export function StoryClear({
     };
   }, [result, skip, starsDone, xpAt]);
 
+  // The cell comes back once the level bar has locked: the row shows, "+1" stamps,
+  // the cell lights. One effect per stage, each arming only the next step, so a
+  // stage change never clears the timers of the steps after it.
   useEffect(() => {
-    if (buttons || xpStage !== "done" || !starsDone) return;
+    if (!energy || skip || xpStage !== "done" || !starsDone || energyStageAnim !== "hidden") return;
+    const id = window.setTimeout(() => setEnergyStage("show"), T.energyShow);
+    return () => window.clearTimeout(id);
+  }, [energy, energyStageAnim, skip, starsDone, xpStage]);
+
+  useEffect(() => {
+    if (!energy || skip || energyStageAnim !== "show") return;
+    if (energy.gained <= 0) {
+      const id = window.setTimeout(() => setEnergyStage("done"), T.energySettle);
+      return () => window.clearTimeout(id);
+    }
+    const id = window.setTimeout(() => {
+      setEnergyStage("stamp");
+      energySfxRef.current?.stamp();
+      pulse(12);
+    }, T.energyStamp - T.energyShow);
+    return () => window.clearTimeout(id);
+  }, [energy, energyStageAnim, skip]);
+
+  useEffect(() => {
+    if (!energy || skip || energyStageAnim !== "stamp") return;
+    const fill = window.setTimeout(() => {
+      setEnergyShown(energy.after);
+      energySfxRef.current?.charge(energy.after / energy.max);
+      if (energy.after >= energy.max) energySfxRef.current?.full();
+      pulse(energy.after >= energy.max ? [10, 30, 16] : 9);
+    }, T.energyFill - T.energyStamp);
+    const done = window.setTimeout(() => setEnergyStage("done"), T.energyFill - T.energyStamp + T.energySettle);
+    return () => {
+      window.clearTimeout(fill);
+      window.clearTimeout(done);
+    };
+  }, [energy, energyStageAnim, skip]);
+
+  useEffect(() => {
+    if (buttons || xpStage !== "done" || !starsDone || energyStage !== "done") return;
     const id = window.setTimeout(() => setButtons(true), T.buttonsAfter);
     return () => window.clearTimeout(id);
-  }, [buttons, xpStage, starsDone]);
+  }, [buttons, energyStage, xpStage, starsDone]);
 
   useEffect(() => {
     if (result) return;
@@ -408,6 +463,28 @@ export function StoryClear({
             </span>
           </div>
         </div>
+
+        {energy ? (
+          <div
+            className="story-clear-energy"
+            data-show={energyStage !== "hidden"}
+            data-stage={energyStage}
+            aria-label={energy.gained > 0 ? `Energy: ${energy.gained} cell back, ${energy.after} of ${energy.max}` : `Energy full, ${energy.after} of ${energy.max}`}
+          >
+            <span className="story-clear-label">Energy</span>
+            <span className="story-clear-energy-row">
+              <EnergyGauge energy={energyShown} max={energy.max} size="md" />
+              {energy.gained > 0 ? (
+                <span className="story-clear-energy-stamp" data-show={energyStage === "stamp" || energyStage === "done"} aria-hidden="true">
+                  <BoltGlyph /> +{energy.gained}
+                </span>
+              ) : null}
+            </span>
+            <span className="story-clear-energy-note">
+              {energy.gained > 0 ? "A clear gives a cell back." : "Core already full — nothing to give back."}
+            </span>
+          </div>
+        ) : null}
 
         {note ? (
           <p className="story-clear-next" data-show={buttons}>

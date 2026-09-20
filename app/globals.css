@@ -18,6 +18,9 @@
   --neon-amber: #ffb020;
   --steel: #c9d2e3;
   --danger: #ff5a5f;
+  /* Energy (Story's daily runs): plasma, amber at the tip cooling to pink. Aliases, not new colors. */
+  --energy: var(--neon-amber);
+  --energy-cool: var(--neon-pink);
   --glass: rgba(255, 255, 255, 0.6);
   --glass-fill: rgba(255, 255, 255, 0.55);
   --glass-border: rgba(255, 255, 255, 0.9);
@@ -933,18 +936,10 @@ html[data-theme="dark"] {
     }
   }
 
-  /* Below 420px the sound chip would push the bag pill out: it moves into the menu. */
-  .header-sound-row {
-    display: none;
-  }
-
+  /* Below 420px the sound chip would push the bag pill out: Controls in the menu has it. */
   @media (max-width: 419px) {
     .header-sound-chip {
       display: none;
-    }
-
-    .header-sound-row {
-      display: block;
     }
   }
 
@@ -1061,11 +1056,10 @@ html[data-theme="dark"] {
     0 14px 36px var(--nav-shadow);
 }
 
-/* --- Story chrome: two pills, one unrolled at a time ----------------------
-   In story mode the game's pill rolls up on the left (the logo) so the story's
-   (book, map, sound, vibration, leave) has the row; tapping either unrolls it
-   and rolls the other up. The story page is always dark, so both pills use the
-   night glass whatever the theme. */
+/* --- Story chrome: the energy pill and the menu round ---------------------
+   The game's pill keeps the row (logo + level / energy). The old story round
+   is the menu: Profile, Controls and Story live in its sheet. The page is
+   always dark, so both pills use the night glass whatever the theme. */
 .site-header[data-story="true"] {
   --nav-fill: rgba(11, 13, 26, 0.55);
   --nav-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.04));
@@ -1088,31 +1082,20 @@ html[data-theme="dark"] {
   min-width: 3.5rem;
   align-items: center;
   overflow: hidden;
-  transition:
-    flex-grow var(--duration) var(--ease),
-    flex-basis var(--duration) var(--ease),
-    padding var(--duration) var(--ease),
-    background var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease);
 }
 
-.story-pill[data-open="false"] {
+.story-pill-main {
+  flex: 0 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding-inline: 0.85rem;
+}
+
+.story-pill-menu {
   flex: 0 0 3.5rem;
   justify-content: center;
   padding: 0;
-}
-
-.story-pill-main[data-open="true"] {
-  flex: 1 1 auto;
-  justify-content: space-between;
-  padding-inline: 1rem;
-}
-
-.story-pill-story[data-open="true"] {
-  flex: 1 1 auto;
-  justify-content: space-between;
-  gap: 0.25rem;
-  padding-inline: 0.4rem;
 }
 
 .story-pill-face {
@@ -1130,22 +1113,42 @@ html[data-theme="dark"] {
   outline-offset: -4px;
 }
 
-@media (min-width: 640px) {
-  .story-pill-main[data-open="true"] {
-    padding-inline: 1.25rem;
-  }
+.header-menu {
+  width: max-content;
+  max-width: min(16.5rem, calc(100vw - 2 * var(--page-gutter)));
+}
 
-  .story-pill-story[data-open="true"] {
-    flex: 0 0 auto;
-    margin-left: auto;
-    gap: 0.5rem;
-    padding-inline: 0.4rem;
+.header-menu-pane .nav-link {
+  white-space: nowrap;
+}
+
+.header-menu-doors,
+.header-menu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.header-menu-doors .header-chip[aria-expanded="true"],
+.header-menu-chips .header-chip[aria-pressed="true"] {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--field) 70%, var(--ink) 14%);
+}
+
+.header-menu-pane {
+  animation: pill-unfold 280ms var(--ease) both;
+}
+
+@media (min-width: 640px) {
+  .story-pill-main {
+    padding-inline: 1.25rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .story-pill {
-    transition: none;
+  .header-menu-pane {
+    animation: none;
   }
 }
 
@@ -5410,6 +5413,804 @@ html[data-theme="dark"] .lore-halo-photo {
   min-height: 2.4rem;
   padding: 0 0.85rem;
   font-size: 0.84rem;
+}
+
+/* --- Energy: Story's daily runs ------------------------------------------
+   A reactor of six cells. A run takes two, a clear gives one back, full at
+   00:00 UTC. The gauge is one component (`components/energy-gauge.tsx`) worn
+   by the header pill, the episode bar, the play button, both end screens and
+   the recharge sheet; only the size changes. Cells are lit plasma — amber at
+   the tip cooling to pink — over dark glass; a gauge that cannot pay a run
+   reads in the one danger red. */
+.bolt-glyph {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -0.12em;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--energy) 60%, transparent));
+}
+
+.energy-gauge {
+  --cell-w: 0.62rem;
+  --cell-h: 1.2rem;
+  --cell-gap: 0.22rem;
+  --cell-r: 0.18rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.energy-gauge[data-size="sm"] {
+  --cell-w: 0.42rem;
+  --cell-h: 0.9rem;
+  --cell-gap: 0.16rem;
+  --cell-r: 0.12rem;
+  gap: 0.35rem;
+}
+
+.energy-gauge[data-size="lg"] {
+  --cell-w: 1rem;
+  --cell-h: 2.1rem;
+  --cell-gap: 0.32rem;
+  --cell-r: 0.3rem;
+  gap: 0.7rem;
+}
+
+.energy-gauge-bolt {
+  font-size: calc(var(--cell-h) * 0.9);
+  transition: filter 400ms var(--ease);
+}
+
+.energy-cells {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cell-gap);
+  padding: 0 0.1rem;
+}
+
+/* One cell: a slanted slab of glass, dark until lit. */
+.energy-cell {
+  position: relative;
+  display: block;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  border-radius: var(--cell-r);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  transform: skewX(-10deg);
+  transition:
+    background 320ms var(--ease),
+    box-shadow 320ms var(--ease),
+    opacity 320ms var(--ease);
+}
+
+.energy-cell[data-on="true"] {
+  background: linear-gradient(180deg, #ffffff 0%, var(--energy) 32%, var(--energy-cool) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 0 calc(var(--cell-w) * 0.9) color-mix(in srgb, var(--energy) 65%, transparent),
+    0 0 calc(var(--cell-w) * 2) color-mix(in srgb, var(--energy-cool) 35%, transparent);
+}
+
+/* A cell that just lit flashes white and settles; one that just went dark cools. */
+.energy-cell[data-lit="true"] {
+  animation: cell-ignite 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.energy-cell[data-dark="true"] {
+  animation: cell-dim 560ms var(--ease) both;
+}
+
+.energy-gauge[data-low="true"] .energy-cell[data-on="true"] {
+  background: linear-gradient(180deg, #ffffff 0%, var(--danger) 40%, color-mix(in srgb, var(--danger) 70%, #000) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 calc(var(--cell-w) * 0.9) color-mix(in srgb, var(--danger) 65%, transparent);
+}
+
+.energy-gauge[data-low="true"] .energy-gauge-bolt {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--danger) 70%, transparent)) saturate(0.4) brightness(0.9);
+}
+
+.energy-gauge[data-empty="true"] .energy-gauge-bolt {
+  animation: bolt-flicker 2.8s ease-in-out infinite;
+}
+
+.energy-count {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: calc(var(--cell-h) * 0.66);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink, #ffffff);
+}
+
+.energy-count-sep {
+  margin: 0 0.06em;
+  opacity: 0.45;
+}
+
+.energy-gauge[data-low="true"] .energy-count {
+  color: var(--danger);
+}
+
+/* Cells bought past the max: a small reserve after the row. */
+.energy-banked {
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--cell-h) * 0.82);
+  padding: 0 0.4em;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--energy) 55%, transparent);
+  background: color-mix(in srgb, var(--energy) 18%, transparent);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: calc(var(--cell-h) * 0.52);
+  font-weight: 600;
+  color: var(--energy);
+}
+
+@keyframes cell-ignite {
+  0% {
+    transform: skewX(-10deg) scaleY(0.4);
+    filter: brightness(2.4);
+  }
+  45% {
+    transform: skewX(-10deg) scaleY(1.18);
+    filter: brightness(1.8);
+  }
+  100% {
+    transform: skewX(-10deg) scaleY(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes cell-dim {
+  0% {
+    filter: brightness(1.6);
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.5;
+  }
+  100% {
+    filter: brightness(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bolt-flicker {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --- The header pill (Story) ---------------------------------------------- */
+.energy-chip {
+  gap: 0.6rem;
+  padding: 0 0.3rem 0 0.75rem;
+  text-decoration: none;
+}
+
+.energy-chip:hover .energy-plus {
+  transform: scale(1.06);
+}
+
+.energy-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.energy-plus {
+  background: linear-gradient(135deg, var(--energy), var(--energy-cool));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 4px 12px -4px var(--energy);
+  transition: transform var(--duration) var(--ease);
+}
+
+.energy-chip[data-low="true"] .energy-plus {
+  background: linear-gradient(135deg, var(--danger), color-mix(in srgb, var(--danger) 70%, #000));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 12px -4px var(--danger);
+}
+
+.energy-folded {
+  position: relative;
+  gap: 0.15rem;
+  cursor: pointer;
+}
+
+.energy-folded-bolt {
+  font-size: 1.1rem;
+}
+
+.energy-folded-n {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.energy-folded[data-low="true"] .energy-folded-n {
+  color: var(--danger);
+}
+
+.header-pills[data-swapped="true"] > .energy-chip {
+  animation: pill-unfold 300ms var(--ease) both;
+}
+
+/* --- The episode bar: the gauge lands between the title and the close ------ */
+.energy-bar-chip {
+  display: inline-flex;
+  height: 2.75rem;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(11, 13, 26, 0.55);
+  color: #ffffff;
+  @apply backdrop-blur-[20px] backdrop-saturate-150;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  transition:
+    opacity 360ms var(--ease) 120ms,
+    transform 420ms var(--ease) 120ms,
+    border-color var(--duration) var(--ease);
+}
+
+.energy-bar-chip[data-in="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.energy-bar-chip[data-low="true"] {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.energy-bar-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 379px) {
+  .energy-bar-chip {
+    padding: 0 0.6rem;
+  }
+
+  .energy-bar-chip .energy-count {
+    display: none;
+  }
+}
+
+/* --- The price on Play ----------------------------------------------------- */
+.play-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin-left: 0.6rem;
+  padding: 0.18rem 0.55rem 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(15, 17, 23, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(15, 17, 23, 0.1);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.play-cost .bolt-glyph {
+  font-size: 0.95rem;
+}
+
+.play-cost[data-short="true"] {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+
+.play-cost[data-short="true"] .bolt-glyph {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--danger) 70%, transparent)) saturate(0.4);
+}
+
+/* Out of energy: Play still answers (with the recharge sheet); the board dims. */
+.trail-dock[data-short="true"] .trail-dock-board {
+  opacity: 0.7;
+}
+
+/* --- The energy row on the end screens ------------------------------------ */
+.story-clear-energy {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 380ms var(--ease),
+    transform 380ms var(--ease);
+}
+
+.story-clear-energy[data-show="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+.story-clear-energy-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.story-clear-energy-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--energy) 55%, transparent);
+  background: color-mix(in srgb, var(--energy) 16%, transparent);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #ffffff;
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.story-clear-energy-stamp[data-show="true"] {
+  animation: clear-stamp 460ms var(--ease) both;
+}
+
+.story-clear-energy-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.story-clear-energy-note .bolt-glyph {
+  font-size: 0.9rem;
+}
+
+.story-clear-energy[data-short="true"] .story-clear-energy-note {
+  color: color-mix(in srgb, var(--danger) 85%, #fff);
+}
+
+.story-clear .btn-play .play-cost {
+  background: rgba(15, 17, 23, 0.08);
+}
+
+/* --- The recharge sheet: where an empty gauge always leads ---------------- */
+.energy-sheet {
+  position: fixed;
+  inset: 0;
+  /* Over the episode sheet (70), a run (80) and the skip's confirmation (82); under the gem shop (90). */
+  z-index: 86;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  background: rgba(5, 6, 12, 0.6);
+  @apply backdrop-blur-[16px];
+  animation: clear-in 300ms var(--ease) both;
+}
+
+.energy-sheet-body {
+  /* Always night glass: a story surface, whatever the theme. */
+  --ink: #f2f3f7;
+  --ink-muted: #9aa1b5;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --field: rgba(255, 255, 255, 0.07);
+  --glass-fill: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --cta: #f2f3f7;
+  --on-cta: #0f1117;
+  position: relative;
+  width: 100%;
+  max-width: 27rem;
+  max-height: 92svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.6rem 1.15rem max(1.15rem, env(safe-area-inset-bottom));
+  border-radius: 1.6rem 1.6rem 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 0;
+  background:
+    radial-gradient(70% 40% at 50% 0%, color-mix(in srgb, var(--energy) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 40%),
+    rgba(11, 13, 26, 0.92);
+  @apply backdrop-blur-[24px] backdrop-saturate-150;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 -18px 60px rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+  outline: none;
+  animation: sheet-up 380ms var(--ease) both;
+}
+
+.energy-sheet[data-depleted="true"] .energy-sheet-body {
+  background:
+    radial-gradient(70% 40% at 50% 0%, color-mix(in srgb, var(--danger) 14%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 40%),
+    rgba(11, 13, 26, 0.92);
+}
+
+@media (min-width: 640px) {
+  .energy-sheet {
+    align-items: center;
+    padding: 1.5rem;
+  }
+
+  .energy-sheet-body {
+    border-radius: 1.6rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 0.7rem 1.5rem 1.5rem;
+  }
+}
+
+.energy-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.energy-sheet-close {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+/* The core: the gauge in a frame, glowing in its own light. */
+.energy-core {
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+  padding: 1.15rem 1rem 0.95rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    radial-gradient(60% 80% at 50% 100%, color-mix(in srgb, var(--energy) 14%, transparent), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 40px -10px color-mix(in srgb, var(--energy) 40%, transparent);
+  transition: box-shadow 600ms var(--ease);
+}
+
+.energy-core[data-depleted="true"] {
+  background:
+    radial-gradient(60% 80% at 50% 100%, color-mix(in srgb, var(--danger) 12%, transparent), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 40px -10px color-mix(in srgb, var(--danger) 35%, transparent);
+  animation: core-breathe 3.6s ease-in-out infinite;
+}
+
+.energy-core-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.energy-core-dot {
+  opacity: 0.45;
+}
+
+.energy-core-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.energy-clock {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.86em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+
+.energy-sheet-copy {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* The three recharges: art, name and line, one price button each. */
+.energy-packs {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.energy-pack {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 0.8rem 0.8rem 0.9rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color var(--duration) var(--ease);
+}
+
+.energy-pack[data-tag] {
+  border-color: color-mix(in srgb, var(--energy) 55%, transparent);
+  background:
+    radial-gradient(80% 100% at 0% 50%, color-mix(in srgb, var(--energy) 12%, transparent), transparent 60%),
+    rgba(255, 255, 255, 0.06);
+}
+
+.energy-pack .pack-tag {
+  top: -0.55rem;
+  left: 1rem;
+  transform: none;
+  background: linear-gradient(135deg, var(--energy), var(--energy-cool));
+  color: #0f1117;
+}
+
+/* The pack's art: a stack of cells the size of the pack, the bolt riding it. */
+.energy-pack-art {
+  position: relative;
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: rgba(5, 6, 12, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.energy-pack-art i {
+  position: absolute;
+  left: 50%;
+  bottom: 0.4rem;
+  width: 1.5rem;
+  height: 0.26rem;
+  margin-left: -0.75rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--energy), var(--energy-cool));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--energy) 60%, transparent);
+  transform: translateY(calc(var(--cell-i) * -0.36rem)) skewX(-10deg);
+  opacity: calc(1 - var(--cell-i) * 0.1);
+}
+
+.energy-pack-bolt {
+  position: relative;
+  z-index: 1;
+  font-size: 1.35rem;
+  margin-top: -0.9rem;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 6px color-mix(in srgb, var(--energy) 60%, transparent));
+}
+
+.energy-pack-art[data-cells="12"] {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 18px -4px color-mix(in srgb, var(--energy) 60%, transparent);
+}
+
+.energy-pack-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.energy-pack-name {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.energy-pack-cells {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--energy);
+}
+
+.energy-pack-runs {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.energy-pack-line {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.energy-pack-cta {
+  display: inline-flex;
+  min-height: 2.75rem;
+  min-width: 4.6rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  padding: 0.3rem 0.85rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.energy-pack-cta.btn-play {
+  background: #f2f3f7;
+  color: #0f1117;
+  box-shadow: 0 8px 24px -10px color-mix(in srgb, var(--energy) 70%, transparent);
+}
+
+.energy-pack-cta .gem-glyph {
+  font-size: 0.9rem;
+  margin-right: 0.28rem;
+}
+
+.energy-pack-cta-sub {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.energy-pack-cta:disabled {
+  opacity: 0.6;
+}
+
+.energy-sheet-fine {
+  margin-top: 0.9rem;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.energy-sheet-fine .gem-glyph {
+  font-size: 0.85em;
+}
+
+.energy-sheet-later {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.85rem;
+}
+
+@media (max-width: 379px) {
+  .energy-pack {
+    gap: 0.6rem;
+    padding: 0.7rem 0.6rem 0.7rem 0.7rem;
+  }
+
+  .energy-pack-line {
+    display: none;
+  }
+
+  .energy-pack-cta {
+    min-width: 4.2rem;
+    padding-inline: 0.6rem;
+  }
+}
+
+/* The recharge has landed: the "+N", then the cells light one by one. */
+.energy-landed {
+  padding: 0.75rem 0 0.25rem;
+  text-align: center;
+  cursor: default;
+}
+
+.energy-landed-title {
+  margin-top: 0.5rem;
+  font-size: clamp(1.7rem, 7vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  animation: clear-rise 520ms var(--ease) 120ms both;
+}
+
+.energy-landed-stamp {
+  gap: 0.45rem;
+  font-size: 1.15rem;
+  border-color: color-mix(in srgb, var(--energy) 55%, transparent);
+  background: color-mix(in srgb, var(--energy) 14%, transparent);
+}
+
+.energy-landed-stamp .bolt-glyph {
+  font-size: 1.05rem;
+}
+
+.energy-landed-core {
+  opacity: 0.55;
+  transition: opacity 360ms var(--ease);
+}
+
+.energy-landed-core[data-live="true"] {
+  opacity: 1;
+}
+
+.energy-landed-core .energy-core-line {
+  opacity: 0;
+  transition: opacity 360ms var(--ease);
+}
+
+.energy-landed-core .energy-core-line[data-show="true"] {
+  opacity: 1;
+}
+
+.energy-landed-actions {
+  margin-top: 1.5rem;
+}
+
+.energy-landed .btn-play {
+  background: #f2f3f7;
+  color: #0f1117;
+}
+
+@keyframes core-breathe {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 40px -10px color-mix(in srgb, var(--danger) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 52px -8px color-mix(in srgb, var(--danger) 55%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-cell,
+  .energy-bar-chip,
+  .story-clear-energy,
+  .energy-landed-core,
+  .energy-core {
+    transition: none !important;
+  }
+
+  .energy-cell[data-lit="true"],
+  .energy-cell[data-dark="true"],
+  .energy-gauge[data-empty="true"] .energy-gauge-bolt,
+  .energy-core[data-depleted="true"],
+  .energy-sheet,
+  .energy-sheet-body,
+  .energy-landed-title,
+  .story-clear-energy-stamp[data-show="true"] {
+    animation: none !important;
+  }
+
+  .story-clear-energy-stamp[data-show="true"] {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

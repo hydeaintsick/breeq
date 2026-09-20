@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GemGlyph } from "@/components/currency-glyphs";
+import { BoltGlyph, GemGlyph } from "@/components/currency-glyphs";
+import { EnergyGauge } from "@/components/energy-gauge";
+import { EnergyClock } from "@/components/energy-sheet";
 import { formatGems } from "@/lib/economy";
+import { ENERGY_PLAY_COST, type EnergyState } from "@/lib/energy";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
 
 /** Timeline, in ms from mount — same beats as the clear screen. */
@@ -33,15 +36,19 @@ export function StoryLose({
   reason,
   onRetry,
   onSkip,
+  energy = null,
   veiled = false,
   onClose,
 }: {
   title: string;
   score: number;
   reason: "lives" | "timeout" | "crushed";
+  /** One more run. Short on energy this still answers: the parent opens the recharge sheet. */
   onRetry: () => void;
   /** Buy past this wall for gems. Omitted where a skip makes no sense (tutorial, replays). */
   onSkip?: () => void;
+  /** The gauge after this run was paid. Null hides the energy row (tutorial). */
+  energy?: EnergyState | null;
   /** A sheet is up over the screen: the copy steps out so it does not bleed through the glass. */
   veiled?: boolean;
   onClose: () => void;
@@ -62,6 +69,8 @@ export function StoryLose({
   const stampReady = skip || stamped;
   const stampStage = skip ? "done" : stamped ? "stamp" : "hidden";
   const buttons = skip || buttonsTimed;
+  /** The gauge cannot pay for another try: the primary button leads to the recharge. */
+  const short = energy !== null && energy.energy < ENERGY_PLAY_COST;
 
   useEffect(() => {
     mountedAt.current = performance.now();
@@ -125,16 +134,48 @@ export function StoryLose({
           <span className="story-clear-note">{NOTE[reason]} Clear the wall to earn it.</span>
         </div>
 
+        {energy ? (
+          <div className="story-clear-energy" data-show={stampReady} data-short={short ? "true" : undefined}>
+            <span className="story-clear-label">Energy</span>
+            <EnergyGauge energy={energy.energy} max={energy.max} size="md" />
+            <span className="story-clear-energy-note">
+              {short ? (
+                <>
+                  Out of energy. Free recharge in <EnergyClock resetAt={energy.resetAt} />
+                </>
+              ) : (
+                <>
+                  One more try takes <BoltGlyph /> {ENERGY_PLAY_COST}.
+                </>
+              )}
+            </span>
+          </div>
+        ) : null}
+
         <div className="story-clear-actions" data-show={buttons}>
           <button
             type="button"
             className="btn-play min-h-11 w-full"
+            aria-label={short ? "Out of energy. Recharge" : energy ? `Try again for ${ENERGY_PLAY_COST} energy` : "Try again"}
             onClick={(e) => {
               e.stopPropagation();
               onRetry();
             }}
           >
-            Try again
+            {short ? (
+              <span className="inline-flex items-center gap-2">
+                <BoltGlyph /> Recharge
+              </span>
+            ) : energy ? (
+              <span className="inline-flex items-center gap-2">
+                Try again
+                <span className="play-cost" aria-hidden="true">
+                  <BoltGlyph /> {ENERGY_PLAY_COST}
+                </span>
+              </span>
+            ) : (
+              "Try again"
+            )}
           </button>
           {onSkip ? (
             <button
