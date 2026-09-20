@@ -67,6 +67,7 @@ export function AdminHeader() {
             aria-expanded={open}
             aria-controls={menuId}
             aria-label={open ? "Close menu" : "Open menu"}
+            data-header-menu=""
             onClick={() => setOpen((current) => !current)}
           >
             <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
@@ -78,9 +79,9 @@ export function AdminHeader() {
       {open ? (
         <div
           id={menuId}
-          className="pointer-events-auto relative z-10 mx-auto mt-2 flex w-full max-w-6xl justify-end"
+          className="pointer-events-none relative z-10 mx-auto mt-2 flex w-full max-w-6xl justify-end"
         >
-          <div className="glass-sheet flex w-full max-w-xs flex-col gap-1 p-3">
+          <div className="glass-sheet pointer-events-auto flex w-full max-w-xs flex-col gap-1 p-3" data-header-menu="">
             {links.map((link) => (
               <Link
                 key={link.href}

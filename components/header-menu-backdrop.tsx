@@ -3,9 +3,14 @@
 import { useEffect, useRef } from "react";
 
 /**
- * The layer under an open header menu: a tap anywhere outside puts the menu
- * away, so does Escape. `onEscape` lets the header hand focus back to the
- * menu button on the keyboard path; a tap leaves focus where the pointer is.
+ * Light-dismiss for an open header menu. A pointerdown anywhere outside the
+ * burger button and its sheet (`[data-header-menu]`) puts the menu away, so
+ * does Escape. `onEscape` lets the header hand focus back to the menu button
+ * on the keyboard path; a tap leaves focus where the pointer is.
+ *
+ * This is a document listener, not a positioned overlay: the header is
+ * `pointer-events: none` and only as tall as its chrome, so a full-screen
+ * child never reliably receives taps on the page underneath.
  */
 export function HeaderMenuBackdrop({
   open,
@@ -35,19 +40,23 @@ export function HeaderMenuBackdrop({
       }
     };
 
+    const onPointerDown = (event: PointerEvent) => {
+      const node = event.target;
+      const el =
+        node instanceof Element ? node : node instanceof Node ? node.parentElement : null;
+      if (el?.closest("[data-header-menu]")) {
+        return;
+      }
+      onCloseRef.current();
+    };
+
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
   }, [open]);
 
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-auto fixed inset-0 z-0"
-      onPointerDown={() => onCloseRef.current()}
-    />
-  );
+  return null;
 }

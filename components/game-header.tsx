@@ -39,8 +39,9 @@ function menuItems(root: HTMLElement | null): HTMLElement[] {
 let dismissMenu = () => {};
 
 /**
- * The dock sits above the menu backdrop, so a Play ↔ Shop tap never hits it.
- * The tab calls this so the sheet does not travel with the layout.
+ * A dock tab is outside the menu, so the document listener already dismisses
+ * it; the tab still calls this so a Play ↔ Shop navigation never carries the
+ * open sheet into the next layout.
  */
 export function closeGameMenu() {
   dismissMenu();
@@ -192,6 +193,7 @@ export function GameHeader({
       aria-expanded={open}
       aria-controls={open ? menuId : undefined}
       aria-label="Menu"
+      data-header-menu=""
       onClick={toggleMenu}
       onKeyDown={onMenuButtonKeyDown}
     >
@@ -202,13 +204,14 @@ export function GameHeader({
   const dropdown = open ? (
     <div
       id={menuId}
-      className="pointer-events-auto relative z-10 mx-auto mt-2 flex w-full max-w-6xl justify-end"
+      className="pointer-events-none relative z-10 mx-auto mt-2 flex w-full max-w-6xl justify-end"
     >
       <div
         ref={menuRef}
-        className="glass-sheet header-menu flex flex-col gap-1 p-3"
+        className="glass-sheet header-menu pointer-events-auto flex flex-col gap-1 p-3"
         role="group"
         aria-label="Menu"
+        data-header-menu=""
         onKeyDown={onMenuKeyDown}
       >
         {/* Top to bottom: where to go, the settings, the account, the admin

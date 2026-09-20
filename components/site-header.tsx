@@ -96,6 +96,7 @@ export function SiteHeader() {
             aria-expanded={open}
             aria-controls={menuId}
             aria-label={open ? "Close menu" : "Open menu"}
+            data-header-menu=""
             onClick={() => setOpen((current) => !current)}
           >
             <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
@@ -108,6 +109,7 @@ export function SiteHeader() {
         <div
           id={menuId}
           className="glass-sheet pointer-events-auto relative z-10 mx-auto mt-2 flex max-w-6xl flex-col gap-1 p-3 md:hidden"
+          data-header-menu=""
         >
           {links.map((link) => (
             <Link
