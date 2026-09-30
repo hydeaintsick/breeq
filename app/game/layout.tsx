@@ -9,6 +9,7 @@ import { requireProgress } from "@/lib/auth/session";
 import { getWardrobe } from "@/lib/cosmetics-store";
 import { getBalances, getEconomy } from "@/lib/earn";
 import { getEnergy } from "@/lib/energy-store";
+import { getLeaderboard } from "@/lib/leaderboard";
 import { canPlayEarn } from "@/lib/progress";
 import { earnSandbox, stripePublishableKey, stripeReady } from "@/lib/stripe";
 import { getSiteSettings } from "@/lib/tutorial";
@@ -19,12 +20,13 @@ export default async function GameLayout({
   children: React.ReactNode;
 }) {
   const { user, progress, stars } = await requireProgress();
-  const [balances, settings, economy, energy, wardrobe] = await Promise.all([
+  const [balances, settings, economy, energy, wardrobe, board] = await Promise.all([
     getBalances(user.id),
     getSiteSettings(),
     getEconomy(),
     getEnergy(user.id),
     getWardrobe(user.id),
+    getLeaderboard(user.id),
   ]);
   const earn = canPlayEarn(user.role, progress.level, settings.earnEnabled);
 
@@ -38,7 +40,7 @@ export default async function GameLayout({
             sandbox={earnSandbox()}
           >
             <EnergyProvider initial={energy}>
-              <GameHeader progress={progress} stars={stars} isAdmin={user.role === "ADMIN"} earn={earn} />
+              <GameHeader progress={progress} stars={stars} board={board} isAdmin={user.role === "ADMIN"} earn={earn} />
               <GameShell>{children}</GameShell>
             </EnergyProvider>
           </GemShopProvider>

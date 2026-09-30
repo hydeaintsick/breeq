@@ -680,6 +680,31 @@ html[data-theme="dark"] {
     outline-offset: 3px;
   }
 
+  .header-chip[data-open="true"] {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline));
+  }
+
+  /* Icon only through phone landscape. The word comes back on a wide desktop. */
+  .leaderboard-chip-label {
+    display: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  @media (min-width: 1024px) {
+    .leaderboard-chip {
+      width: auto;
+      gap: 0.4rem;
+      padding: 0 0.85rem 0 0.7rem;
+    }
+
+    .leaderboard-chip-label {
+      display: inline;
+    }
+  }
+
   /* Level meter: badge, label + XP, bar. One chip, same height as the others. */
   .rank-chip {
     display: inline-flex;
@@ -1282,6 +1307,252 @@ html[data-theme="dark"] {
 
 @media (prefers-reduced-motion: reduce) {
   .header-menu-pane {
+    animation: none;
+  }
+}
+
+/* --- Leaderboard: the main-menu header disclosure ------------------------
+   A glass sheet under the nav. The podium steps are neon bricks; the page
+   stays ink, glass, and one accent. */
+.leaderboard {
+  width: min(22.5rem, 100%);
+  /* Stay above the dock: nav, the gap under it, and the dock's own pill. */
+  max-height: min(34rem, calc(100svh - max(1rem, env(safe-area-inset-top)) - max(0.75rem, env(safe-area-inset-bottom)) - 8.6rem));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.95rem 0.85rem 0.7rem;
+  background-image:
+    radial-gradient(140px 90px at 50% 28%, color-mix(in srgb, var(--neon-amber) 22%, transparent), transparent 70%),
+    radial-gradient(110px 80px at 12% 36%, color-mix(in srgb, var(--neon-cyan) 18%, transparent), transparent 72%),
+    radial-gradient(110px 80px at 90% 40%, color-mix(in srgb, var(--neon-pink) 16%, transparent), transparent 72%);
+  animation: pill-unfold 280ms var(--ease) both;
+}
+
+.leaderboard-kicker {
+  padding-left: 0.35rem;
+}
+
+.leaderboard-podium {
+  display: grid;
+  grid-template-columns: 1fr 1.12fr 1fr;
+  align-items: end;
+  gap: 0.45rem;
+  margin: 0.85rem 0 0.2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.leaderboard-podium[data-count="2"] {
+  grid-template-columns: 1fr 1.12fr;
+}
+
+.leaderboard-podium[data-count="1"] {
+  grid-template-columns: minmax(0, 8.75rem);
+  justify-content: center;
+}
+
+.leaderboard-place {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.leaderboard-place[data-place="1"] {
+  order: 2;
+}
+
+.leaderboard-place[data-place="2"] {
+  order: 1;
+}
+
+.leaderboard-place[data-place="3"] {
+  order: 3;
+}
+
+.leaderboard-place-rank {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+
+.leaderboard-place-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.leaderboard-you {
+  flex: none;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.leaderboard-brick {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  margin-top: 0.15rem;
+  border-radius: 0.7rem 0.7rem 0.45rem 0.45rem;
+  /* Fixed ink: these bricks stay neon in both themes, and --ink flips to white at night. */
+  color: #0f1117;
+}
+
+.leaderboard-place[data-place="1"] .leaderboard-brick {
+  height: 5.15rem;
+  background: linear-gradient(180deg, color-mix(in srgb, white 28%, var(--neon-amber)), var(--neon-amber));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 12px 28px -12px var(--neon-amber);
+}
+
+.leaderboard-place[data-place="2"] .leaderboard-brick {
+  height: 3.85rem;
+  background: linear-gradient(180deg, color-mix(in srgb, white 26%, var(--neon-cyan)), var(--neon-cyan));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 12px 28px -14px var(--neon-cyan);
+}
+
+.leaderboard-place[data-place="3"] .leaderboard-brick {
+  height: 3rem;
+  background: linear-gradient(180deg, color-mix(in srgb, white 24%, var(--neon-pink)), var(--neon-pink));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 12px 28px -14px var(--neon-pink);
+}
+
+.leaderboard-brick-level {
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.leaderboard-place[data-place="1"] .leaderboard-brick-level {
+  font-size: 1.5rem;
+}
+
+.leaderboard-brick-caption {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+.leaderboard-list {
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leaderboard-pinned {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 1.65rem minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.35rem;
+  border-radius: 0.85rem;
+}
+
+.leaderboard-row[data-you="true"] {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.leaderboard-rank {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.leaderboard-name {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.leaderboard-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.leaderboard-level-word {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.leaderboard-level-n {
+  display: inline-flex;
+  min-width: 1.65rem;
+  height: 1.65rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-violet));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 4px 12px -6px var(--neon-violet);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.leaderboard-empty {
+  margin: 0.85rem 0.35rem 0.45rem;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard {
     animation: none;
   }
 }

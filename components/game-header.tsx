@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { EnergyChip } from "@/components/energy-chip";
 import { GalaxyMap } from "@/components/galaxy-map";
+import { LeaderboardIcon, LeaderboardPanel } from "@/components/leaderboard";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { HeaderMenuBackdrop } from "@/components/header-menu-backdrop";
 import { LogoMark } from "@/components/logo-mark";
@@ -25,6 +26,7 @@ import { useStoryChrome } from "@/components/story-chrome";
 import { SwipeToggle } from "@/components/swipe-toggle";
 import { WalletChip } from "@/components/wallet-chip";
 import { ACCOUNT_PATH, ADMIN_DASHBOARD_PATH, EARN_PATH, GAME_MENU_PATH, SHOP_PATH, STORY_PATH } from "@/lib/auth/paths";
+import type { Leaderboard } from "@/lib/leaderboard";
 import type { Progress, StarTally } from "@/lib/progress";
 
 type Pill = "rank" | "wallet" | "energy";
@@ -50,27 +52,34 @@ export function closeGameMenu() {
 export function GameHeader({
   progress,
   stars,
+  board,
   isAdmin = false,
   earn = false,
 }: {
   progress: Progress;
   stars: StarTally;
+  board: Leaderboard;
   isAdmin?: boolean;
   /** The player can use Earn: the bag pill joins the level pill. */
   earn?: boolean;
 }) {
   const pathname = usePathname();
   const [menuPath, setMenuPath] = useState<string | null>(null);
+  const [boardPath, setBoardPath] = useState<string | null>(null);
   const [door, setDoor] = useState<MenuDoor | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
+  const boardId = useId();
   const settingsId = `${menuId}-settings`;
   const storyId = `${menuId}-story`;
   const chrome = useStoryChrome();
   const story = pathname.startsWith(STORY_PATH);
   const open = menuPath === pathname;
+  const onMenu = pathname === GAME_MENU_PATH;
+  const boardOpen = onMenu && boardPath === pathname;
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const boardButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   /** The menu was opened from the keyboard with an arrow: land on its first row once it is up. */
   const focusFirst = useRef(false);
@@ -108,12 +117,14 @@ export function GameHeader({
   const closeMenu = () => {
     setMenuPath(null);
     setDoor(null);
+    setBoardPath(null);
   };
 
   useEffect(() => {
     dismissMenu = () => {
       setMenuPath(null);
       setDoor(null);
+      setBoardPath(null);
     };
     return () => {
       dismissMenu = () => {};
@@ -125,14 +136,24 @@ export function GameHeader({
   useEffect(() => {
     setMenuPath(null);
     setDoor(null);
+    setBoardPath(null);
   }, [pathname]);
 
-  /** Escape: the menu goes, focus comes back to the button that opened it. */
+  /** Escape: the sheet goes, focus comes back to the button that opened it. */
   const escapeMenu = () => {
+    const boardWasOpen = boardOpen;
     closeMenu();
-    menuButtonRef.current?.focus();
+    (boardWasOpen ? boardButtonRef : menuButtonRef).current?.focus();
   };
-  const toggleMenu = () => setMenuPath((current) => (current === pathname ? null : pathname));
+  const toggleMenu = () => {
+    setBoardPath(null);
+    setMenuPath((current) => (current === pathname ? null : pathname));
+  };
+  const toggleBoard = () => {
+    setMenuPath(null);
+    setDoor(null);
+    setBoardPath((current) => (current === pathname ? null : pathname));
+  };
   const toggleDoor = (next: MenuDoor) => setDoor((current) => (current === next ? null : next));
 
   // Opened with an arrow key: focus the first row as soon as it exists.
@@ -145,7 +166,7 @@ export function GameHeader({
   // Tabbing out of the header puts the menu away; a pointer tap that moves
   // focus nowhere (Safari never focuses buttons) is left to the backdrop.
   const onHeaderBlur = (event: FocusEvent<HTMLElement>) => {
-    if (!open) return;
+    if (!open && !boardOpen) return;
     const next = event.relatedTarget;
     if (next instanceof Node && !headerRef.current?.contains(next)) closeMenu();
   };
@@ -159,6 +180,7 @@ export function GameHeader({
       return;
     }
     focusFirst.current = true;
+    setBoardPath(null);
     setMenuPath(pathname);
   };
 
@@ -351,7 +373,7 @@ export function GameHeader({
         data-scrolled={scrolled}
         onBlur={onHeaderBlur}
       >
-        <HeaderMenuBackdrop open={open} onClose={closeMenu} onEscape={escapeMenu} />
+        <HeaderMenuBackdrop open={open || boardOpen} onClose={closeMenu} onEscape={escapeMenu} />
         <nav
           className="site-nav pointer-events-auto relative z-10 mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full px-4 backdrop-blur-[28px] backdrop-saturate-150 sm:px-5"
           aria-label="Game"
@@ -373,6 +395,22 @@ export function GameHeader({
           </div>
 
           <div className="relative z-10 flex shrink-0 items-center gap-2">
+            {onMenu ? (
+              <button
+                ref={boardButtonRef}
+                type="button"
+                className="header-chip leaderboard-chip"
+                aria-expanded={boardOpen}
+                aria-controls={boardOpen ? boardId : undefined}
+                aria-label="Ranks"
+                data-header-menu=""
+                data-open={boardOpen ? "true" : undefined}
+                onClick={toggleBoard}
+              >
+                <LeaderboardIcon />
+                <span className="leaderboard-chip-label">Ranks</span>
+              </button>
+            ) : null}
             <div className="header-sound-chip">
               <SoundToggle />
             </div>
@@ -380,6 +418,7 @@ export function GameHeader({
           </div>
         </nav>
         {dropdown}
+        {boardOpen ? <LeaderboardPanel id={boardId} board={board} /> : null}
       </header>
     );
   }
