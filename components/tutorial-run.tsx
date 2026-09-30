@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { useRouter } from "next/navigation";
 import type { ChapterClearResult } from "@/app/actions/progress";
 import { completeTutorial } from "@/app/actions/tutorial";
+import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
@@ -146,6 +147,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   const { anywhere: swipeAnywhere } = useSwipe();
   const rootRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
+  const [board, setBoard] = useState<BreakoutHandle | null>(null);
   const seen = useRef<Set<StepId>>(new Set());
   const actionRef = useRef<HTMLButtonElement>(null);
   // Finishing refreshes the page with `done` flipped; the labels keep the
@@ -201,6 +203,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
 
   const onHandle = useCallback((handle: BreakoutHandle | null) => {
     handleRef.current = handle;
+    setBoard(handle);
     setReady(handle !== null);
   }, []);
 
@@ -355,6 +358,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   );
 
   return (
+    <AutopilotProvider key={runId} handle={board}>
     <div ref={rootRef} className="story-play tutorial-run" role="dialog" aria-modal="true" aria-label="Tutorial">
       <BreakoutPreview
         levels={LEVELS}
@@ -370,9 +374,12 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
         paused={paused}
         chrome={
           cleared || lost ? null : (
-            <button type="button" className="story-pause" aria-label="Pause" onClick={() => setMenu(true)}>
-              <CloseGlyph />
-            </button>
+            <>
+              <AutopilotButton variant="hud" />
+              <button type="button" className="story-pause" aria-label="Pause" onClick={() => setMenu(true)}>
+                <CloseGlyph />
+              </button>
+            </>
           )
         }
         onCleared={onCleared}
@@ -437,6 +444,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
               <button type="button" className="btn-play min-h-11 w-full" onClick={() => setMenu(false)}>
                 Resume
               </button>
+              <AutopilotButton variant="row" />
               <SoundToggle variant="row" />
               <HapticsToggle variant="row" />
               <SwipeToggle variant="row" />
@@ -448,6 +456,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
         </div>
       ) : null}
     </div>
+    </AutopilotProvider>
   );
 }
 

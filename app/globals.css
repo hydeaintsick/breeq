@@ -3269,8 +3269,133 @@ html[data-theme="dark"] {
   pointer-events: auto;
 }
 
+/* Admin assist: a 44px circle a clear gap left of pause. No blur over the live board. */
+.story-play-fit .story-auto {
+  position: absolute;
+  top: max(3.45%, 1.4rem);
+  right: calc(3.3% + 3.45rem);
+  z-index: 3;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(11, 13, 26, 0.62);
+  color: #ffffff;
+}
+
+.story-play-fit .story-auto[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--neon-lime) 70%, white);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--neon-lime) 55%, transparent);
+}
+
+.story-play-fit .story-auto:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.story-auto-lamp {
+  position: relative;
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+}
+
+.story-auto[aria-pressed="true"] .story-auto-lamp,
+.story-auto-row[aria-pressed="true"] .story-auto-lamp {
+  background: var(--neon-lime);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--neon-lime) 40%, white),
+    0 0 10px var(--neon-lime);
+  animation: story-auto-glow 1.6s ease-in-out infinite;
+}
+
+.story-auto-spark {
+  position: absolute;
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 1px;
+  background: #fff;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.story-auto[aria-pressed="true"] .story-auto-spark,
+.story-auto-row[aria-pressed="true"] .story-auto-spark {
+  animation: story-auto-spark 1.6s ease-in-out infinite;
+}
+
+.story-auto-spark:first-child,
+.story-auto-row .story-auto-spark:first-child {
+  top: -0.28rem;
+  right: -0.22rem;
+}
+
+.story-auto-spark:last-child,
+.story-auto-row .story-auto-spark:last-child {
+  bottom: -0.22rem;
+  left: -0.28rem;
+  animation-delay: 0.8s;
+}
+
+.story-auto-row[aria-pressed="true"] {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--neon-lime) 65%, transparent);
+}
+
+@keyframes story-auto-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--neon-lime) 40%, white),
+      0 0 8px color-mix(in srgb, var(--neon-lime) 50%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--neon-lime) 70%, white),
+      0 0 16px var(--neon-lime);
+  }
+}
+
+@keyframes story-auto-spark {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.55);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-auto[aria-pressed="true"] .story-auto-lamp,
+  .story-auto-row[aria-pressed="true"] .story-auto-lamp,
+  .story-auto[aria-pressed="true"] .story-auto-spark,
+  .story-auto-row[aria-pressed="true"] .story-auto-spark {
+    animation: none;
+  }
+
+  .story-auto[aria-pressed="true"] .story-auto-spark,
+  .story-auto-row[aria-pressed="true"] .story-auto-spark {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .story-play-fit .board-hud {
   padding-right: calc(3.3% + 3.1rem);
+}
+
+.story-play-fit:has(.story-auto) .board-hud {
+  padding-right: calc(3.3% + 6.85rem);
 }
 
 /* --- Thumb rail (touch control strip under the board) --------------------- */

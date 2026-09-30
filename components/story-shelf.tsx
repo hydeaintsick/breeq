@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSPrope
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { useBalances } from "@/components/balances-provider";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { EnergyBarChip } from "@/components/energy-chip";
@@ -242,6 +243,7 @@ export function StoryShelf({
   const [runId, setRunId] = useState(0);
   /** The live board, to revive it in place. */
   const boardRef = useRef<BreakoutHandle | null>(null);
+  const [board, setBoard] = useState<BreakoutHandle | null>(null);
   /** Hearts bought in this run; the offer stops at `REVIVE_MAX_PER_RUN`. */
   const [revives, setRevives] = useState(0);
   /** The revive sheet is up over the game over screen (the bag could not pay). */
@@ -970,6 +972,7 @@ export function StoryShelf({
                 </div>
               ) : null}
               {playing ? (
+                <AutopilotProvider key={`${playing.id}-${runId}`} handle={board}>
                 <div className="story-play" role="dialog" aria-modal="true" aria-label={playing.title}>
                   <StoryPlay
                     chapterId={playing.id}
@@ -980,14 +983,17 @@ export function StoryShelf({
                     paused={paused || intro}
                     chrome={
                       cleared || lost || intro ? null : (
-                        <button
-                          type="button"
-                          className="story-pause"
-                          aria-label="Pause"
-                          onClick={() => setPaused(true)}
-                        >
-                          <CloseGlyph />
-                        </button>
+                        <>
+                          <AutopilotButton variant="hud" />
+                          <button
+                            type="button"
+                            className="story-pause"
+                            aria-label="Pause"
+                            onClick={() => setPaused(true)}
+                          >
+                            <CloseGlyph />
+                          </button>
+                        </>
                       )
                     }
                     discovered={known}
@@ -1024,6 +1030,7 @@ export function StoryShelf({
                     }}
                     onHandle={(handle) => {
                       boardRef.current = handle;
+                      setBoard(handle);
                     }}
                   />
                   {burst ? (
@@ -1104,6 +1111,7 @@ export function StoryShelf({
                           <button type="button" className="btn-play min-h-11 w-full" autoFocus onClick={() => setPaused(false)}>
                             Resume
                           </button>
+                          <AutopilotButton variant="row" />
                           <SoundToggle variant="row" />
                           <HapticsToggle variant="row" />
                           <SwipeToggle variant="row" />
@@ -1122,6 +1130,7 @@ export function StoryShelf({
                     </div>
                   ) : null}
                 </div>
+                </AutopilotProvider>
               ) : null}
             </>,
             portal,

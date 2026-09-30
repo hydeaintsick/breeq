@@ -1,3 +1,4 @@
+import { PlayAdminProvider } from "@/components/admin-autopilot";
 import { BalancesProvider } from "@/components/balances-provider";
 import { CosmeticsProvider } from "@/components/cosmetics-provider";
 import { EnergyProvider } from "@/components/energy-provider";
@@ -31,6 +32,7 @@ export default async function GameLayout({
   const earn = canPlayEarn(user.role, progress.level, settings.earnEnabled);
 
   return (
+    <PlayAdminProvider admin={user.role === "ADMIN"}>
     <StoryChromeProvider>
       <BalancesProvider initial={balances}>
         <CosmeticsProvider initial={wardrobe}>
@@ -47,5 +49,6 @@ export default async function GameLayout({
         </CosmeticsProvider>
       </BalancesProvider>
     </StoryChromeProvider>
+    </PlayAdminProvider>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { finishEarnRun, forfeitEarnRun, startEarnRun, type RunEnd, type RunStart } from "@/app/actions/earn";
+import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { EthGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { TopUpButton } from "@/components/gem-shop";
@@ -14,7 +15,7 @@ import { useTheme } from "@/components/use-story-theme";
 import { applyBackgroundPhoto, parseStoredLevel, RULES, type GameEvent, type GameState } from "@/game/breakout/engine";
 import { createPayoutSfx, levelKey, playSheetBack, playSheetBuy, pursuit, type PayoutSfx } from "@/game/breakout/audio";
 import { isHapticsEnabled, isHapticsSupported } from "@/game/breakout/haptics";
-import { enterImmersive, wantsImmersive } from "@/game/breakout/preview";
+import { enterImmersive, wantsImmersive, type BreakoutHandle } from "@/game/breakout/preview";
 import type { Balances, EarnMapCard } from "@/lib/earn";
 import { formatEth, formatGems, formatUsd } from "@/lib/economy";
 import { screenPhoto } from "@/lib/photo";
@@ -45,6 +46,7 @@ export function EarnRun({
   const [paused, setPaused] = useState(false);
   const [end, setEnd] = useState<{ kind: "won" | "lost"; score: number; reason?: "lives" | "timeout" | "crushed"; result: RunEnd | null } | null>(null);
   const [runIndex, setRunIndex] = useState(0);
+  const [board, setBoard] = useState<BreakoutHandle | null>(null);
   const runRef = useRef<RunStart | null>(null);
 
   useEffect(() => {
@@ -254,6 +256,7 @@ export function EarnRun({
   }
 
   return createPortal(
+    <AutopilotProvider key={runIndex} handle={board}>
     <div className="story-play" role="dialog" aria-modal="true" aria-label={card.title}>
       <div className="absolute inset-0">
         <BreakoutPreview
@@ -271,11 +274,15 @@ export function EarnRun({
           paused={paused || end !== null}
           chrome={
             end ? null : (
-              <button type="button" className="story-pause" aria-label="Pause" onClick={() => setPaused(true)}>
-                <CloseGlyph />
-              </button>
+              <>
+                <AutopilotButton variant="hud" />
+                <button type="button" className="story-pause" aria-label="Pause" onClick={() => setPaused(true)}>
+                  <CloseGlyph />
+                </button>
+              </>
             )
           }
+          onHandle={setBoard}
           onCleared={handleCleared}
           onOver={handleOver}
           onEvent={handleEvent}
@@ -320,6 +327,7 @@ export function EarnRun({
               <button type="button" className="btn-play min-h-11 w-full" onClick={() => setPaused(false)}>
                 Resume
               </button>
+              <AutopilotButton variant="row" />
               <SoundToggle variant="row" />
               <HapticsToggle variant="row" />
               <SwipeToggle variant="row" />
@@ -330,7 +338,8 @@ export function EarnRun({
           </div>
         </div>
       ) : null}
-    </div>,
+    </div>
+    </AutopilotProvider>,
     portal,
   );
 }

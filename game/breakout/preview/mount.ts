@@ -144,6 +144,12 @@ export interface BreakoutHandle {
   /** Editor: run the autopilot, or freeze back to the authored serve frame. */
   setSimulating(on: boolean): void;
   /**
+   * Flawless autopilot takes the paddle (the same pilot that proves a wall).
+   * Pointer and rail input are ignored while it is on. Turning it on marks the
+   * run as played, so a clear or a loss still settles.
+   */
+  setAutopilot(on: boolean): void;
+  /**
    * A world rectangle in CSS pixels relative to the canvas's top-left, so a DOM
    * overlay can sit on a brick, a zone, or the paddle.
    */
@@ -163,6 +169,7 @@ const CAPTIONS = {
   playYou: "You have the paddle.",
   /** Pointer-only games stay quiet during play. */
   playTouch: "",
+  assist: "Autopilot has the paddle.",
   lost: "Ball lost.",
   cleared: "Level cleared.",
   overLives: "Game over. Next level…",
@@ -225,6 +232,8 @@ export function mountBreakout(
   } | null = null;
   let lastPointerT = -Infinity;
   let humanTouched = false;
+  /** Admin assist: the flawless pilot owns the paddle until turned off. */
+  let assisted = false;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let frozen = forceFrozen || (!editMode && reducedMotion.matches);
@@ -235,6 +244,7 @@ export function mountBreakout(
   let level = rotation[levelIndex];
   let game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
   let pilot = new Autopilot(level, { seed: seed * 7 });
+  let assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
   let renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode, skins);
 
   let hud: HudState = {
@@ -262,6 +272,7 @@ export function mountBreakout(
     pointerAimX === null || pointerAimY === null ? {} : { aimX: pointerAimX, aimY: pointerAimY };
 
   const input = (): GameInput => {
+    if (assisted) return assistPilot.input(game.state, game.bricks);
     // Pointer-only games always accept a launch, even before a drag has a
     // target (tap-anywhere to serve). Hybrid still needs a pointer on the board.
     if (controls === "pointer") {
@@ -310,7 +321,7 @@ export function mountBreakout(
 
   const syncHud = () => {
     const s = game.state;
-    const who: HudState["pilot"] = humanActive() && pointerX !== null ? "you" : "auto";
+    const who: HudState["pilot"] = assisted ? "auto" : humanActive() && pointerX !== null ? "you" : "auto";
     let caption: string;
     switch (s.phase) {
       case "serve":
@@ -329,6 +340,7 @@ export function mountBreakout(
         caption = s.ending === "timeout" ? CAPTIONS.overTimeout : s.ending === "crushed" ? CAPTIONS.overCrushed : CAPTIONS.overLives;
         break;
     }
+    if (assisted && (s.phase === "serve" || s.phase === "play")) caption = CAPTIONS.assist;
     const next: HudState = {
       levelName: level.name,
       author: level.author,
@@ -359,6 +371,7 @@ export function mountBreakout(
     if (bumpSeed) seed += 1;
     game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
     pilot = new Autopilot(level, { seed: seed * 7 });
+    assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
     renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode, skins);
     if (cssWidth > 0) renderer.view(viewport());
     scene.trail.length = 0;
@@ -384,6 +397,7 @@ export function mountBreakout(
     seed += 1;
     game.reset(seed);
     pilot = new Autopilot(level, { seed: seed * 7 });
+    assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
     scene.trail.length = 0;
     endHold = 0;
     humanTouched = false;
@@ -552,14 +566,14 @@ export function mountBreakout(
   // that point. Pointer-only games use the stage handlers below: a tap aims
   // and launches; a relative swipe steers when the player has that setting on.
   const onPointerMove = (e: PointerEvent) => {
-    if (controls !== "hybrid" || paused || rail) return;
+    if (controls !== "hybrid" || paused || rail || assisted) return;
     humanTouched = true;
     pointerX = toWorldX(e.clientX);
     lastPointerT = scene.time;
     if (game.state.phase === "serve") aimAtClient(e.clientX, e.clientY);
   };
   const onPointerDown = (e: PointerEvent) => {
-    if (controls !== "hybrid" || paused || !e.isPrimary) return;
+    if (controls !== "hybrid" || paused || !e.isPrimary || assisted) return;
     sfx?.unlock();
     humanTouched = true;
     lastPointerT = scene.time;
@@ -578,7 +592,7 @@ export function mountBreakout(
   const playSurface = stage ?? canvas;
   const STEER_SLOP = 12;
   const onPlayDown = (e: PointerEvent) => {
-    if (controls !== "pointer" || paused || !e.isPrimary) return;
+    if (controls !== "pointer" || paused || !e.isPrimary || assisted) return;
     if (isPlayChrome(e.target)) return;
     e.preventDefault();
     sfx?.unlock();
@@ -600,7 +614,7 @@ export function mountBreakout(
     }
   };
   const onPlayMove = (e: PointerEvent) => {
-    if (controls !== "pointer" || paused) return;
+    if (controls !== "pointer" || paused || assisted) return;
     if (playDrag && playDrag.id === e.pointerId) {
       lastPointerT = scene.time;
       aimAtClient(e.clientX, e.clientY);
@@ -618,7 +632,7 @@ export function mountBreakout(
     if (playDrag === null || playDrag.id !== e.pointerId) return;
     const dragged = playDrag.moved;
     playDrag = null;
-    if (controls === "auto" || paused) return;
+    if (controls === "auto" || paused || assisted) return;
     if (!dragged) {
       aimAtClient(e.clientX, e.clientY);
       pointerLaunch = true;
@@ -666,7 +680,7 @@ export function mountBreakout(
   const RAIL_TAP_SLOP = 10;
   const RAIL_TAP_MS = 350;
   const onRailDown = (e: PointerEvent) => {
-    if (controls === "auto" || paused || !e.isPrimary) return;
+    if (controls === "auto" || paused || !e.isPrimary || assisted) return;
     e.preventDefault();
     sfx?.unlock();
     humanTouched = true;
@@ -682,7 +696,7 @@ export function mountBreakout(
     rail!.dataset.active = "true";
   };
   const onRailMove = (e: PointerEvent) => {
-    if (controls === "auto" || paused || !e.isPrimary) return;
+    if (controls === "auto" || paused || !e.isPrimary || assisted) return;
     // Only steer while a finger is down or a mouse hovers the rail; a finger
     // resting on the rail while paused must not move the paddle on resume.
     if (railTap === null && e.pointerType !== "mouse") return;
@@ -695,7 +709,7 @@ export function mountBreakout(
     const isTap = !Number.isNaN(railTap.x) && e.timeStamp - railTap.t < RAIL_TAP_MS;
     railTap = null;
     rail!.dataset.active = "false";
-    if (controls === "auto" || paused) return;
+    if (controls === "auto" || paused || assisted) return;
     if (isTap) {
       pointerLaunch = true;
       lastPointerT = scene.time;
@@ -848,6 +862,22 @@ export function mountBreakout(
       if (!paused) return;
       paused = false;
       schedule();
+    },
+    setAutopilot(on) {
+      if (destroyed || editMode) return;
+      assisted = on;
+      if (on) {
+        assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
+        humanTouched = true;
+        pointerX = null;
+        pointerLaunch = false;
+        pointerAimX = null;
+        pointerAimY = null;
+        playDrag = null;
+        railTap = null;
+        if (rail) rail.dataset.active = "false";
+      }
+      syncHud();
     },
     setSimulating(on) {
       if (!editMode || simulating === on) return;
