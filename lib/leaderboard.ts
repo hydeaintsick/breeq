@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { progressFromXp } from "@/lib/progress";
 
@@ -27,9 +28,10 @@ function playerName(user: { username: string | null; name: string | null }) {
 
 /**
  * Top players by level (XP), oldest account first on a tie.
- * The viewer's own row is pinned on when they sit past the window.
+ * Pass the signed-in player to pin their row when they sit past the window.
+ * Cached per request so the home header and the Play menu share one read.
  */
-export async function getLeaderboard(viewerId: string): Promise<Leaderboard> {
+export const getLeaderboard = cache(async (viewerId: string | null): Promise<Leaderboard> => {
   const users = await prisma.user.findMany({
     orderBy: [{ xp: "desc" }, { createdAt: "asc" }],
     take: LEADERBOARD_LIMIT,
@@ -40,10 +42,10 @@ export async function getLeaderboard(viewerId: string): Promise<Leaderboard> {
     rank: index + 1,
     name: playerName(user),
     level: progressFromXp(user.xp ?? 0).level,
-    you: user.id === viewerId,
+    you: viewerId !== null && user.id === viewerId,
   }));
 
-  if (entries.some((entry) => entry.you)) {
+  if (!viewerId || entries.some((entry) => entry.you)) {
     return { entries, you: null };
   }
 
@@ -69,4 +71,4 @@ export async function getLeaderboard(viewerId: string): Promise<Leaderboard> {
       you: true,
     },
   };
-}
+});
