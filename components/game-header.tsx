@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { EnergyChip } from "@/components/energy-chip";
+import { useEnergy } from "@/components/energy-provider";
 import { GalaxyMap } from "@/components/galaxy-map";
 import { LeaderboardIcon, LeaderboardPanel } from "@/components/leaderboard";
 import { HapticsToggle } from "@/components/haptics-toggle";
@@ -73,6 +74,7 @@ export function GameHeader({
   const settingsId = `${menuId}-settings`;
   const storyId = `${menuId}-story`;
   const chrome = useStoryChrome();
+  const energyOn = useEnergy()?.enabled !== false;
   const story = pathname.startsWith(STORY_PATH);
   const open = menuPath === pathname;
   const onMenu = pathname === GAME_MENU_PATH;
@@ -84,12 +86,13 @@ export function GameHeader({
   /** The menu was opened from the keyboard with an arrow: land on its first row once it is up. */
   const focusFirst = useRef(false);
 
-  // Two pills, one unfolded at a time: the energy gauge in Story, the bag in
-  // Earn and the shop, the level elsewhere. A tap on the folded one swaps
-  // them; a route change goes back to the default.
+  // Two pills, one unfolded at a time: the energy gauge in Story (when energy
+  // is on), the bag in Earn and the shop, the level elsewhere. A tap on the
+  // folded one swaps them; a route change goes back to the default.
   const inEarn = pathname.startsWith(EARN_PATH) || pathname.startsWith(SHOP_PATH);
-  const second: Pill | null = story ? "energy" : earn ? "wallet" : null;
-  const defaultPill: Pill = story ? "energy" : earn && inEarn ? "wallet" : "rank";
+  const showEnergy = story && energyOn;
+  const second: Pill | null = showEnergy ? "energy" : earn ? "wallet" : null;
+  const defaultPill: Pill = showEnergy ? "energy" : earn && inEarn ? "wallet" : "rank";
   const [pick, setPick] = useState<{ path: string; pill: Pill } | null>(null);
   const picked = second && pick && pick.path === pathname && (pick.pill === "rank" || pick.pill === second) ? pick.pill : null;
   const swapped = picked !== null;

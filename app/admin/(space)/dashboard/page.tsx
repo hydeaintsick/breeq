@@ -35,8 +35,8 @@ export default async function AdminDashboardPage() {
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Admin space</p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Dashboard</h1>
       <p className="mt-3 text-sm leading-6 text-ink-muted">
-        Signed in as {label}. Earn is {settings.earnEnabled ? "on" : "off"}, the tutorial is{" "}
-        {settings.tutorialEnabled ? "on" : "off"} —{" "}
+        Signed in as {label}. Earn is {settings.earnEnabled ? "on" : "off"}, energy is{" "}
+        {settings.energyEnabled ? "on" : "off"}, the tutorial is {settings.tutorialEnabled ? "on" : "off"} —{" "}
         <Link href={ADMIN_SETTINGS_PATH} className="underline decoration-hairline underline-offset-4">
           change that in Settings
         </Link>

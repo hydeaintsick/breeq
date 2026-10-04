@@ -20,6 +20,7 @@ import { StoryJourney, type JourneyCard, type StoryJourneyHandle } from "@/compo
 import { ReviveBurst } from "@/components/revive-burst";
 import { ReviveSheet } from "@/components/revive-sheet";
 import { StoryLose } from "@/components/story-lose";
+import { PlayClock } from "@/components/play-clock";
 import { StoryPlay } from "@/components/story-play";
 import { StorySkipSheet } from "@/components/story-skip";
 import { HUE_VAR, StoryTrail } from "@/components/story-trail";
@@ -267,9 +268,10 @@ export function StoryShelf({
   const balances = useBalances();
   const publishBalances = balances?.setBalances;
   const gems = balances?.balances.gems ?? 0;
-  /** The gauge: every run is paid from it before the ball is served. */
+  /** The gauge: every run is paid from it before the ball is served. Off: runs are free. */
   const energyCtx = useEnergy();
-  const energyState = energyCtx?.state ?? null;
+  const energyOn = energyCtx?.enabled ?? true;
+  const energyState = energyOn ? (energyCtx?.state ?? null) : null;
   // Read through a ref by the run payer, which may be called from a callback made renders ago.
   const energyRef = useRef<EnergyState | null>(energyState);
   useEffect(() => {
@@ -711,7 +713,7 @@ export function StoryShelf({
   function payRun(chapter: StoryChapterCard, reason: EnergySheetReason, serve: () => void) {
     const ctx = energyCtx;
     const state = energyRef.current;
-    if (!ctx || !state) {
+    if (!ctx?.enabled || !state) {
       serve();
       return;
     }
@@ -920,7 +922,7 @@ export function StoryShelf({
                         ) : null}
                       </p>
                     </div>
-                    <EnergyBarChip live={grown && !closing} />
+                    {energyOn ? <EnergyBarChip live={grown && !closing} /> : null}
                     <button type="button" className="story-close" aria-label="Back to the route" onClick={closeSheet}>
                       <CloseGlyph />
                     </button>
@@ -933,7 +935,7 @@ export function StoryShelf({
                     onSelect={setChapterActive}
                     onPlay={startChapter}
                     onSkip={askSkip}
-                    energy={energyState?.energy}
+                    energy={energyOn ? energyState?.energy : undefined}
                     live={covered}
                     snap={trailSnap}
                     keyboard={!playing && !closing && !skipping && !skipped && !energyOpen}
@@ -974,6 +976,7 @@ export function StoryShelf({
               {playing ? (
                 <AutopilotProvider key={`${playing.id}-${runId}`} handle={board}>
                 <div className="story-play" role="dialog" aria-modal="true" aria-label={playing.title}>
+                  <PlayClock active={!paused && !intro && !cleared && !lost} />
                   <StoryPlay
                     chapterId={playing.id}
                     title={playing.title}
@@ -1085,7 +1088,7 @@ export function StoryShelf({
                           ? { cost: REVIVE_GEMS, gems, busy: reviveBusy, error: reviveError, onRevive: () => void reviveRun() }
                           : null
                       }
-                      energy={energyState}
+                      energy={energyOn ? energyState : null}
                       veiled={skipping !== null || energyOpen || reviving}
                       onClose={quitRun}
                     />

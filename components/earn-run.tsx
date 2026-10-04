@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { finishEarnRun, forfeitEarnRun, startEarnRun, type RunEnd, type RunStart } from "@/app/actions/earn";
 import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { PlayClock } from "@/components/play-clock";
 import { EthGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { TopUpButton } from "@/components/gem-shop";
 import { HapticsToggle } from "@/components/haptics-toggle";
@@ -259,6 +260,7 @@ export function EarnRun({
     <AutopilotProvider key={runIndex} handle={board}>
     <div className="story-play" role="dialog" aria-modal="true" aria-label={card.title}>
       <div className="absolute inset-0">
+        <PlayClock active={!paused && end === null} />
         <BreakoutPreview
           key={runIndex}
           levels={level}

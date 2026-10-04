@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EarnSetting } from "@/components/earn-setting";
+import { EnergySetting } from "@/components/energy-setting";
 import { TutorialSetting } from "@/components/tutorial-setting";
 import { requireAdmin } from "@/lib/auth/session";
 import { EARN_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
@@ -52,6 +53,17 @@ export default async function AdminSettingsPage() {
             )}
           </p>
           <EarnSetting enabled={settings.earnEnabled} />
+        </li>
+        <li className="glass p-6">
+          <h2 className="text-xl font-semibold tracking-tight text-ink">Energy</h2>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            Story runs spend two cells and a clear gives one back. The gauge sits in the header, and recharges are sold
+            in the shop.
+            {settings.energyEnabled
+              ? " Turn it off and every player can play without a limit: no gauge, no energy shelf."
+              : " It is off. Story runs are unlimited, and the shop does not sell energy."}
+          </p>
+          <EnergySetting enabled={settings.energyEnabled} />
         </li>
       </ul>
     </section>

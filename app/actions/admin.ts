@@ -104,6 +104,7 @@ export async function grantGems(userId: string, gems: number, note?: string): Pr
     note: note?.trim().slice(0, 80) || `${amount > 0 ? "+" : ""}${formatGems(amount)} gems from ${admin.username ?? "admin"}`,
   });
   revalidatePath(ADMIN_PLAYERS_PATH);
+  revalidatePath(`${ADMIN_PLAYERS_PATH}/${userId}`);
   revalidatePath(ADMIN_DASHBOARD_PATH);
   revalidatePath(EARN_PATH);
   revalidatePath(EARN_WALLET_PATH);

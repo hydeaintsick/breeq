@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { grantGems } from "@/app/actions/admin";
 import { EthGlyph, GemGlyph } from "@/components/currency-glyphs";
@@ -65,11 +66,13 @@ export function AdminPlayers({ rows }: { rows: AdminPlayerRow[] }) {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                <p className="font-medium text-ink">
-                  {row.username}
-                  {row.role === "ADMIN" ? <span className="ml-2 font-mono text-[0.62rem] tracking-[0.1em] text-accent">ADMIN</span> : null}
-                </p>
-                <p className="text-xs text-ink-muted">{row.email ?? "—"}</p>
+                <Link href={`/admin/players/${row.id}`} className="inline-flex min-h-11 flex-col justify-center underline decoration-hairline underline-offset-4">
+                  <span className="font-medium text-ink">
+                    {row.username}
+                    {row.role === "ADMIN" ? <span className="ml-2 font-mono text-[0.62rem] tracking-[0.1em] text-accent no-underline">ADMIN</span> : null}
+                  </span>
+                  <span className="text-xs text-ink-muted">{row.email ?? "—"}</span>
+                </Link>
               </td>
               <td>{row.level}</td>
               <td className="whitespace-nowrap">

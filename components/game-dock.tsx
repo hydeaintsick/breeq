@@ -36,7 +36,7 @@ export function GameDock() {
   const pathname = usePathname();
   const energy = useEnergy();
   const active = Math.max(0, TABS.findIndex((tab) => tab.match(pathname)));
-  const nudge = energy !== null && energy.state.energy < ENERGY_PLAY_COST;
+  const nudge = Boolean(energy?.enabled && energy.state.energy < ENERGY_PLAY_COST);
 
   return (
     <nav className="dock" aria-label="Game sections">

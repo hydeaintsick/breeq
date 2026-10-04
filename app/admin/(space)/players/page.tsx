@@ -71,8 +71,9 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
         </button>
       </form>
       <p className="mt-3 text-xs text-ink-muted">
-        {q ? `${rows.length} match${rows.length === 1 ? "" : "es"} for “${q}”` : "The latest 60 accounts."} Grants
-        add or remove gems and show up in the player&apos;s activity.
+        {q ? `${rows.length} match${rows.length === 1 ? "" : "es"} for “${q}”. ` : "The latest 60 accounts. "}
+        Open a player for their device, country, app version, and play time. Grants add or remove gems and show up in
+        the player&apos;s activity.
       </p>
       <AdminPlayers rows={rows} />
     </section>

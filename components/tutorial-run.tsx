@@ -6,6 +6,7 @@ import type { ChapterClearResult } from "@/app/actions/progress";
 import { completeTutorial } from "@/app/actions/tutorial";
 import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { PlayClock } from "@/components/play-clock";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
 import { StoryClear } from "@/components/story-clear";
@@ -360,6 +361,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   return (
     <AutopilotProvider key={runId} handle={board}>
     <div ref={rootRef} className="story-play tutorial-run" role="dialog" aria-modal="true" aria-label="Tutorial">
+      <PlayClock active={!menu && cleared === null && lost === null} />
       <BreakoutPreview
         levels={LEVELS}
         seed={31 + runId}

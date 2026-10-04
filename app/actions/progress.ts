@@ -12,6 +12,7 @@ import { formatGems } from "@/lib/economy";
 import { parseStoredLevel, starsForClear, clampStar, type StarCount } from "@/game/breakout/engine";
 import { ENERGY_CLEAR_REFUND, ENERGY_MAX, nextEnergyReset } from "@/lib/energy";
 import { refundEnergy } from "@/lib/energy-store";
+import { getSiteSettings } from "@/lib/tutorial";
 import { progressFromXp, xpAfter, SKIP_CHAPTER_GEMS, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
 
 export type ClearRunInput = {
@@ -90,7 +91,8 @@ async function chapterLocked(userId: string, chapter: { id: string; episodeId: s
 }
 
 /** A human clear gives a cell back; the gauge before and after ride along for the clear screen. */
-async function clearEnergy(userId: string): Promise<ClearEnergy> {
+async function clearEnergy(userId: string): Promise<ClearEnergy | undefined> {
+  if (!(await getSiteSettings()).energyEnabled) return undefined;
   const { before, after } = await refundEnergy(userId, ENERGY_CLEAR_REFUND);
   return { before, after, max: ENERGY_MAX, gained: after - before, resetAt: nextEnergyReset().toISOString() };
 }

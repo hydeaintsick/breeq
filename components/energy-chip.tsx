@@ -54,6 +54,7 @@ export function EnergyChip({ folded, onUnfold }: { folded: boolean; onUnfold: ()
   const ctx = useEnergy();
   const state = ctx?.state ?? { energy: 0, max: 6, resetAt: new Date().toISOString() };
   useEnergyVoice(state.energy, state.max);
+  if (!ctx?.enabled) return null;
   const summary = summaryFor(state.energy, state.max, state.resetAt);
   const low = state.energy < ENERGY_PLAY_COST;
 
@@ -101,7 +102,7 @@ export function EnergyChip({ folded, onUnfold }: { folded: boolean; onUnfold: ()
  */
 export function EnergyBarChip({ live }: { live: boolean }) {
   const ctx = useEnergy();
-  if (!ctx) return null;
+  if (!ctx?.enabled) return null;
   const { state } = ctx;
   const summary = summaryFor(state.energy, state.max, state.resetAt);
   const low = state.energy < ENERGY_PLAY_COST;

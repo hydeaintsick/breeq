@@ -5,6 +5,7 @@ import { useState, type CSSProperties } from "react";
 import { useBalances } from "@/components/balances-provider";
 import { GemGlyph } from "@/components/currency-glyphs";
 import { EnergyShelf } from "@/components/energy-shelf";
+import { useEnergy } from "@/components/energy-provider";
 import { useGemShop } from "@/components/gem-shop";
 import { GemStorefront } from "@/components/gem-storefront";
 import { SkinShelf } from "@/components/skin-shelf";
@@ -14,11 +15,9 @@ import { formatGems } from "@/lib/economy";
 import { isShopTab, SHOP_TABS as TABS, type ShopTab } from "@/lib/shop";
 
 /**
- * The shop: one page, three shelves — skins, gems, energy — under a
- * segmented control. The tab lives in the URL (`?tab=`) so a link can land
- * on a shelf and Back returns to it. Skins is the door: the bag and the gauge
- * are one tab away, and the two checkouts (the gem packs, the recharge sheet)
- * are the ones every other surface uses.
+ * The shop: skins, gems, and energy under a segmented control. Energy leaves
+ * the control when an admin turns it off. The tab lives in the URL (`?tab=`)
+ * so a link can land on a shelf and Back returns to it.
  */
 export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
   const router = useRouter();
@@ -27,12 +26,16 @@ export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
   const fromUrl = params.get("tab");
   const balances = useBalances();
   const shop = useGemShop();
+  const energyOn = useEnergy()?.enabled !== false;
+  const tabs = energyOn ? TABS : TABS.filter((item) => item.id !== "energy");
 
   // The URL leads (Back / forward, a shared link); a tap shows its tab at
-  // once and is forgotten as soon as the URL has caught up.
-  const urlTab: ShopTab = isShopTab(fromUrl) ? fromUrl : initialTab;
+  // once and is forgotten as soon as the URL has caught up. Energy in the
+  // URL falls through to skins while the shelf is turned off.
+  const requested: ShopTab = isShopTab(fromUrl) ? fromUrl : initialTab;
+  const urlTab: ShopTab = tabs.some((item) => item.id === requested) ? requested : "skins";
   const [pick, setPick] = useState<{ url: string | null; tab: ShopTab } | null>(null);
-  const tab = pick && pick.url === fromUrl ? pick.tab : urlTab;
+  const tab = pick && pick.url === fromUrl && tabs.some((item) => item.id === pick.tab) ? pick.tab : urlTab;
 
   function go(next: ShopTab) {
     if (next === tab) return;
@@ -42,7 +45,10 @@ export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
     router.replace(`${pathname}?tab=${next}`, { scroll: false });
   }
 
-  const active = TABS.findIndex((t) => t.id === tab);
+  const active = Math.max(0, tabs.findIndex((item) => item.id === tab));
+  const gemIntro = energyOn
+    ? "Gems buy skins, recharges and Earn tickets. Bigger bags cost less per gem."
+    : "Gems buy skins and Earn tickets. Bigger bags cost less per gem.";
 
   return (
     <section className="page-gutter shop-page" data-tab={tab}>
@@ -63,9 +69,9 @@ export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
           </button>
         </header>
 
-        <div className="shop-seg" role="tablist" aria-label="Shop sections" style={{ "--n": TABS.length, "--i": active } as CSSProperties}>
+        <div className="shop-seg" role="tablist" aria-label="Shop sections" style={{ "--n": tabs.length, "--i": active } as CSSProperties}>
           <span className="shop-seg-indicator" aria-hidden="true" />
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -79,7 +85,7 @@ export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
               onKeyDown={(event) => {
                 if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
                 event.preventDefault();
-                const next = TABS[(active + (event.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
+                const next = tabs[(active + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
                 go(next.id);
                 document.getElementById(`shop-tab-${next.id}`)?.focus();
               }}
@@ -98,7 +104,7 @@ export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
                   economy={shop.economy}
                   publishableKey={shop.publishableKey}
                   sandbox={shop.sandbox}
-                  intro="Gems buy skins, recharges and Earn tickets. Bigger bags cost less per gem."
+                  intro={gemIntro}
                   layout="rows"
                 />
               </div>
@@ -106,7 +112,7 @@ export function ShopPage({ initialTab }: { initialTab: ShopTab }) {
               <p className="text-sm text-ink-muted">The gem shop is not open yet.</p>
             )
           ) : null}
-          {tab === "energy" ? <EnergyShelf /> : null}
+          {energyOn && tab === "energy" ? <EnergyShelf /> : null}
         </div>
       </div>
     </section>

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { auth } from "@/auth";
+import { Analytics } from "@/components/analytics";
 import { AppChrome } from "@/components/app-chrome";
 import { Providers } from "@/components/providers";
 import { HAPTICS_COOKIE, parseHaptics } from "@/lib/haptics";
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <Providers session={session} theme={theme} sound={sound} haptics={haptics} swipe={swipe}>
           <Suspense fallback={null}>
+            <Analytics userId={session?.user?.id ?? null} username={session?.user?.username ?? null} email={session?.user?.email ?? null} />
             <AppChrome board={board}>{children}</AppChrome>
           </Suspense>
         </Providers>

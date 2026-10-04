@@ -5,10 +5,12 @@ import { EnergyProvider } from "@/components/energy-provider";
 import { GameHeader } from "@/components/game-header";
 import { GameShell } from "@/components/game-shell";
 import { GemShopProvider } from "@/components/gem-shop";
+import { PlayerBeacon } from "@/components/player-beacon";
 import { StoryChromeProvider } from "@/components/story-chrome";
 import { requireProgress } from "@/lib/auth/session";
 import { getWardrobe } from "@/lib/cosmetics-store";
 import { getBalances, getEconomy } from "@/lib/earn";
+import { ENERGY_MAX, toEnergyState } from "@/lib/energy";
 import { getEnergy } from "@/lib/energy-store";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { canPlayEarn } from "@/lib/progress";
@@ -21,11 +23,11 @@ export default async function GameLayout({
   children: React.ReactNode;
 }) {
   const { user, progress, stars } = await requireProgress();
-  const [balances, settings, economy, energy, wardrobe, board] = await Promise.all([
+  const settings = await getSiteSettings();
+  const [balances, economy, energy, wardrobe, board] = await Promise.all([
     getBalances(user.id),
-    getSiteSettings(),
     getEconomy(),
-    getEnergy(user.id),
+    settings.energyEnabled ? getEnergy(user.id) : Promise.resolve(toEnergyState(ENERGY_MAX)),
     getWardrobe(user.id),
     getLeaderboard(user.id),
   ]);
@@ -41,7 +43,8 @@ export default async function GameLayout({
             publishableKey={stripeReady() ? stripePublishableKey() : null}
             sandbox={earnSandbox()}
           >
-            <EnergyProvider initial={energy}>
+            <EnergyProvider initial={energy} enabled={settings.energyEnabled}>
+              <PlayerBeacon userId={user.id} username={user.username} />
               <GameHeader progress={progress} stars={stars} board={board} isAdmin={user.role === "ADMIN"} earn={earn} />
               <GameShell>{children}</GameShell>
             </EnergyProvider>

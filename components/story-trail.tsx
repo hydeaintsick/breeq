@@ -252,7 +252,9 @@ export function StoryTrail({
             aria-label={
               selectedLocked
                 ? `Locked. ${chapter.title}. ${hint ?? ""}`
-                : `${chapter.cleared ? "Replay" : "Play"} ${chapter.title} for ${ENERGY_PLAY_COST} energy${short ? ". Out of energy: recharge" : ""}`
+                : energy === undefined
+                  ? `${chapter.cleared ? "Replay" : "Play"} ${chapter.title}`
+                  : `${chapter.cleared ? "Replay" : "Play"} ${chapter.title} for ${ENERGY_PLAY_COST} energy${short ? ". Out of energy: recharge" : ""}`
             }
             onClick={() => {
               if (!selectedLocked) onPlay(chapter);

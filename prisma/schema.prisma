@@ -49,6 +49,37 @@ model User {
   referralsMade  Referral[]     @relation("referrer")
   /// The link this player signed up through, if any.
   referredBy     Referral?      @relation("referred")
+  /// Acquisition, written once when the account is created.
+  signupAt         DateTime?
+  /// "password" | "google" | "wallet"
+  signupMethod     String?
+  /// ISO 3166-1 alpha-2 from the edge (Vercel or Cloudflare). Null when unknown.
+  signupCountry    String?
+  /// "android-app" | "android-web" | "ios" | "desktop" | "other"
+  signupPlatform   String?
+  signupOs         String?
+  /// `BreeqApp/<version>` when they signed up inside the Android app.
+  signupAppVersion String?
+  signupLocale     String?
+  signupUserAgent  String?
+  /// Filled on the first game load after sign-up, while the screen is still the one they registered on.
+  signupScreen     String?
+  signupTimezone   String?
+  /// Latest device, refreshed while the player is in the game.
+  lastSeenAt       DateTime?
+  lastCountry      String?
+  lastPlatform     String?
+  lastOs           String?
+  lastAppVersion   String?
+  lastLocale       String?
+  lastUserAgent    String?
+  lastScreen       String?
+  lastTimezone     String?
+  lastTouch        Boolean?
+  /// Seconds a live board was actually running (story, tutorial, earn). Pauses and end screens do not count.
+  playSeconds      Int            @default(0)
+  /// Wall clock of the last accepted play-time beat. Stops a client from inflating `playSeconds`.
+  lastPlayAt       DateTime?
   accounts       Account[]
   sessions       Session[]
   chapterClears  ChapterClear[]
@@ -143,6 +174,8 @@ model SiteSettings {
   tutorialEnabled Boolean  @default(true)
   /// Earn is on the play menu and open to players who reach the unlock level.
   earnEnabled     Boolean  @default(true)
+  /// Story energy: the gauge, the per-run cost, and the recharge shelf. Off means unlimited runs.
+  energyEnabled   Boolean  @default(true)
   updatedAt       DateTime @updatedAt
 }
 

@@ -16,10 +16,12 @@ export type EnergyOpen = {
 };
 
 interface EnergyContext {
+  /** False when an admin has turned energy off: no gauge, no sheet, unlimited runs. */
+  enabled: boolean;
   state: EnergyState;
   /** Push what the server just returned so every surface (the header pill first) shows it now. */
   setState: (next: EnergyState) => void;
-  /** Slide the recharge sheet up over the current page. */
+  /** Slide the recharge sheet up over the current page. Does nothing while energy is off. */
   open: (options?: EnergyOpen) => void;
   close: () => void;
   isOpen: boolean;
@@ -71,7 +73,16 @@ function readEnergyIntent(): boolean {
  * back, and a fresh server render resets it to the truth. At 00:00 UTC the
  * gauge reads full on its own and the page re-fetches.
  */
-export function EnergyProvider({ initial, children }: { initial: EnergyState; children: ReactNode }) {
+export function EnergyProvider({
+  initial,
+  enabled = true,
+  children,
+}: {
+  initial: EnergyState;
+  /** Site setting. Off hides the gauge and refuses recharges; runs are free. */
+  enabled?: boolean;
+  children: ReactNode;
+}) {
   const router = useRouter();
   const [state, setState] = useState(initial);
   const [seen, setSeen] = useState(initial);
@@ -83,10 +94,11 @@ export function EnergyProvider({ initial, children }: { initial: EnergyState; ch
   const onReadyRef = useRef<(() => void) | undefined>(undefined);
 
   const open = useCallback((options: EnergyOpen = {}) => {
+    if (!enabled) return;
     playSheetAppear();
     onReadyRef.current = options.onReady;
     setSheet({ reason: options.reason ?? "browse", hasReady: options.onReady !== undefined, pack: options.pack });
-  }, []);
+  }, [enabled]);
   const close = useCallback(() => {
     onReadyRef.current = undefined;
     setSheet(null);
@@ -100,6 +112,7 @@ export function EnergyProvider({ initial, children }: { initial: EnergyState; ch
 
   // Midnight: the gauge fills by itself, then the server confirms.
   useEffect(() => {
+    if (!enabled) return;
     const roll = () => {
       const next = rolledEnergy(state);
       if (next !== state) {
@@ -118,25 +131,31 @@ export function EnergyProvider({ initial, children }: { initial: EnergyState; ch
       window.clearTimeout(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [router, state]);
+  }, [enabled, router, state]);
 
   // Back from the shop with a recharge in mind: the sheet comes back up.
   useEffect(() => {
+    if (!enabled) {
+      readEnergyIntent();
+      return;
+    }
     if (!readEnergyIntent()) return;
     // Restoring a surface the player left mid-flow: read once on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSheet({ reason: "browse", hasReady: false });
-  }, []);
+  }, [enabled]);
 
   const value = useMemo<EnergyContext>(
-    () => ({ state, setState, open, close, isOpen: sheet !== null }),
-    [close, open, sheet, state],
+    () => ({ enabled, state, setState, open, close, isOpen: enabled && sheet !== null }),
+    [close, enabled, open, sheet, state],
   );
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      {sheet ? <EnergySheet reason={sheet.reason} hasReady={sheet.hasReady} initialPack={sheet.pack} onReady={ready} onClose={close} /> : null}
+      {enabled && sheet ? (
+        <EnergySheet reason={sheet.reason} hasReady={sheet.hasReady} initialPack={sheet.pack} onReady={ready} onClose={close} />
+      ) : null}
     </Ctx.Provider>
   );
 }

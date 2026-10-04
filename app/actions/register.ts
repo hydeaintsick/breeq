@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/paths";
 import { isValidUsername, normalizeUsername } from "@/lib/auth/username";
+import { stampSignup } from "@/lib/presence";
 import { applyReferral } from "@/lib/referrals";
 
 export async function registerAccount(input: {
@@ -43,6 +44,7 @@ export async function registerAccount(input: {
       select: { id: true },
     });
     await applyReferral(created.id);
+    await stampSignup(created.id, "password");
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

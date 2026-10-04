@@ -7,9 +7,10 @@ import { GAME_ROOT_PATH } from "@/lib/auth/paths";
 import { ensureBalanceFields } from "@/lib/balances";
 import { getBalances, toBalances, type Balances } from "@/lib/earn";
 import { formatGems } from "@/lib/economy";
-import { ENERGY_PLAY_COST, energyPack, type EnergyPack, type EnergyState } from "@/lib/energy";
+import { ENERGY_MAX, ENERGY_PLAY_COST, energyPack, toEnergyState, type EnergyPack, type EnergyState } from "@/lib/energy";
 import { creditEnergy, readEnergy, spendEnergy } from "@/lib/energy-store";
 import { fulfilPaymentIntent } from "@/lib/purchases";
+import { getSiteSettings } from "@/lib/tutorial";
 
 /** The ball is served: the cells left the gauge. */
 export type RunStarted = { energy: EnergyState; cost: number };
@@ -27,6 +28,8 @@ export async function startStoryRun(chapterId: string): Promise<RunStarted | Run
   const user = await requireUser();
   const chapter = await prisma.chapter.findUnique({ where: { id: chapterId }, select: { id: true } });
   if (!chapter) return { error: "Chapter not found.", energy: await readEnergy(user.id) };
+  // Energy off: the run is free. Do not touch the gauge.
+  if (!(await getSiteSettings()).energyEnabled) return { energy: toEnergyState(ENERGY_MAX), cost: 0 };
   const energy = await spendEnergy(user.id, ENERGY_PLAY_COST);
   if (!energy) return { error: "Out of energy.", energy: await readEnergy(user.id) };
   return { energy, cost: ENERGY_PLAY_COST };
@@ -72,6 +75,7 @@ async function recharge(userId: string, pack: EnergyPack): Promise<EnergyBought 
  */
 export async function buyEnergy(packId: string): Promise<EnergyBought | BuyFail> {
   const user = await requireUser();
+  if (!(await getSiteSettings()).energyEnabled) return { error: "Energy is turned off." };
   const pack = energyPack(packId);
   if (!pack) return { error: "That recharge is not on sale." };
   return recharge(user.id, pack);
@@ -94,6 +98,11 @@ export async function claimEnergyPayment(paymentIntentId: string, packId: string
     select: { userId: true, usdCents: true },
   });
   if (!purchase || purchase.userId !== user.id) return { error: "Purchase not found." };
+  if (!(await getSiteSettings()).energyEnabled) {
+    const landed = await fulfilPaymentIntent(paymentIntentId);
+    if (!landed || landed.gems === 0) return { error: "Stripe has not confirmed the payment yet. Your gems land as soon as it does." };
+    return { error: `${formatGems(landed.gems)} gems landed in your bag. Energy is turned off, so no recharge was bought.` };
+  }
   const paid = await fulfilPaymentIntent(paymentIntentId);
   if (!paid || paid.gems === 0) return { error: "Stripe has not confirmed the payment yet. Your gems land as soon as it does." };
   const result = await recharge(user.id, pack);

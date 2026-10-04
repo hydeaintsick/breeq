@@ -15,11 +15,13 @@ export type TutorialStatus = {
 export const getSiteSettings = cache(async function getSiteSettings() {
   const row = await prisma.siteSettings.findUnique({
     where: { id: SITE_SETTINGS_ID },
-    select: { tutorialEnabled: true, earnEnabled: true },
+    select: { tutorialEnabled: true, earnEnabled: true, energyEnabled: true },
   });
   return {
     tutorialEnabled: row?.tutorialEnabled ?? true,
     earnEnabled: row?.earnEnabled ?? true,
+    // Missing on a document written before the switch existed: energy stays on.
+    energyEnabled: row?.energyEnabled ?? true,
   };
 });
 
