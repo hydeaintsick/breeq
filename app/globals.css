@@ -232,6 +232,25 @@ html[data-theme="dark"] {
     border-radius: 0.5rem;
   }
 
+  /* Official Google Play badge. Height only — the artwork stays Google's.
+     Clear space is a quarter of that height, which the margin covers. */
+  .play-store-badge {
+    display: inline-flex;
+    margin-top: 1.15rem;
+    line-height: 0;
+    border-radius: 0.55rem;
+  }
+
+  .play-store-badge img {
+    height: 3rem;
+    width: auto;
+  }
+
+  .play-store-badge:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+
   /* Neon gradient text for one word per headline. */
   .text-neon {
     background: linear-gradient(92deg, var(--neon-blue) 0%, var(--neon-violet) 45%, var(--neon-pink) 100%);

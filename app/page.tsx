@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BreakoutPreview } from "@/components/breakout-preview";
 import { LoreDeck } from "@/components/lore-deck";
 import { PieceKit } from "@/components/piece-kit";
+import { PlayStoreBadge } from "@/components/play-store-badge";
 import { CATALOG, LEVEL_BUDGET } from "@/game/breakout/engine/catalog";
 import { GAME_MENU_PATH } from "@/lib/auth/paths";
 import { EARN_UNLOCK_LEVEL } from "@/lib/progress";
@@ -73,6 +74,7 @@ export default async function Home() {
               How it works
             </a>
           </div>
+          <PlayStoreBadge />
         </div>
 
         <BreakoutPreview />
