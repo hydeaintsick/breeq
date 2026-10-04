@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { abandonGemPayment, claimCheckout, claimPayment, createGemPayment, sandboxTopUp, type GemPayment } from "@/app/actions/earn";
 import { useBalances } from "@/components/balances-provider";
+import { isClaimBlock, useClaim } from "@/components/claim-provider";
 import { GemGlyph } from "@/components/currency-glyphs";
 import { GemBag, bagTierFor } from "@/components/gem-bag";
 import { GemPay } from "@/components/gem-pay";
@@ -59,6 +60,7 @@ export function GemStorefront({
   onLandedClose?: () => void;
 }) {
   const shared = useBalances();
+  const claim = useClaim();
   const publish = shared?.setBalances;
   const stripeReady = publishableKey !== null;
 
@@ -145,7 +147,8 @@ export function GemStorefront({
       if (!stripeReady && sandbox) {
         const result = await sandboxTopUp(pack.gems);
         if ("error" in result) {
-          setError(result.error);
+          if (isClaimBlock(result)) claim.open("pay");
+          else setError(result.error);
           return;
         }
         land(result.gems, result.balances, false);
@@ -153,7 +156,8 @@ export function GemStorefront({
       }
       const result = await createGemPayment(pack.gems);
       if ("error" in result) {
-        setError(result.error);
+        if (isClaimBlock(result)) claim.open("pay");
+        else setError(result.error);
         return;
       }
       setStep({ kind: "pay", pack, payment: result });

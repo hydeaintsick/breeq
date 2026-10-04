@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { abandonGemPayment, createGemPayment, sandboxTopUp, type GemPayment } from "@/app/actions/earn";
 import { buyRevive, claimRevivePayment, type ReviveBought } from "@/app/actions/revive";
 import { useBalances } from "@/components/balances-provider";
+import { isClaimBlock, useClaim } from "@/components/claim-provider";
 import { GemGlyph, HeartGlyph } from "@/components/currency-glyphs";
 import { GemBag, bagTierFor } from "@/components/gem-bag";
 import { GemPay } from "@/components/gem-pay";
@@ -83,6 +84,7 @@ export function ReviveSheet({
   const titleId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
   const balances = useBalances();
+  const claim = useClaim();
   const shop = useGemShop();
   const gems = balances?.balances.gems ?? 0;
   const gemPacks = shop.economy?.packs ?? [];
@@ -169,6 +171,11 @@ export function ReviveSheet({
     setCheckout({ gemPack, payment: null, loading: true, error: null });
     try {
       const result = await createGemPayment(gemPack.gems);
+      if ("claim" in result && result.claim) {
+        claim.open("pay");
+        setCheckout((current) => (current ? { ...current, loading: false, error: null } : current));
+        return;
+      }
       setCheckout((current) => {
         // The player moved on (back, or another pack) while Stripe answered: drop this intent.
         if (!current || current.gemPack.gems !== gemPack.gems || !current.loading) {
@@ -250,7 +257,12 @@ export function ReviveSheet({
     try {
       const topUp = await sandboxTopUp(checkout.gemPack.gems);
       if ("error" in topUp) {
-        setCheckout({ ...checkout, loading: false, error: topUp.error });
+        if (isClaimBlock(topUp)) {
+          claim.open("pay");
+          setCheckout({ ...checkout, loading: false, error: null });
+        } else {
+          setCheckout({ ...checkout, loading: false, error: topUp.error });
+        }
         return;
       }
       const result = await buyRevive(chapterId);

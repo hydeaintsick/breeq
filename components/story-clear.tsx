@@ -12,6 +12,8 @@ import type { StarCount } from "@/game/breakout/engine/stars";
 import { formatGems } from "@/lib/economy";
 import { progressFromXp, type Progress } from "@/lib/progress";
 import { clearShareText, REFERRAL_GEMS, REFERRAL_MAX_PAID } from "@/lib/share";
+import { claimLater, type ClaimView } from "@/lib/claim-view";
+import { useClaim } from "@/components/claim-provider";
 
 /** Timeline, in ms from mount. */
 const T = {
@@ -84,6 +86,10 @@ export function StoryClear({
   shareCode = null,
   nextLabel = "Next chapter",
   closeLabel = "Close",
+  /** Jump to the settled victory. Used when Google sends the player back. */
+  settled = false,
+  /** Set on a real clear so the claim sheet can restore this screen. */
+  claimStory,
   onNext,
   onClose,
 }: {
@@ -106,6 +112,8 @@ export function StoryClear({
   shareCode?: string | null;
   nextLabel?: string;
   closeLabel?: string;
+  settled?: boolean;
+  claimStory?: { kind: "tutorial" | "story"; chapterId: string | null };
   onNext: () => void;
   onClose: () => void;
 }) {
@@ -117,7 +125,7 @@ export function StoryClear({
   const earned = stars === 1 || stars === 2 || stars === 3 ? stars : 0;
   const showStars = earned > 0;
 
-  const [skipped, setSkipped] = useState(false);
+  const [skipped, setSkipped] = useState(settled);
   const [costStageAnim, setCostStage] = useState<"hidden" | "stamp" | "done">("hidden");
   const [starsReadyAnim, setStarsReady] = useState(false);
   const [litAnim, setLit] = useState(0);
@@ -156,6 +164,46 @@ export function StoryClear({
   const shown = skip || replay ? (result?.progress ?? null) : (shownAnim ?? result?.before ?? null);
   const levelUps = result && (skip || replay) ? result.progress.level - result.before.level : levelUpsAnim;
   const buttons = skip || buttonsTimed;
+  const claim = useClaim();
+  const asked = useRef(false);
+
+  useEffect(() => {
+    if (asked.current || !claimStory || !buttons || !result || result.xpGained <= 0) return;
+    if (!claim.needed || claimLater()) return;
+    if (new URLSearchParams(window.location.search).get("claim")) return;
+    asked.current = true;
+    const view: ClaimView = {
+      kind: claimStory.kind,
+      path: window.location.pathname,
+      chapterId: claimStory.chapterId,
+      title,
+      score,
+      stars: earned,
+      result,
+      hasNext,
+      episodeDone,
+      kicker: kickerOverride,
+      note,
+      nextLabel,
+      closeLabel,
+      savedAt: Date.now(),
+    };
+    claim.open("clear", view);
+  }, [
+    buttons,
+    claim,
+    claimStory,
+    closeLabel,
+    earned,
+    episodeDone,
+    hasNext,
+    kickerOverride,
+    nextLabel,
+    note,
+    result,
+    score,
+    title,
+  ]);
   const improved = Boolean(result?.improved && replay);
 
   useEffect(() => {
@@ -395,6 +443,7 @@ export function StoryClear({
       aria-label={`${kicker}: ${title}`}
       data-skip={skip}
       data-paid={paid ? "true" : undefined}
+      data-claim={claim.active && claim.reason === "clear" ? "open" : undefined}
       onClick={() => setSkipped(true)}
     >
       <div className="story-clear-body">

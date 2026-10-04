@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Message
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -92,14 +93,40 @@ class MainActivity : ComponentActivity() {
         val restored = savedInstanceState?.let { web.restoreState(it) } != null
         if (!restored) {
             val linked = intent?.data?.takeIf { isAppHost(it.host) }
-            web.loadUrl(linked?.toString() ?: BuildConfig.START_URL)
+            val url = linked?.toString() ?: BuildConfig.START_URL
+            // Cold start of the menu opens the campaign. A link to a specific page does not.
+            loadApp(url, linked == null || isMenu(url))
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // App Links (breeq.space/r/<code>...) while the app is already running.
-        intent.data?.takeIf { isAppHost(it.host) }?.let { web.loadUrl(it.toString()) }
+        // App Links while the app is already running: open that page, don't bounce to the campaign.
+        intent.data?.takeIf { isAppHost(it.host) }?.let { loadApp(it.toString(), false) }
+    }
+
+    /**
+     * Full loads only. The install id lets a signed-out cold start resume the same
+     * guest; the launch flag is what sends the menu to the campaign. In-app taps
+     * are ordinary navigations and do not carry either header.
+     */
+    private fun loadApp(url: String, launch: Boolean) {
+        val headers = mutableMapOf<String, String>()
+        val id = installId()
+        if (id.length >= 8) headers["X-Breeq-Install"] = id
+        if (launch) headers["X-Breeq-Launch"] = "1"
+        if (headers.isEmpty()) web.loadUrl(url) else web.loadUrl(url, headers)
+    }
+
+    private fun isMenu(url: String): Boolean {
+        val path = Uri.parse(url).path ?: return false
+        return path == "/game/menu" || path == "/game/menu/"
+    }
+
+    /** App-scoped Android id. Stable across reinstall on this phone; a factory reset changes it. */
+    private fun installId(): String {
+        val raw = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: return ""
+        return raw.trim().take(128)
     }
 
     // ---- WebView -------------------------------------------------------------------------
@@ -257,7 +284,7 @@ class MainActivity : ComponentActivity() {
             probe.webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
                     val uri = request.url
-                    if (isAppHost(uri.host)) web.loadUrl(uri.toString()) else openExternally(uri)
+                    if (isAppHost(uri.host)) loadApp(uri.toString(), false) else openExternally(uri)
                     v.post { v.destroy() }
                     return true
                 }
@@ -300,7 +327,7 @@ class MainActivity : ComponentActivity() {
     private fun retry() {
         loadFailed = false
         val url = web.url?.takeIf { isAppHost(Uri.parse(it).host) } ?: BuildConfig.START_URL
-        web.loadUrl(url)
+        loadApp(url, isMenu(url))
     }
 
     // ---- System bars follow the page --------------------------------------------------------

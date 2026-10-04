@@ -15,6 +15,7 @@ import {
   signupMethodLabel,
 } from "@/lib/acquisition";
 import { gweiToEth, formatEth, formatGems } from "@/lib/economy";
+import { isGuestPlaceholder } from "@/lib/guest-door";
 import { readEnergy } from "@/lib/energy-store";
 import { prisma } from "@/lib/prisma";
 import { progressFromXp } from "@/lib/progress";
@@ -156,7 +157,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         ) : null}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        {user.email ?? "No email"} · joined {formatWhen(user.createdAt)}
+        {user.email && !isGuestPlaceholder(user.email) ? user.email : "No email yet"} · joined {formatWhen(user.createdAt)}
         {referrer ? (
           <>
             {" "}

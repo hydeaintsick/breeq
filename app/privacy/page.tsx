@@ -69,6 +69,10 @@ export default function PrivacyPage() {
               wallet address and a short-lived sign-in nonce if you use wallet / SIWE
               sign-in;
             </li>
+            <li>
+              a guest account created in the Android app before you add an email or Google
+              sign-in, so a first session can start on the tutorial;
+            </li>
             <li>role (player or admin), account timestamps, and linked sign-in providers;</li>
             <li>age-related flags only if we later ask you to confirm you are 18+.</li>
           </ul>
@@ -126,6 +130,12 @@ export default function PrivacyPage() {
               phone model when you use the app), approximate country from IP, locale,
               screen size, time zone, whether the device is touch-first, timestamps, and
               security logs;
+            </li>
+            <li>
+              in the Android app, a one-way hash of the app-scoped Android install id, so
+              the same phone can resume a guest account after the app is reinstalled. It
+              changes if the phone is factory-reset. We do not use it for advertising, and
+              we never store the raw id;
             </li>
             <li>
               crash or render-process events inside the Android shell, used to recover the

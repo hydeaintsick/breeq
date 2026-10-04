@@ -1,6 +1,10 @@
 export type Role = "PLAYER" | "ADMIN";
 
 export const AFTER_AUTH_PATH = "/auth/continue";
+/** Silent guest sign-in. The proxy rewrites the app (and the secret door) here. */
+export const ENTER_PATH = "/auth/enter";
+/** Cold start: the tutorial, or the episode the player is on. */
+export const CONTINUE_PATH = "/game/continue";
 /** The game layout: every signed-in game page hangs under it. */
 export const GAME_ROOT_PATH = "/game";
 export const GAME_MENU_PATH = "/game/menu";

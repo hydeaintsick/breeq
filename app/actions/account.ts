@@ -2,18 +2,24 @@
 
 import { compare, hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { claimWithPassword } from "@/app/actions/claim";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/paths";
 import { requireUser } from "@/lib/auth/session";
-import { isValidUsername, normalizeUsername } from "@/lib/auth/username";
+import { guestUsername, isStockGuestHandle, isValidUsername, normalizeUsername } from "@/lib/auth/username";
+import { isGuestPlaceholder } from "@/lib/guest-door";
 
 export async function updateAccount(input: {
   username: string;
   email: string;
+  password?: string;
+  confirmPassword?: string;
 }): Promise<{ ok: true } | { error: string }> {
   const sessionUser = await requireUser();
-  const username = normalizeUsername(input.username);
+  let username = normalizeUsername(input.username);
   const email = input.email.trim().toLowerCase();
+  const password = input.password ?? "";
+  const confirmPassword = input.confirmPassword ?? "";
 
   if (!isValidUsername(username)) {
     return {
@@ -23,19 +29,43 @@ export async function updateAccount(input: {
 
   const current = await prisma.user.findUnique({
     where: { id: sessionUser.id },
-    select: { username: true, email: true, name: true },
+    select: { username: true, email: true, name: true, passwordHash: true },
   });
 
   if (!current) {
     return { error: "Account not found." };
   }
 
+  const placeholder = isGuestPlaceholder(current.email);
+  if (placeholder && isStockGuestHandle(username)) {
+    username = await guestUsername();
+  }
   let nextEmail: string | null = current.email;
+  let claimed = false;
 
-  if (!email) {
+  if (placeholder && !email) {
+    if (password || confirmPassword) {
+      return { error: "Add an email with that password." };
+    }
+    nextEmail = current.email;
+  } else if (!email) {
     nextEmail = null;
-  } else if (!email.includes("@") || email.length > 254) {
+  } else if (!email.includes("@") || email.length > 254 || isGuestPlaceholder(email)) {
     return { error: "Enter a valid email address." };
+  } else if (placeholder && !current.passwordHash) {
+    if (password.length < 8) {
+      return { error: "Password must be at least 8 characters." };
+    }
+    if (password !== confirmPassword) {
+      return { error: "Passwords do not match." };
+    }
+    const result = await claimWithPassword({ email, password });
+    if ("taken" in result) {
+      return { error: "That email already has a road." };
+    }
+    if ("error" in result) return result;
+    nextEmail = email;
+    claimed = true;
   } else {
     nextEmail = email;
   }
@@ -46,7 +76,7 @@ export async function updateAccount(input: {
       data: {
         username,
         name: current.name === current.username || !current.name ? username : current.name,
-        email: nextEmail,
+        email: claimed ? undefined : nextEmail,
         role: isAdminEmail(nextEmail) ? "ADMIN" : undefined,
       },
     });

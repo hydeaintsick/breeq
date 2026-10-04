@@ -51,8 +51,12 @@ model User {
   referredBy     Referral?      @relation("referred")
   /// Acquisition, written once when the account is created.
   signupAt         DateTime?
-  /// "password" | "google" | "wallet"
+  /// "password" | "google" | "wallet" | "guest"
   signupMethod     String?
+  /// SHA-256 of the Android install id, or a random key for the secret door.
+  /// Not `@unique`: Mongo would file every account without one under one null key.
+  /// `lib/guest.ts` looks it up in code before writing.
+  installKey       String?
   /// ISO 3166-1 alpha-2 from the edge (Vercel or Cloudflare). Null when unknown.
   signupCountry    String?
   /// "android-app" | "android-web" | "ios" | "desktop" | "other"

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireEarn, requireUser } from "@/lib/auth/session";
 import { EARN_PATH, EARN_TOPUP_PATH, EARN_WALLET_PATH, GAME_ROOT_PATH } from "@/lib/auth/paths";
 import { ensureBalanceFields } from "@/lib/balances";
+import { isUnclaimed } from "@/lib/guest";
 import { uploadEarnBackground } from "@/lib/cloudinary";
 import {
   clampTicket,
@@ -40,10 +41,14 @@ const RUN_TTL_MS = 45 * 60 * 1000;
 /** The same proof the seed script trusts, sized to answer inside a request. */
 const PUBLISH_RATING = { runs: 8, maxSeconds: 240, proofSeeds: [1, 2, 3, 4] };
 
-type Fail = { error: string; need?: number };
+type Fail = { error: string; need?: number; claim?: boolean };
 
 function fail(error: string, need?: number): Fail {
   return need === undefined ? { error } : { error, need };
+}
+
+function claimRequired(): Fail {
+  return { error: "Save your progress before you pay.", claim: true };
 }
 
 function revalidateEarn() {
@@ -344,6 +349,7 @@ export type GemPayment = {
 export async function createGemPayment(packGems: number): Promise<GemPayment | Fail> {
   // Gems pay for story skips and energy long before Earn unlocks: any signed-in player can fill the bag.
   const user = await requireUser();
+  if (await isUnclaimed(user.id)) return claimRequired();
   if (!stripeReady()) return fail("Payments are not set up yet.");
   const economy = await getEconomy();
   const pack = economy.packs.find((item) => item.gems === packGems);
@@ -439,6 +445,7 @@ export async function claimCheckout(sessionId: string): Promise<{ credited: bool
 /** Local development only: gems without a card. */
 export async function sandboxTopUp(packGems: number): Promise<{ gems: number; balances: Balances } | Fail> {
   const user = await requireUser();
+  if (await isUnclaimed(user.id)) return claimRequired();
   if (!earnSandbox()) return fail("The sandbox is off.");
   const economy = await getEconomy();
   const pack = economy.packs.find((item) => item.gems === packGems);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdminPlayers, type AdminPlayerRow } from "@/components/admin-players";
 import { countryName, formatPlayTime, modelFromUserAgent, supportLine } from "@/lib/acquisition";
 import { requireAdmin } from "@/lib/auth/session";
+import { isGuestPlaceholder } from "@/lib/guest-door";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -66,7 +67,7 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
     return {
       id: user.id,
       username: user.username ?? user.name ?? "player",
-      email: user.email,
+      email: isGuestPlaceholder(user.email) ? null : user.email,
       role: user.role,
       joined: user.createdAt.toLocaleDateString("en-US"),
       playTime: formatPlayTime(user.playSeconds ?? 0),

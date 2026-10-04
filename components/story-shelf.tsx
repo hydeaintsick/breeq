@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,7 @@ import { starsForClear } from "@/game/breakout/engine/stars";
 import { QUIET_START } from "@/game/breakout/levels";
 import { hueForEpisode, sceneForEpisode, type JourneyNodeInput, type JourneyNodeState } from "@/game/journey";
 import { GAME_MENU_PATH, STORY_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { peekClaimView } from "@/lib/claim-view";
 import { ENERGY_PLAY_COST, type EnergyState } from "@/lib/energy";
 import { ambientPhoto, boardPhoto, nodePhoto, screenPhoto } from "@/lib/photo";
 import { SKIP_CHAPTER_GEMS } from "@/lib/progress";
@@ -204,6 +205,11 @@ export function StoryShelf({
   const offset = tutorial ? 1 : 0;
   /** The story waits for the tutorial. */
   const gate = tutorial !== null && !tutorial.done;
+  const [held, setHeld] = useState<{
+    episode: StoryEpisodeCard;
+    chapter: StoryChapterCard;
+    view: NonNullable<ReturnType<typeof peekClaimView>>;
+  } | null>(null);
   const [shelf, setShelf] = useState(episodes);
   /** The node the map opens on. */
   const [start] = useState(() =>
@@ -241,6 +247,23 @@ export function StoryShelf({
     result: ChapterClearResult | null;
   } | null>(null);
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
+  const restored = useRef(false);
+  useLayoutEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    const view = peekClaimView();
+    if (!view || view.kind !== "story" || view.path !== window.location.pathname || !view.chapterId) return;
+    for (const episode of episodes) {
+      const chapter = episode.chapters.find((item) => item.id === view.chapterId);
+      if (!chapter) continue;
+      setHeld({ episode, chapter, view });
+      setOpen(episode);
+      setGrown(true);
+      setPlaying(chapter);
+      setCleared({ score: view.score, stars: view.stars, result: view.result });
+      return;
+    }
+  }, [episodes]);
   const [runId, setRunId] = useState(0);
   /** The live board, to revive it in place. */
   const boardRef = useRef<BreakoutHandle | null>(null);
@@ -962,6 +985,7 @@ export function StoryShelf({
                     result={skipped.result.result}
                     hasNext={skippedNext !== null}
                     episodeDone={episodeDone}
+                    claimStory={{ kind: "story", chapterId: skipped.chapter.id }}
                     kicker="Chapter skipped"
                     cost={skipCost}
                     note="One star for now. Replay the wall any time to earn the other two."
@@ -983,7 +1007,7 @@ export function StoryShelf({
                     storedLevel={playing.level}
                     backgroundUrl={open.backgroundUrl}
                     seed={17 + runId}
-                    paused={paused || intro}
+                    paused={paused || intro || (held !== null && cleared !== null)}
                     chrome={
                       cleared || lost || intro ? null : (
                         <>
@@ -1068,6 +1092,8 @@ export function StoryShelf({
                       result={cleared.result}
                       hasNext={nextChapter !== null}
                       episodeDone={episodeDone}
+                      settled={held !== null && cleared.result === held.view.result}
+                      claimStory={{ kind: "story", chapterId: playing.id }}
                       shareCode={referralCode}
                       onNext={() => {
                         if (nextChapter) startChapter(nextChapter);

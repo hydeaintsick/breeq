@@ -138,7 +138,7 @@ declaration blocks the release.
 | Financial info (wallet address) | No, while Earn is closed | – | – | The withdrawal form is not reachable. Switch this back to Yes when Earn reopens. |
 | App interactions | Yes | No | Analytics, app functionality | Runs, clears, XP |
 | Crash logs | No | – | – | No SDK |
-| Device or other IDs | No | – | – | – |
+| Device or other IDs | Yes | No | App functionality | Hashed Android install id, so a reinstall on the same phone resumes the same player. Not used for ads. Reset on factory reset. |
 
 Encryption in transit: Yes. Data deletion: Yes, from the account page or by email.
 No data is collected by third-party SDKs; the app is a WebView over breeq.space with

@@ -17,6 +17,7 @@ import type { GameEvent } from "@/game/breakout/engine/types";
 import { TUTORIAL } from "@/game/breakout/levels";
 import type { BreakoutHandle, CssRect } from "@/game/breakout/preview";
 import { STORY_AFTER_TUTORIAL_PATH, STORY_PATH } from "@/lib/auth/paths";
+import { peekClaimView } from "@/lib/claim-view";
 
 const DONE_NOTE =
   "Glass and hard bricks are just the start. Explosive, ghost, magnet, keys and locks, plus rings that speed the ball up, flip it, or split it in two, are all waiting in the story.";
@@ -154,6 +155,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   // Finishing refreshes the page with `done` flipped; the labels keep the
   // state the player arrived with, so the button does not change under them.
   const [firstVisit] = useState(() => !alreadyDone);
+  const [held, setHeld] = useState<ReturnType<typeof peekClaimView>>(null);
 
   const [step, setStep] = useState<Step | null>(WELCOME);
   const [menu, setMenu] = useState(false);
@@ -169,6 +171,14 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   const paused = step !== null || menu || cleared !== null || lost !== null;
   const stepRef = useRef(step);
   const endedRef = useRef(false);
+  useLayoutEffect(() => {
+    const view = peekClaimView();
+    if (!view || view.kind !== "tutorial" || view.path !== window.location.pathname) return;
+    endedRef.current = true;
+    setHeld(view);
+    setStep(null);
+    setCleared({ score: view.score, result: view.result });
+  }, []);
   useEffect(() => {
     stepRef.current = step;
   }, [step]);
@@ -418,6 +428,8 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
           result={cleared.result}
           hasNext
           episodeDone={false}
+          settled={held !== null && cleared.result === held.result}
+          claimStory={{ kind: "tutorial", chapterId: null }}
           note={DONE_NOTE}
           nextLabel={opening ? "Opening the story…" : firstVisit ? "Start the story" : "Back to the story"}
           closeLabel="Replay tutorial"

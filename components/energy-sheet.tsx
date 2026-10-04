@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSPrope
 import { abandonGemPayment, createGemPayment, sandboxTopUp, type GemPayment } from "@/app/actions/earn";
 import { buyEnergy, claimEnergyPayment, type EnergyBought } from "@/app/actions/energy";
 import { useBalances } from "@/components/balances-provider";
+import { isClaimBlock, useClaim } from "@/components/claim-provider";
 import { BoltGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { clearEnergyIntent, useEnergy, writeEnergyIntent } from "@/components/energy-provider";
 import { EnergyGauge } from "@/components/energy-gauge";
@@ -131,6 +132,7 @@ export function EnergySheet({
   const titleId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
   const energy = useEnergy();
+  const claim = useClaim();
   const balances = useBalances();
   const shop = useGemShop();
   const gems = balances?.balances.gems ?? 0;
@@ -218,6 +220,11 @@ export function EnergySheet({
     setCheckout({ pack, gemPack, payment: null, loading: true, error: null });
     try {
       const result = await createGemPayment(gemPack.gems);
+      if ("claim" in result && result.claim) {
+        claim.open("pay");
+        setCheckout((current) => (current ? { ...current, loading: false, error: null } : current));
+        return;
+      }
       setCheckout((current) => {
         // The player moved on (back, or another pack) while Stripe answered: drop this intent.
         if (!current || current.pack.id !== pack.id || current.gemPack.gems !== gemPack.gems || !current.loading) {
@@ -313,7 +320,12 @@ export function EnergySheet({
     try {
       const topUp = await sandboxTopUp(checkout.gemPack.gems);
       if ("error" in topUp) {
-        setCheckout({ ...checkout, loading: false, error: topUp.error });
+        if (isClaimBlock(topUp)) {
+          claim.open("pay");
+          setCheckout({ ...checkout, loading: false, error: null });
+        } else {
+          setCheckout({ ...checkout, loading: false, error: topUp.error });
+        }
         return;
       }
       const result = await buyEnergy(checkout.pack.id);

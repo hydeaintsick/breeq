@@ -8,6 +8,8 @@ import { getAddress, isAddress, verifyMessage } from "viem";
 import { prisma } from "@/lib/prisma";
 import { isGoogleEnabled } from "@/lib/auth/google";
 import { isAdminEmail, LOGIN_PATH, type Role } from "@/lib/auth/paths";
+import { attachGoogleClaim, googleLinkFromAccount } from "@/lib/guest";
+import { CLAIM_BACK_COOKIE, CLAIM_COOKIE, isGuestPlaceholder, safeNext } from "@/lib/guest-door";
 import { SIWE_NONCE_COOKIE, siweMessage } from "@/lib/auth/siwe";
 import { normalizeUsername, uniqueUsername } from "@/lib/auth/username";
 import { stampSignup } from "@/lib/presence";
@@ -245,7 +247,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ account, profile }) {
       if (account?.provider === "google") {
-        return profile?.email_verified === true && typeof profile.email === "string";
+        if (profile?.email_verified !== true || typeof profile.email !== "string") {
+          return false;
+        }
+
+        // A guest asked to keep this road. Attach Google to that user and
+        // come back without opening a second account. A Google account that
+        // already has its own road leaves the guest signed in.
+        const jar = await cookies();
+        const guestId = jar.get(CLAIM_COOKIE)?.value;
+        if (!guestId) return true;
+
+        const back = safeNext(jar.get(CLAIM_BACK_COOKIE)?.value);
+        jar.delete(CLAIM_COOKIE);
+        jar.delete(CLAIM_BACK_COOKIE);
+        const link = googleLinkFromAccount(guestId, profile.email, account);
+        const result = link ? await attachGoogleClaim(link) : "skip";
+        if (result === "skip") return true;
+        return `${back}${back.includes("?") ? "&" : "?"}claim=${result}`;
       }
 
       return true;
@@ -262,7 +281,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = dbUser?.role ?? "PLAYER";
         token.username = dbUser?.username ?? null;
         token.name = dbUser?.name ?? token.name;
-        token.email = dbUser?.email ?? token.email;
+        token.email = isGuestPlaceholder(dbUser?.email) ? null : (dbUser?.email ?? token.email);
 
         if (isAdminEmail(dbUser?.email) && dbUser?.role !== "ADMIN") {
           await prisma.user.update({

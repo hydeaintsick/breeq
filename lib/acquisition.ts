@@ -8,7 +8,7 @@ const UA_MAX = 240;
 
 export type Platform = "android-app" | "android-web" | "ios" | "desktop" | "other";
 
-export type SignupMethod = "password" | "google" | "wallet";
+export type SignupMethod = "password" | "google" | "wallet" | "guest";
 
 export type DeviceSnapshot = {
   country: string | null;
@@ -190,6 +190,8 @@ export function signupMethodLabel(method: string | null | undefined): string {
       return "Google";
     case "wallet":
       return "Wallet";
+    case "guest":
+      return "Guest";
     default:
       return "—";
   }

@@ -13,6 +13,7 @@ export function AccountForm({
   hasPassword,
   passwordSetAt,
   hasOtherMethods,
+  unclaimed,
 }: {
   username: string;
   email: string;
@@ -21,6 +22,7 @@ export function AccountForm({
   hasPassword: boolean;
   passwordSetAt: string | null;
   hasOtherMethods: boolean;
+  unclaimed: boolean;
 }) {
   const router = useRouter();
   const { update } = useSession();
@@ -37,11 +39,15 @@ export function AccountForm({
     const form = new FormData(event.currentTarget);
     const nextUsername = String(form.get("username") ?? "");
     const nextEmail = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    const confirmPassword = String(form.get("confirmPassword") ?? "");
 
     try {
       const result = await updateAccount({
         username: nextUsername,
         email: nextEmail,
+        password,
+        confirmPassword,
       });
 
       if ("error" in result) {
@@ -82,13 +88,42 @@ export function AccountForm({
         <label className="grid gap-2 text-sm text-ink-muted">
           Email
           <input
+            key={email}
             name="email"
             type="email"
             defaultValue={email}
+            placeholder={unclaimed ? "Add your email" : undefined}
             autoComplete="email"
             className="field"
           />
         </label>
+        {unclaimed ? (
+          <>
+            <label className="grid gap-2 text-sm text-ink-muted">
+              Password
+              <input
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                className="field"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-ink-muted">
+              Confirm password
+              <input
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                className="field"
+              />
+            </label>
+            <p className="text-sm leading-6 text-ink-muted">
+              Add an email and a password together to open this road on another phone.
+            </p>
+          </>
+        ) : null}
         <div className="grid gap-2">
           <p className="text-sm text-ink-muted">Wallet</p>
           <p className="field flex items-center font-mono text-sm">
@@ -108,12 +143,14 @@ export function AccountForm({
         </button>
       </form>
 
-      <AlternativeLoginForm
-        username={username}
-        hasPassword={hasPassword}
-        passwordSetAt={passwordSetAt}
-        hasOtherMethods={hasOtherMethods}
-      />
+      {unclaimed ? null : (
+        <AlternativeLoginForm
+          username={username}
+          hasPassword={hasPassword}
+          passwordSetAt={passwordSetAt}
+          hasOtherMethods={hasOtherMethods}
+        />
+      )}
     </div>
   );
 }

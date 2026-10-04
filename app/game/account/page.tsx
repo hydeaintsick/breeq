@@ -6,6 +6,8 @@ import { PlaySettings } from "@/components/play-settings";
 import { SignOutButton } from "@/components/sign-out-button";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
+import { isGuestPlaceholder } from "@/lib/guest-door";
+import { isUnclaimed, repairGuestUsername } from "@/lib/guest";
 
 export const metadata: Metadata = {
   title: "Account",
@@ -14,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function AccountPage() {
   const sessionUser = await requireUser();
+  const handle = await repairGuestUsername(sessionUser.id);
   const user = await prisma.user.findUnique({
     where: { id: sessionUser.id },
     select: {
@@ -28,7 +31,8 @@ export default async function AccountPage() {
     },
   });
 
-  const username = user?.username ?? sessionUser.username ?? sessionUser.name ?? "Player";
+  const username = handle ?? user?.username ?? sessionUser.username ?? sessionUser.name ?? "Player";
+  const unclaimed = await isUnclaimed(sessionUser.id);
   const providers = new Set(user?.accounts.map((account) => account.provider));
   const hasPassword = Boolean(user?.passwordHash);
   const methods = [
@@ -55,7 +59,7 @@ export default async function AccountPage() {
 
       <AccountForm
         username={username}
-        email={user?.email ?? ""}
+        email={user?.email && !isGuestPlaceholder(user.email) ? user.email : ""}
         wallet={user?.walletAddress ?? null}
         methods={methods}
         hasPassword={hasPassword}
@@ -63,6 +67,7 @@ export default async function AccountPage() {
         hasOtherMethods={Boolean(
           user?.walletAddress || providers.has("metamask") || providers.has("google"),
         )}
+        unclaimed={unclaimed}
       />
 
       <div className="mt-4 grid gap-4">

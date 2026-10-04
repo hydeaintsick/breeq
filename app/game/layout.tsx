@@ -1,4 +1,5 @@
 import { PlayAdminProvider } from "@/components/admin-autopilot";
+import { ClaimProvider } from "@/components/claim-provider";
 import { BalancesProvider } from "@/components/balances-provider";
 import { CosmeticsProvider } from "@/components/cosmetics-provider";
 import { EnergyProvider } from "@/components/energy-provider";
@@ -15,6 +16,8 @@ import { getEnergy } from "@/lib/energy-store";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { canPlayEarn } from "@/lib/progress";
 import { earnSandbox, stripePublishableKey, stripeReady } from "@/lib/stripe";
+import { isGoogleEnabled } from "@/lib/auth/google";
+import { isUnclaimed } from "@/lib/guest";
 import { getSiteSettings } from "@/lib/tutorial";
 
 export default async function GameLayout({
@@ -24,17 +27,19 @@ export default async function GameLayout({
 }) {
   const { user, progress, stars } = await requireProgress();
   const settings = await getSiteSettings();
-  const [balances, economy, energy, wardrobe, board] = await Promise.all([
+  const [balances, economy, energy, wardrobe, board, unclaimed] = await Promise.all([
     getBalances(user.id),
     getEconomy(),
     settings.energyEnabled ? getEnergy(user.id) : Promise.resolve(toEnergyState(ENERGY_MAX)),
     getWardrobe(user.id),
     getLeaderboard(user.id),
+    isUnclaimed(user.id),
   ]);
   const earn = canPlayEarn(user.role, progress.level, settings.earnEnabled);
 
   return (
     <PlayAdminProvider admin={user.role === "ADMIN"}>
+    <ClaimProvider needed={unclaimed} google={isGoogleEnabled()}>
     <StoryChromeProvider>
       <BalancesProvider initial={balances}>
         <CosmeticsProvider initial={wardrobe}>
@@ -52,6 +57,7 @@ export default async function GameLayout({
         </CosmeticsProvider>
       </BalancesProvider>
     </StoryChromeProvider>
+    </ClaimProvider>
     </PlayAdminProvider>
   );
 }

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/auth/paths";
 import { isValidUsername, normalizeUsername } from "@/lib/auth/username";
+import { isGuestPlaceholder } from "@/lib/guest-door";
 import { stampSignup } from "@/lib/presence";
 import { applyReferral } from "@/lib/referrals";
 
@@ -23,7 +24,7 @@ export async function registerAccount(input: {
     };
   }
 
-  if (!email.includes("@") || email.length > 254) {
+  if (!email.includes("@") || email.length > 254 || isGuestPlaceholder(email)) {
     return { error: "Enter a valid email address." };
   }
 

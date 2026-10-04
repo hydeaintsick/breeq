@@ -6,6 +6,7 @@ import { canPlayEarn, EARN_UNLOCK_LEVEL } from "@/lib/progress";
 import { getStoryShelf } from "@/lib/story";
 import { routeStand } from "@/lib/story-route";
 import { getSiteSettings, getTutorialStatus } from "@/lib/tutorial";
+import { repairGuestUsername } from "@/lib/guest";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
@@ -27,7 +28,7 @@ export default async function GameMenuPage() {
   // Closed means absent: no card, no "closed for now", no teaser query.
   const teaser = settings.earnEnabled ? await getEarnTeaser() : null;
   const stand = routeStand(episodes, tutorial.enabled ? { done: tutorial.done } : null);
-  const label = user.username ?? user.name ?? "Player";
+  const label = (await repairGuestUsername(user.id)) ?? user.username ?? user.name ?? "Player";
   const earnLocked = settings.earnEnabled
     ? !canPlayEarn(user.role, progress.level, settings.earnEnabled)
     : false;
