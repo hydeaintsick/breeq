@@ -4,6 +4,15 @@ import { gweiToEth } from "@/lib/economy";
 const DAY = 24 * 60 * 60 * 1000;
 export const SERIES_DAYS = 14;
 
+/**
+ * Accounts an admin has removed stay stored and drop out of every admin number.
+ * Mongo leaves the field unset until then, and `{ deletedAt: null }` does not
+ * match an unset field, so both shapes count.
+ */
+export const countedAccount = {
+  OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
+};
+
 /** Counts per day for the last `SERIES_DAYS`, oldest first. */
 function bucket(dates: Date[], now: number): number[] {
   const series = new Array<number>(SERIES_DAYS).fill(0);
@@ -64,24 +73,24 @@ export async function getAdminStats(): Promise<AdminStats> {
     pending,
     paid,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: week } } }),
-    prisma.user.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
-    prisma.chapterClear.count(),
+    prisma.user.count({ where: countedAccount }),
+    prisma.user.count({ where: { ...countedAccount, createdAt: { gte: week } } }),
+    prisma.user.findMany({ where: { ...countedAccount, createdAt: { gte: since } }, select: { createdAt: true } }),
+    prisma.chapterClear.count({ where: { user: { is: countedAccount } } }),
     prisma.chapter.count(),
-    prisma.earnMap.count({ where: { status: "PUBLISHED" } }),
-    prisma.earnRun.count(),
-    prisma.earnRun.count({ where: { outcome: "WON" } }),
-    prisma.earnRun.count({ where: { createdAt: { gte: week } } }),
-    prisma.earnRun.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
-    prisma.ledgerEntry.aggregate({ where: { kind: "TICKET" }, _sum: { gems: true } }),
-    prisma.ledgerEntry.aggregate({ where: { kind: "PAYOUT" }, _sum: { ethGwei: true } }),
-    prisma.gemPurchase.aggregate({ where: { status: "PAID" }, _sum: { gems: true, usdCents: true }, _count: true }),
-    prisma.gemPurchase.aggregate({ where: { status: "PAID", paidAt: { gte: week } }, _sum: { usdCents: true } }),
-    prisma.user.aggregate({ _sum: { gems: true } }),
-    prisma.user.aggregate({ _sum: { ethGwei: true } }),
-    prisma.withdrawal.aggregate({ where: { status: "PENDING" }, _sum: { amountGwei: true }, _count: true }),
-    prisma.withdrawal.aggregate({ where: { status: "PAID" }, _sum: { amountGwei: true } }),
+    prisma.earnMap.count({ where: { status: "PUBLISHED", author: { is: countedAccount } } }),
+    prisma.earnRun.count({ where: { user: { is: countedAccount } } }),
+    prisma.earnRun.count({ where: { outcome: "WON", user: { is: countedAccount } } }),
+    prisma.earnRun.count({ where: { createdAt: { gte: week }, user: { is: countedAccount } } }),
+    prisma.earnRun.findMany({ where: { createdAt: { gte: since }, user: { is: countedAccount } }, select: { createdAt: true } }),
+    prisma.ledgerEntry.aggregate({ where: { kind: "TICKET", user: { is: countedAccount } }, _sum: { gems: true } }),
+    prisma.ledgerEntry.aggregate({ where: { kind: "PAYOUT", user: { is: countedAccount } }, _sum: { ethGwei: true } }),
+    prisma.gemPurchase.aggregate({ where: { status: "PAID", user: { is: countedAccount } }, _sum: { gems: true, usdCents: true }, _count: true }),
+    prisma.gemPurchase.aggregate({ where: { status: "PAID", paidAt: { gte: week }, user: { is: countedAccount } }, _sum: { usdCents: true } }),
+    prisma.user.aggregate({ where: countedAccount, _sum: { gems: true } }),
+    prisma.user.aggregate({ where: countedAccount, _sum: { ethGwei: true } }),
+    prisma.withdrawal.aggregate({ where: { status: "PENDING", user: { is: countedAccount } }, _sum: { amountGwei: true }, _count: true }),
+    prisma.withdrawal.aggregate({ where: { status: "PAID", user: { is: countedAccount } }, _sum: { amountGwei: true } }),
   ]);
 
   return {

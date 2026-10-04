@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { countedAccount } from "@/lib/admin-stats";
 import { prisma } from "@/lib/prisma";
 import { progressFromXp } from "@/lib/progress";
 
@@ -33,6 +34,7 @@ function playerName(user: { username: string | null; name: string | null }) {
  */
 export const getLeaderboard = cache(async (viewerId: string | null): Promise<Leaderboard> => {
   const users = await prisma.user.findMany({
+    where: countedAccount,
     orderBy: [{ xp: "desc" }, { createdAt: "asc" }],
     take: LEADERBOARD_LIMIT,
     select: { id: true, username: true, name: true, xp: true },
@@ -51,14 +53,14 @@ export const getLeaderboard = cache(async (viewerId: string | null): Promise<Lea
 
   const viewer = await prisma.user.findUnique({
     where: { id: viewerId },
-    select: { username: true, name: true, xp: true, createdAt: true },
+    select: { username: true, name: true, xp: true, createdAt: true, deletedAt: true },
   });
-  if (!viewer) return { entries, you: null };
+  if (!viewer || viewer.deletedAt) return { entries, you: null };
 
   const xp = Math.max(0, Math.floor(viewer.xp ?? 0));
   const ahead = await prisma.user.count({
     where: {
-      OR: [{ xp: { gt: xp } }, { xp, createdAt: { lt: viewer.createdAt } }],
+      AND: [countedAccount, { OR: [{ xp: { gt: xp } }, { xp, createdAt: { lt: viewer.createdAt } }] }],
     },
   });
 

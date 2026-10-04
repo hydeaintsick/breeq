@@ -3,6 +3,7 @@
 import { randomInt } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { countedAccount } from "@/lib/admin-stats";
 import { prisma } from "@/lib/prisma";
 import { requireEarn, requireUser } from "@/lib/auth/session";
 import { EARN_PATH, EARN_TOPUP_PATH, EARN_WALLET_PATH, GAME_ROOT_PATH } from "@/lib/auth/paths";
@@ -84,7 +85,7 @@ export async function startEarnRun(mapId: string): Promise<RunStart | Fail> {
   const { user } = await requireEarn();
   const [map, economy] = await Promise.all([
     prisma.earnMap.findFirst({
-      where: { id: mapId, status: "PUBLISHED" },
+      where: { id: mapId, status: "PUBLISHED", author: { is: countedAccount } },
       select: { id: true, authorId: true, ticketGems: true },
     }),
     getEconomy(),

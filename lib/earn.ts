@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { Prisma } from "@prisma/client";
+import { countedAccount } from "@/lib/admin-stats";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_ECONOMY,
@@ -67,8 +68,15 @@ export type EarnTeaser = {
 export const getEarnTeaser = cache(async function getEarnTeaser(): Promise<EarnTeaser> {
   const [economy, maps, paid] = await Promise.all([
     getEconomy(),
-    prisma.earnMap.aggregate({ where: { status: "PUBLISHED" }, _count: { _all: true }, _max: { ticketGems: true } }),
-    prisma.ledgerEntry.aggregate({ where: { kind: "PAYOUT" }, _sum: { ethGwei: true } }),
+    prisma.earnMap.aggregate({
+      where: { status: "PUBLISHED", author: { is: countedAccount } },
+      _count: { _all: true },
+      _max: { ticketGems: true },
+    }),
+    prisma.ledgerEntry.aggregate({
+      where: { kind: "PAYOUT", user: { is: countedAccount } },
+      _sum: { ethGwei: true },
+    }),
   ]);
   const topTicketGems = maps._max.ticketGems ?? 0;
   return {
@@ -205,7 +213,7 @@ export async function listEarnMaps(input: {
   const [economy, rows] = await Promise.all([
     getEconomy(),
     prisma.earnMap.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", author: { is: countedAccount } },
       orderBy: orderFor(input.sort),
       take: take + 1,
       ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
@@ -233,19 +241,19 @@ export async function getEarnStore(userId: string, sort: EarnSort): Promise<Earn
   const [economy, featuredRows, playedRows, balances, total, page] = await Promise.all([
     getEconomy(),
     prisma.earnMap.findMany({
-      where: { status: "PUBLISHED", featured: true },
+      where: { status: "PUBLISHED", featured: true, author: { is: countedAccount } },
       orderBy: [{ featuredOrder: "asc" }, { updatedAt: "desc" }],
       take: 10,
       select: CARD_SELECT,
     }),
     prisma.earnMap.findMany({
-      where: { status: "PUBLISHED", plays: { gt: 0 } },
+      where: { status: "PUBLISHED", plays: { gt: 0 }, author: { is: countedAccount } },
       orderBy: [{ plays: "desc" }, { id: "desc" }],
       take: 10,
       select: CARD_SELECT,
     }),
     getBalances(userId),
-    prisma.earnMap.count({ where: { status: "PUBLISHED" } }),
+    prisma.earnMap.count({ where: { status: "PUBLISHED", author: { is: countedAccount } } }),
     listEarnMaps({ userId, sort }),
   ]);
   const ids = [...featuredRows, ...playedRows].map((row) => row.id);
@@ -263,7 +271,7 @@ export async function getEarnStore(userId: string, sort: EarnSort): Promise<Earn
 export async function getEarnMapBySlug(slug: string, userId: string): Promise<EarnMapCard | null> {
   const [economy, row] = await Promise.all([
     getEconomy(),
-    prisma.earnMap.findFirst({ where: { slug, status: "PUBLISHED" }, select: CARD_SELECT }),
+    prisma.earnMap.findFirst({ where: { slug, status: "PUBLISHED", author: { is: countedAccount } }, select: CARD_SELECT }),
   ]);
   if (!row) return null;
   const won = await wonMapIds(userId, [row.id]);

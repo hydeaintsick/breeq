@@ -6193,6 +6193,69 @@ html[data-theme="dark"] .lore-halo-photo {
   min-width: 34rem;
 }
 
+.admin-row-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  color: var(--danger);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+html[data-theme="dark"] .btn-danger {
+  color: var(--on-cta);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.admin-row-delete:focus-visible,
+.admin-confirm .btn-danger:focus-visible,
+.admin-confirm .btn-glass:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.admin-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  background: rgba(15, 17, 23, 0.4);
+}
+
+.admin-confirm-card {
+  width: min(100%, 26rem);
+  padding: 1.25rem 1.25rem 1.1rem;
+}
+
+.admin-confirm-card:focus {
+  outline: none;
+}
+
 .field-sm {
   height: 2.4rem;
   font-size: 0.88rem;

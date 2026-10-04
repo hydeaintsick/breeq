@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AdminWithdrawals, type AdminWithdrawalRow } from "@/components/admin-withdrawals";
+import { countedAccount } from "@/lib/admin-stats";
 import { requireAdmin } from "@/lib/auth/session";
 import { formatEth, gweiToEth } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
@@ -13,12 +14,12 @@ export default async function AdminWithdrawalsPage() {
   await requireAdmin();
   const [pending, resolved] = await Promise.all([
     prisma.withdrawal.findMany({
-      where: { status: "PENDING" },
+      where: { status: "PENDING", user: { is: countedAccount } },
       orderBy: { createdAt: "asc" },
       include: { user: { select: { username: true, name: true, email: true } } },
     }),
     prisma.withdrawal.findMany({
-      where: { status: { not: "PENDING" } },
+      where: { status: { not: "PENDING" }, user: { is: countedAccount } },
       orderBy: { updatedAt: "desc" },
       take: 30,
       include: { user: { select: { username: true, name: true, email: true } } },

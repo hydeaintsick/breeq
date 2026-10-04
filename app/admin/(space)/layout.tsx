@@ -1,11 +1,14 @@
 import { AdminNav } from "@/components/admin-nav";
+import { countedAccount } from "@/lib/admin-stats";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 /** The admin space: the side menu plus the page. The story editor keeps its own full-width layout. */
 export default async function AdminSpaceLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
-  const pending = await prisma.withdrawal.count({ where: { status: "PENDING" } });
+  const pending = await prisma.withdrawal.count({
+    where: { status: "PENDING", user: { is: countedAccount } },
+  });
 
   return (
     <div className="admin-shell">

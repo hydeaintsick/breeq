@@ -17,7 +17,7 @@ function countryCell(code: string | null) {
 }
 
 export default async function AdminPlayersPage({ searchParams }: PageProps<"/admin/players">) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const params = await searchParams;
   const q = (Array.isArray(params.q) ? params.q[0] : params.q)?.trim() ?? "";
 
@@ -95,9 +95,9 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       </form>
       <p className="mt-3 text-xs text-ink-muted">
         {q ? `${rows.length} match${rows.length === 1 ? "" : "es"} for “${q}”. ` : "The latest 60 accounts. "}
-        Open a player for balances, grants, and the full device record.
+        Open a player for balances, grants, and the full device record. Delete removes the account so it never counts.
       </p>
-      <AdminPlayers rows={rows} />
+      <AdminPlayers rows={rows} selfId={admin.id} />
     </section>
   );
 }

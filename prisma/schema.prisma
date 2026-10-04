@@ -87,6 +87,8 @@ model User {
   playSeconds      Int            @default(0)
   /// Wall clock of the last accepted play-time beat. Stops a client from inflating `playSeconds`.
   lastPlayAt       DateTime?
+  /// Set when an admin removes the account from the admin numbers. The row and its history stay.
+  deletedAt        DateTime?
   accounts       Account[]
   sessions       Session[]
   chapterClears  ChapterClear[]
@@ -99,6 +101,7 @@ model User {
   updatedAt      DateTime       @updatedAt
 
   @@index([referralCode])
+  @@index([deletedAt])
 }
 
 model Account {

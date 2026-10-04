@@ -94,6 +94,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         lastTimezone: true,
         lastTouch: true,
         playSeconds: true,
+        deletedAt: true,
         referredBy: {
           select: { via: true, referrer: { select: { id: true, username: true, name: true } } },
         },
@@ -216,9 +217,15 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         <DeviceCard title="Latest device" empty={!user.lastSeenAt} rows={latestRows} agent={user.lastUserAgent} />
       </div>
 
-      <div className="mt-4">
-        <AdminGrant userId={user.id} />
-      </div>
+      {user.deletedAt ? (
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-muted">
+          Removed from admin stats on {formatWhen(user.deletedAt)}. The account and its history are still stored.
+        </p>
+      ) : (
+        <div className="mt-4">
+          <AdminGrant userId={user.id} />
+        </div>
+      )}
 
       <h2 className="mt-10 text-lg font-semibold tracking-tight text-ink">Recent activity</h2>
       {user.ledger.length === 0 ? (

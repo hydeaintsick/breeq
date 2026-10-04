@@ -13,8 +13,10 @@ import {
   EARN_PATH,
   EARN_TOPUP_PATH,
   EARN_WALLET_PATH,
+  GAME_MENU_PATH,
   GAME_ROOT_PATH,
 } from "@/lib/auth/paths";
+import { purgePlayer } from "@/lib/purge-player";
 import { clampNumber, ECONOMY_ID, formatEth, formatGems, parsePacks, type Economy } from "@/lib/economy";
 import { creditGems } from "@/lib/purchases";
 
@@ -94,8 +96,8 @@ export async function grantGems(userId: string, gems: number, note?: string): Pr
   const admin = await requireAdmin();
   const amount = Math.round(Number(gems));
   if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1_000_000) return { error: "Enter a whole number of gems." };
-  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, gems: true } });
-  if (!target) return { error: "Player not found." };
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, gems: true, deletedAt: true } });
+  if (!target || target.deletedAt) return { error: "Player not found." };
   if (amount < 0 && target.gems + amount < 0) return { error: "That would take the balance below zero." };
   await creditGems({
     userId,
@@ -108,6 +110,31 @@ export async function grantGems(userId: string, gems: number, note?: string): Pr
   revalidatePath(ADMIN_DASHBOARD_PATH);
   revalidatePath(EARN_PATH);
   revalidatePath(EARN_WALLET_PATH);
+  return { ok: true };
+}
+
+/** Remove an account so the player and everything they did stop counting. */
+export async function deletePlayer(userId: string): Promise<{ ok: true } | Fail> {
+  const admin = await requireAdmin();
+  if (!/^[a-f\d]{24}$/i.test(userId)) return { error: "Player not found." };
+  if (admin.id === userId) return { error: "You can't delete your own account." };
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!target) return { error: "Player not found." };
+  try {
+    await purgePlayer(userId);
+  } catch (error) {
+    console.error("deletePlayer", error);
+    return { error: "Could not delete this account. Try again." };
+  }
+  revalidatePath(ADMIN_PLAYERS_PATH);
+  revalidatePath(`${ADMIN_PLAYERS_PATH}/${userId}`);
+  revalidatePath(ADMIN_DASHBOARD_PATH);
+  revalidatePath(ADMIN_WITHDRAWALS_PATH);
+  revalidatePath(ADMIN_EARN_PATH);
+  revalidatePath("/admin", "layout");
+  revalidatePath(EARN_PATH);
+  revalidatePath(GAME_MENU_PATH);
+  revalidatePath(GAME_ROOT_PATH, "layout");
   return { ok: true };
 }
 
