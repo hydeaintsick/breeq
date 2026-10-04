@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import { AdminPlayers, type AdminPlayerRow } from "@/components/admin-players";
+import { countryName, formatPlayTime, modelFromUserAgent, supportLine } from "@/lib/acquisition";
 import { requireAdmin } from "@/lib/auth/session";
-import { gweiToEth } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
-import { progressFromXp } from "@/lib/progress";
 
 export const metadata: Metadata = {
   title: "Players — Admin",
-  description: "Accounts, balances, grants.",
+  description: "Accounts, play time, country, and how they play.",
 };
+
+function countryCell(code: string | null) {
+  if (!code) return "—";
+  const name = countryName(code);
+  return name === "Unknown" ? code : name;
+}
 
 export default async function AdminPlayersPage({ searchParams }: PageProps<"/admin/players">) {
   await requireAdmin();
@@ -33,26 +38,43 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       name: true,
       email: true,
       role: true,
-      xp: true,
-      gems: true,
-      ethGwei: true,
       createdAt: true,
-      _count: { select: { earnRuns: true, earnMaps: true } },
+      playSeconds: true,
+      signupCountry: true,
+      signupPlatform: true,
+      signupAppVersion: true,
+      signupModel: true,
+      signupUserAgent: true,
+      lastSeenAt: true,
+      lastCountry: true,
+      lastPlatform: true,
+      lastAppVersion: true,
+      lastModel: true,
+      lastUserAgent: true,
     },
   });
 
-  const rows: AdminPlayerRow[] = users.map((user) => ({
-    id: user.id,
-    username: user.username ?? user.name ?? "player",
-    email: user.email,
-    role: user.role,
-    level: progressFromXp(user.xp).level,
-    gems: user.gems,
-    eth: gweiToEth(user.ethGwei),
-    runs: user._count.earnRuns,
-    maps: user._count.earnMaps,
-    createdAt: user.createdAt.toISOString(),
-  }));
+  const rows: AdminPlayerRow[] = users.map((user) => {
+    const seen = user.lastSeenAt != null;
+    const support = supportLine({
+      platform: seen ? user.lastPlatform : user.signupPlatform,
+      appVersion: seen ? user.lastAppVersion : user.signupAppVersion,
+      model:
+        (seen ? user.lastModel : user.signupModel) ??
+        modelFromUserAgent((seen ? user.lastUserAgent : user.signupUserAgent) ?? ""),
+    });
+    return {
+      id: user.id,
+      username: user.username ?? user.name ?? "player",
+      email: user.email,
+      role: user.role,
+      joined: user.createdAt.toLocaleDateString("en-US"),
+      playTime: formatPlayTime(user.playSeconds ?? 0),
+      country: countryCell(user.lastCountry ?? user.signupCountry),
+      channel: support.channel,
+      device: support.model,
+    };
+  });
 
   return (
     <section>
@@ -72,8 +94,7 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       </form>
       <p className="mt-3 text-xs text-ink-muted">
         {q ? `${rows.length} match${rows.length === 1 ? "" : "es"} for “${q}”. ` : "The latest 60 accounts. "}
-        Open a player for their device, country, app version, and play time. Grants add or remove gems and show up in
-        the player&apos;s activity.
+        Open a player for balances, grants, and the full device record.
       </p>
       <AdminPlayers rows={rows} />
     </section>

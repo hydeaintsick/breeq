@@ -15,6 +15,8 @@ export type DeviceSnapshot = {
   platform: Platform;
   os: string | null;
   appVersion: string | null;
+  /** Marketing or hardware name when the request carried one. */
+  model: string | null;
   locale: string | null;
   userAgent: string | null;
 };
@@ -25,6 +27,8 @@ export type ClientPresence = {
   timezone?: string;
   language?: string;
   touch?: boolean;
+  /** From User-Agent Client Hints (`navigator.userAgentData`), when the browser has them. */
+  model?: string;
 };
 
 export type CleanClientPresence = {
@@ -32,6 +36,7 @@ export type CleanClientPresence = {
   timezone: string | null;
   language: string | null;
   touch: boolean | null;
+  model: string | null;
 };
 
 const LOCALE = /^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$/;
@@ -49,13 +54,42 @@ function localeTag(raw: string | null | undefined): string | null {
   return LOCALE.test(tag) ? tag.slice(0, 35) : null;
 }
 
-/** Platform, OS, and the Android app version baked into `BreeqApp/<version>`. */
-export function parseUserAgent(uaRaw: string): Pick<DeviceSnapshot, "platform" | "os" | "appVersion" | "userAgent"> {
+/**
+ * A phone name we are willing to show. Chrome's reduced agent uses the frozen
+ * token `K` in place of a model; that is not hardware.
+ */
+export function cleanModel(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const model = raw.replace(/\s+/g, " ").trim().slice(0, 40);
+  if (!model || /^(k|unknown|android|linux|generic|mobile)$/i.test(model)) return null;
+  if (!/^[\p{L}\p{N} ._+()-]{2,40}$/u.test(model)) return null;
+  return model;
+}
+
+/**
+ * Hardware name from the user agent. The Android shell appends
+ * `BreeqDevice/<manufacturer model>`. Older builds and mobile browsers only
+ * have whatever Chrome still puts after the Android version, or "iPhone".
+ */
+export function modelFromUserAgent(ua: string): string | null {
+  const tagged = /BreeqDevice\/(.+)$/.exec(ua);
+  if (tagged) return cleanModel(tagged[1]);
+  const android = /Android [^;)]*;\s*([^;)]+?)(?:\s+Build\/|[;)])/.exec(ua);
+  if (android) return cleanModel(android[1]);
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/iPod/i.test(ua)) return "iPod";
+  if (/iPhone/i.test(ua)) return "iPhone";
+  return null;
+}
+
+/** Platform, OS, app version (`BreeqApp/<version>`), and model. */
+export function parseUserAgent(uaRaw: string): Pick<DeviceSnapshot, "platform" | "os" | "appVersion" | "model" | "userAgent"> {
   const userAgent = uaRaw.replace(/\s+/g, " ").trim().slice(0, UA_MAX) || null;
   const ua = userAgent ?? "";
+  const model = modelFromUserAgent(ua);
   const app = /BreeqApp\/([0-9][0-9A-Za-z.+-]{0,20})/.exec(ua);
   if (app) {
-    return { platform: "android-app", os: androidOs(ua), appVersion: app[1], userAgent };
+    return { platform: "android-app", os: androidOs(ua), appVersion: app[1], model, userAgent };
   }
   if (/iPhone|iPad|iPod/i.test(ua)) {
     const version = /OS (\d+(?:[_.]\d+)*)/.exec(ua);
@@ -63,11 +97,12 @@ export function parseUserAgent(uaRaw: string): Pick<DeviceSnapshot, "platform" |
       platform: "ios",
       os: version ? `iOS ${version[1].replace(/_/g, ".")}` : "iOS",
       appVersion: null,
+      model,
       userAgent,
     };
   }
   if (/Android/i.test(ua)) {
-    return { platform: "android-web", os: androidOs(ua), appVersion: null, userAgent };
+    return { platform: "android-web", os: androidOs(ua), appVersion: null, model, userAgent };
   }
   if (/Mac OS X|Macintosh/i.test(ua)) {
     const version = /Mac OS X (\d+(?:[_.]\d+)*)/.exec(ua);
@@ -75,13 +110,14 @@ export function parseUserAgent(uaRaw: string): Pick<DeviceSnapshot, "platform" |
       platform: "desktop",
       os: version ? `macOS ${version[1].replace(/_/g, ".")}` : "macOS",
       appVersion: null,
+      model,
       userAgent,
     };
   }
-  if (/Windows NT/i.test(ua)) return { platform: "desktop", os: "Windows", appVersion: null, userAgent };
-  if (/CrOS/i.test(ua)) return { platform: "desktop", os: "ChromeOS", appVersion: null, userAgent };
-  if (/Linux/i.test(ua)) return { platform: "desktop", os: "Linux", appVersion: null, userAgent };
-  return { platform: "other", os: null, appVersion: null, userAgent };
+  if (/Windows NT/i.test(ua)) return { platform: "desktop", os: "Windows", appVersion: null, model, userAgent };
+  if (/CrOS/i.test(ua)) return { platform: "desktop", os: "ChromeOS", appVersion: null, model, userAgent };
+  if (/Linux/i.test(ua)) return { platform: "desktop", os: "Linux", appVersion: null, model, userAgent };
+  return { platform: "other", os: null, appVersion: null, model, userAgent };
 }
 
 function androidOs(ua: string): string {
@@ -111,7 +147,22 @@ export function cleanClientPresence(input: ClientPresence): CleanClientPresence 
       : null;
   const language = localeTag(typeof input.language === "string" ? input.language : null);
   const touch = typeof input.touch === "boolean" ? input.touch : null;
-  return { screen, timezone, language, touch };
+  const model = cleanModel(typeof input.model === "string" ? input.model : null);
+  return { screen, timezone, language, touch, model };
+}
+
+/** What the players table shows: Android app and its version, or Web, plus the phone when we know it. */
+export function supportLine(input: {
+  platform: string | null | undefined;
+  appVersion: string | null | undefined;
+  model: string | null | undefined;
+}): { channel: string; model: string | null } {
+  if (!input.platform) return { channel: "—", model: null };
+  const model = input.model ?? (input.platform === "desktop" ? "Desktop" : null);
+  if (input.platform === "android-app") {
+    return { channel: input.appVersion ? `Android app ${input.appVersion}` : "Android app", model };
+  }
+  return { channel: "Web", model };
 }
 
 export function platformLabel(platform: string | null | undefined): string {

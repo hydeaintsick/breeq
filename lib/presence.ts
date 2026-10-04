@@ -20,6 +20,7 @@ export type PlayerProfile = {
   platform: string | null;
   os: string | null;
   appVersion: string | null;
+  model: string | null;
   locale: string | null;
   screen: string | null;
   timezone: string | null;
@@ -31,11 +32,13 @@ type SeenRow = {
   signupAt: Date | null;
   signupScreen: string | null;
   signupTimezone: string | null;
+  signupModel: string | null;
   lastSeenAt: Date | null;
   lastCountry: string | null;
   lastPlatform: string | null;
   lastOs: string | null;
   lastAppVersion: string | null;
+  lastModel: string | null;
   lastLocale: string | null;
   lastUserAgent: string | null;
   lastScreen: string | null;
@@ -51,11 +54,13 @@ const seenSelect = {
   signupAt: true,
   signupScreen: true,
   signupTimezone: true,
+  signupModel: true,
   lastSeenAt: true,
   lastCountry: true,
   lastPlatform: true,
   lastOs: true,
   lastAppVersion: true,
+  lastModel: true,
   lastLocale: true,
   lastUserAgent: true,
   lastScreen: true,
@@ -72,6 +77,7 @@ function profileOf(row: SeenRow): PlayerProfile {
     platform: row.lastPlatform,
     os: row.lastOs,
     appVersion: row.lastAppVersion,
+    model: row.lastModel,
     locale: row.lastLocale,
     screen: row.lastScreen,
     timezone: row.lastTimezone,
@@ -87,6 +93,7 @@ function personProps(row: Pick<SeenRow, "username" | "email" | "playSeconds">, p
     platform: profile.platform,
     os: profile.os,
     app_version: profile.appVersion,
+    device_model: profile.model,
     locale: profile.locale,
     screen: profile.screen,
     timezone: profile.timezone,
@@ -119,6 +126,7 @@ export async function stampSignup(userId: string, method: SignupMethod): Promise
         signupPlatform: snap.platform,
         signupOs: snap.os,
         signupAppVersion: snap.appVersion,
+        signupModel: snap.model,
         signupLocale: snap.locale,
         signupUserAgent: snap.userAgent,
         lastSeenAt: now,
@@ -126,6 +134,7 @@ export async function stampSignup(userId: string, method: SignupMethod): Promise
         lastPlatform: snap.platform,
         lastOs: snap.os,
         lastAppVersion: snap.appVersion,
+        lastModel: snap.model,
         lastLocale: snap.locale,
         lastUserAgent: snap.userAgent,
       },
@@ -139,6 +148,7 @@ export async function stampSignup(userId: string, method: SignupMethod): Promise
         platform: snap.platform,
         os: snap.os,
         app_version: snap.appVersion,
+        device_model: snap.model,
         locale: snap.locale,
       },
       {
@@ -149,6 +159,7 @@ export async function stampSignup(userId: string, method: SignupMethod): Promise
         platform: snap.platform,
         os: snap.os,
         app_version: snap.appVersion,
+        device_model: snap.model,
         locale: snap.locale,
         play_seconds: existing.playSeconds ?? 0,
       },
@@ -171,6 +182,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
       platform: null,
       os: null,
       appVersion: null,
+      model: null,
       locale: null,
       screen: null,
       timezone: null,
@@ -188,18 +200,21 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
   // The auth callback sometimes cannot see the request. If the account is still new
   // and has no signup snapshot, this first game load is close enough to count.
   const backfillSignup = row.signupAt === null && now.getTime() - row.createdAt.getTime() < SIGNUP_WINDOW_MS;
+  const model = client.model ?? snap.model;
   const fillScreen = Boolean((signupFresh || backfillSignup) && !row.signupScreen && client.screen);
   const fillZone = Boolean((signupFresh || backfillSignup) && !row.signupTimezone && client.timezone);
+  const fillModel = Boolean((signupFresh || backfillSignup) && !row.signupModel && model);
   const unchanged =
     row.lastCountry === (snap.country ?? row.lastCountry) &&
     row.lastPlatform === snap.platform &&
     row.lastAppVersion === snap.appVersion &&
+    row.lastModel === model &&
     row.lastLocale === locale &&
     row.lastScreen === screen &&
     row.lastTimezone === timezone &&
     row.lastTouch === (client.touch ?? row.lastTouch);
   const recent = row.lastSeenAt !== null && now.getTime() - row.lastSeenAt.getTime() < SEEN_THROTTLE_MS;
-  if (unchanged && recent && !fillScreen && !fillZone && !backfillSignup) return profileOf(row);
+  if (unchanged && recent && !fillScreen && !fillZone && !fillModel && !backfillSignup) return profileOf(row);
 
   const next: SeenRow = {
     ...row,
@@ -208,6 +223,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
     lastPlatform: snap.platform,
     lastOs: snap.os,
     lastAppVersion: snap.appVersion,
+    lastModel: model,
     lastLocale: locale,
     lastUserAgent: snap.userAgent,
     lastScreen: screen,
@@ -215,6 +231,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
     lastTouch: client.touch ?? row.lastTouch,
     signupScreen: fillScreen ? client.screen : row.signupScreen,
     signupTimezone: fillZone ? client.timezone : row.signupTimezone,
+    signupModel: fillModel || backfillSignup ? model : row.signupModel,
   };
 
   await prisma.user.update({
@@ -225,6 +242,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
       lastPlatform: next.lastPlatform,
       lastOs: next.lastOs,
       lastAppVersion: next.lastAppVersion,
+      lastModel: next.lastModel,
       lastLocale: next.lastLocale,
       lastUserAgent: next.lastUserAgent,
       lastScreen: next.lastScreen,
@@ -232,6 +250,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
       lastTouch: next.lastTouch,
       ...(fillScreen ? { signupScreen: client.screen } : {}),
       ...(fillZone ? { signupTimezone: client.timezone } : {}),
+      ...(fillModel && !backfillSignup ? { signupModel: model } : {}),
       ...(backfillSignup
         ? {
             signupAt: now,
@@ -239,6 +258,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
             signupPlatform: snap.platform,
             signupOs: snap.os,
             signupAppVersion: snap.appVersion,
+            signupModel: model,
             signupLocale: locale,
             signupUserAgent: snap.userAgent,
           }
@@ -254,6 +274,7 @@ export async function touchPresence(userId: string, input: ClientPresence): Prom
       platform: profile.platform,
       os: profile.os,
       app_version: profile.appVersion,
+      device_model: profile.model,
       country: profile.country,
       locale: profile.locale,
     },

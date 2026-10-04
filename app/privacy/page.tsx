@@ -122,9 +122,10 @@ export default function PrivacyPage() {
           <h3>Device, logs, and diagnostics</h3>
           <ul>
             <li>
-              IP address, user-agent (including a Breeq Android token and app version
-              when you use the app), approximate country from IP, locale, screen size,
-              time zone, whether the device is touch-first, timestamps, and security logs;
+              IP address, user-agent (including a Breeq Android token, app version, and
+              phone model when you use the app), approximate country from IP, locale,
+              screen size, time zone, whether the device is touch-first, timestamps, and
+              security logs;
             </li>
             <li>
               crash or render-process events inside the Android shell, used to recover the
@@ -189,7 +190,7 @@ export default function PrivacyPage() {
               6(1)(f)) — keeping the Service safe (fraud, cheats, chargebacks, multi-accounting);
               debugging; improving difficulty proofs and economy settings; establishing,
               exercising, or defending legal claims; product analytics (page views, sign-up,
-              device, country, app version, and play time) in PostHog. You may object
+              device, country, app version, phone model, and play time) in PostHog. You may object
               (Section 10). We do not use legitimate interests
               to override a child or to send you marketing you did not ask for.
             </li>
@@ -310,7 +311,7 @@ export default function PrivacyPage() {
             <li>
               <strong className="font-medium text-ink">Product analytics</strong> — PostHog
               (EU cloud unless we configure another host), for page views, sign-up, device,
-              country, Android app version, and play time. The person profile uses your
+              country, Android app version, phone model, and play time. The person profile uses your
               account id, username, and email once you are signed in;
             </li>
             <li>

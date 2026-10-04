@@ -10,6 +10,7 @@ import {
   countryLabel,
   formatPlayTime,
   formatWhen,
+  modelFromUserAgent,
   platformLabel,
   signupMethodLabel,
 } from "@/lib/acquisition";
@@ -47,6 +48,10 @@ function screenLabel(value: string | null) {
   return value ? value.replace("x", "×") : "—";
 }
 
+function phoneLabel(stored: string | null, ua: string | null) {
+  return stored ?? modelFromUserAgent(ua ?? "") ?? "—";
+}
+
 export default async function AdminPlayerPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
   const { id } = await params;
@@ -71,6 +76,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         signupPlatform: true,
         signupOs: true,
         signupAppVersion: true,
+        signupModel: true,
         signupLocale: true,
         signupUserAgent: true,
         signupScreen: true,
@@ -80,6 +86,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         lastPlatform: true,
         lastOs: true,
         lastAppVersion: true,
+        lastModel: true,
         lastLocale: true,
         lastUserAgent: true,
         lastScreen: true,
@@ -114,6 +121,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
     { label: "Country", value: countryLabel(user.signupCountry) },
     { label: "Device", value: platformLabel(user.signupPlatform) },
     { label: "System", value: user.signupOs ?? "—" },
+    { label: "Model", value: phoneLabel(user.signupModel, user.signupUserAgent) },
     { label: "Android app", value: user.signupAppVersion ?? (user.signupAt ? "Web" : "—") },
     { label: "Language", value: user.signupLocale ?? "—" },
     { label: "Screen", value: screenLabel(user.signupScreen) },
@@ -125,6 +133,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
     { label: "Country", value: countryLabel(user.lastCountry) },
     { label: "Device", value: platformLabel(user.lastPlatform) },
     { label: "System", value: user.lastOs ?? "—" },
+    { label: "Model", value: phoneLabel(user.lastModel, user.lastUserAgent) },
     { label: "Android app", value: user.lastAppVersion ?? (user.lastSeenAt ? "Web" : "—") },
     { label: "Language", value: user.lastLocale ?? "—" },
     { label: "Screen", value: screenLabel(user.lastScreen) },

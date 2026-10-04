@@ -60,6 +60,8 @@ model User {
   signupOs         String?
   /// `BreeqApp/<version>` when they signed up inside the Android app.
   signupAppVersion String?
+  /// Phone model when we could read one ("Pixel 8", "iPhone").
+  signupModel      String?
   signupLocale     String?
   signupUserAgent  String?
   /// Filled on the first game load after sign-up, while the screen is still the one they registered on.
@@ -71,6 +73,7 @@ model User {
   lastPlatform     String?
   lastOs           String?
   lastAppVersion   String?
+  lastModel        String?
   lastLocale       String?
   lastUserAgent    String?
   lastScreen       String?

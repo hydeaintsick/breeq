@@ -151,11 +151,23 @@ class MainActivity : ComponentActivity() {
     /**
      * WebView announces itself with "; wv" and a "Version/4.0" token. Google's sign-in
      * refuses that (403 disallowed_useragent); Stripe and the site are indifferent. Present
-     * as the Chrome it is, tagged so the site can tell it runs in the app.
+     * as the Chrome it is, tagged so the site can tell the app version and the phone.
      */
     private fun appUserAgent(default: String): String {
         val chrome = default.replace("; wv", "").replace(Regex("\\sVersion/\\d+(\\.\\d+)*"), "")
-        return "$chrome BreeqApp/${BuildConfig.VERSION_NAME}"
+        return "$chrome BreeqApp/${BuildConfig.VERSION_NAME}${deviceToken()}"
+    }
+
+    /** ` BreeqDevice/Google Pixel 8`. Empty when the build has no usable model. */
+    private fun deviceToken(): String {
+        val maker = Build.MANUFACTURER.trim()
+        val model = Build.MODEL.trim()
+        val label = when {
+            model.isEmpty() || model.equals("unknown", ignoreCase = true) -> maker
+            maker.isEmpty() || model.startsWith(maker, ignoreCase = true) -> model
+            else -> "$maker $model"
+        }.replace(Regex("[^A-Za-z0-9 ._+()-]"), "").trim().take(40)
+        return if (label.length < 2) "" else " BreeqDevice/$label"
     }
 
     private fun isAppHost(host: String?): Boolean = host != null && host.lowercase() in appHosts
