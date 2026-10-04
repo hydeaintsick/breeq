@@ -49,6 +49,12 @@ model User {
   referralsMade  Referral[]     @relation("referrer")
   /// The link this player signed up through, if any.
   referredBy     Referral?      @relation("referred")
+  /// Partner door (`/p/<partner>`), written once. "plypto" for the Plypto campaign.
+  partner        String?
+  /// Email the partner sent for this player (`origin_user_email`). Their address over there.
+  partnerEmail   String?
+  /// When `partner` was first written.
+  partnerAt      DateTime?
   /// Acquisition, written once when the account is created.
   signupAt         DateTime?
   /// "password" | "google" | "wallet" | "guest"
@@ -101,6 +107,7 @@ model User {
   updatedAt      DateTime       @updatedAt
 
   @@index([referralCode])
+  @@index([partner])
   @@index([deletedAt])
 }
 

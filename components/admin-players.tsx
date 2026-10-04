@@ -9,6 +9,8 @@ export type AdminPlayerRow = {
   id: string;
   username: string;
   email: string | null;
+  partner: string | null;
+  partnerEmail: string | null;
   role: string;
   joined: string;
   playTime: string;
@@ -124,6 +126,12 @@ export function AdminPlayers({ rows, selfId }: { rows: AdminPlayerRow[]; selfId:
                       {row.role === "ADMIN" ? <span className="ml-2 font-mono text-[0.62rem] tracking-[0.1em] text-accent no-underline">ADMIN</span> : null}
                     </span>
                     <span className="text-xs text-ink-muted">{row.email ?? "—"}</span>
+                    {row.partner ? (
+                      <span className="text-xs text-ink-muted">
+                        From {row.partner}
+                        {row.partnerEmail ? ` · ${row.partnerEmail}` : ""}
+                      </span>
+                    ) : null}
                   </Link>
                 </td>
                 <td className="whitespace-nowrap text-ink-muted">{row.joined}</td>

@@ -27,6 +27,38 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        // Partner previews are framed by the host and stay out of search.
+        source: "/embed/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "frame-ancestors",
+              "'self'",
+              "http://localhost:3333",
+              "http://127.0.0.1:3333",
+              "http://breeq.local:3333",
+              "https://plypto.space",
+              "https://www.plypto.space",
+              "https://*.plypto.space",
+              "https://plypto.com",
+              "https://www.plypto.com",
+              "https://*.plypto.com",
+            ].join(" "),
+          },
+        ],
+      },
+      {
+        // The partner door carries an email in the query. It only redirects.
+        source: "/p/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
   async redirects() {
     return [
       // Apex → www, done here rather than at the domain level so `/.well-known/*`

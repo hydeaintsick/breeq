@@ -82,6 +82,9 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         signupUserAgent: true,
         signupScreen: true,
         signupTimezone: true,
+        partner: true,
+        partnerEmail: true,
+        partnerAt: true,
         lastSeenAt: true,
         lastCountry: true,
         lastPlatform: true,
@@ -120,6 +123,9 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
 
   const signupRows = [
     { label: "Signed up with", value: signupMethodLabel(user.signupMethod) },
+    { label: "Partner", value: user.partner ?? "—" },
+    { label: "Partner email", value: user.partnerEmail ?? "—" },
+    { label: "Tagged", value: user.partnerAt ? formatWhen(user.partnerAt) : "—" },
     { label: "Country", value: countryLabel(user.signupCountry) },
     { label: "Device", value: platformLabel(user.signupPlatform) },
     { label: "System", value: user.signupOs ?? "—" },

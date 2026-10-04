@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Suspense } from "react";
 import { auth } from "@/auth";
 import { Analytics } from "@/components/analytics";
@@ -53,9 +53,12 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
-  const board = await getLeaderboard(session?.user?.id ?? null);
+  const requestHeaders = await headers();
+  const embed = requestHeaders.get("x-breeq-embed") === "1";
+  const board = embed ? { entries: [], you: null } : await getLeaderboard(session?.user?.id ?? null);
   const jar = await cookies();
-  const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
+  // The partner card is always the light showcase, whoever is signed in.
+  const theme = embed ? "light" : parseTheme(jar.get(THEME_COOKIE)?.value);
   const sound = parseSound(jar.get(SOUND_COOKIE)?.value);
   const haptics = parseHaptics(jar.get(HAPTICS_COOKIE)?.value);
   const swipe = parseSwipe(jar.get(SWIPE_COOKIE)?.value);
@@ -64,6 +67,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-theme={theme}
+      data-embed={embed ? "true" : undefined}
       data-authed={session ? "true" : undefined}
       style={{ colorScheme: theme }}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}

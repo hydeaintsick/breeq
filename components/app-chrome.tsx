@@ -15,15 +15,17 @@ export function AppChrome({
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
   const isGame = pathname.startsWith("/game");
+  const isEmbed = pathname.startsWith("/embed");
   const hideFooter =
     isAdmin ||
     isGame ||
+    isEmbed ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth");
 
   return (
     <>
-      {isAdmin || isGame ? null : <SiteHeader board={board} />}
+      {isAdmin || isGame || isEmbed ? null : <SiteHeader board={board} />}
       <main id="content" className="flex flex-1 flex-col">
         {children}
       </main>

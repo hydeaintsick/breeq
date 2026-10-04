@@ -144,11 +144,14 @@ html[data-theme="dark"] {
   }
 
   /* Signed-in surfaces are the game: no accidental text selection.
-     Form fields stay selectable so account / editor inputs still work. */
+     Form fields stay selectable so account / editor inputs still work.
+     `touch-action: manipulation` keeps a drag as a scroll. Without it, mobile
+     emulation turns the drag into a cancelled selection and the page never moves. */
   html[data-authed="true"] {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
+    touch-action: manipulation;
   }
 
   html[data-authed="true"] input,
@@ -5492,12 +5495,23 @@ html[data-theme="dark"] .lore-halo-photo {
   display: grid;
   align-items: end;
   justify-items: center;
-  background: rgba(5, 6, 12, 0.5);
-  @apply backdrop-blur-[14px];
   animation: clear-in 260ms var(--ease) both;
 }
 
+/* The blur is a sibling of the sheet, not an ancestor of its scroller.
+   A filter on the ancestor swallows the touch scroll in mobile emulation. */
+.gem-shop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 6, 12, 0.5);
+  @apply backdrop-blur-[14px];
+  pointer-events: none;
+}
+
 .gem-shop-sheet {
+  position: relative;
+  z-index: 1;
   display: flex;
   width: 100%;
   max-width: 48rem;
@@ -5557,6 +5571,7 @@ html[data-theme="dark"] .lore-halo-photo {
   padding-top: 1rem;
   /* Room for the "Most popular" tag over the first row of bags. */
   scroll-padding-top: 1rem;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -6683,14 +6698,24 @@ html[data-theme="dark"] .btn-danger {
   display: grid;
   align-items: end;
   justify-items: center;
+  animation: clear-in 300ms var(--ease) both;
+}
+
+.energy-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: rgba(5, 6, 12, 0.6);
   @apply backdrop-blur-[16px];
-  animation: clear-in 300ms var(--ease) both;
+  pointer-events: none;
 }
 
 /* The claim sheet sits over the shop and the victory, with the board still readable. */
 .energy-sheet.claim-sheet {
   z-index: 96;
+}
+
+.energy-sheet.claim-sheet::before {
   background: rgba(5, 6, 12, 0.38);
 }
 
@@ -6711,11 +6736,13 @@ html[data-theme="dark"] .btn-danger {
   --cta: #f2f3f7;
   --on-cta: #0f1117;
   position: relative;
+  z-index: 1;
   width: 100%;
   /* Same footprint as the gem shop sheet. */
   max-width: 48rem;
   max-height: 92svh;
   overflow-y: auto;
+  touch-action: pan-y;
   /* The wizard's steps slide in from the sides. */
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -9310,4 +9337,179 @@ html[data-theme="dark"] .btn-danger {
 
 .revive-burst[data-reduced="true"] .revive-burst-core {
   display: none;
+}
+
+/* --- Plypto embed ----------------------------------------------------------
+   A partner card: the live board, then one play link that leaves in a new
+   tab. The frame is whatever height the host gives it; the board stays
+   whole and centered inside the room above the bar. */
+
+html[data-embed="true"],
+html[data-embed="true"] body {
+  height: 100%;
+  min-height: 100dvh;
+}
+
+html[data-embed="true"] body {
+  overflow: hidden;
+}
+
+html[data-embed="true"] main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.plypto-embed {
+  display: flex;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 0.75rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.plypto-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  background: #0b0d1a;
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.82),
+    0 0 0 2px rgba(15, 17, 23, 0.06),
+    0 28px 70px rgba(15, 17, 23, 0.16);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.plypto-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.plypto-stage {
+  container-type: size;
+  position: relative;
+  display: grid;
+  flex: 1 1 auto;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  background: #0b0d1a;
+}
+
+/* A frame taller than 4:3 holds the whole field. A shorter one fills the
+   width and keeps the wall — the portrait board would otherwise shrink
+   into a gutter. */
+.plypto-stage > figure {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 360 / 640));
+  max-width: none;
+  margin: 0;
+  justify-self: center;
+  align-self: center;
+}
+
+@container (min-aspect-ratio: 3 / 4) {
+  .plypto-stage > figure {
+    width: 100cqw;
+    align-self: start;
+  }
+}
+
+.plypto-stage .board-stage {
+  width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.plypto-stage .board-stage,
+.plypto-stage .board-aura,
+.plypto-stage canvas {
+  pointer-events: none;
+}
+
+.plypto-stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.plypto-bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 1rem 1rem;
+  background: var(--surface);
+}
+
+.plypto-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.plypto-kicker svg {
+  flex: none;
+}
+
+.plypto-dot {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 55%, white);
+}
+
+.plypto-title {
+  margin: 0.4rem 0 0;
+  color: var(--ink);
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.plypto-lede {
+  margin: 0.3rem 0 0.75rem;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.plypto-play {
+  width: 100%;
+  min-height: 3rem;
+  gap: 0.4rem;
+  font-size: 1rem;
+}
+
+@media (min-width: 720px) {
+  .plypto-embed {
+    display: grid;
+    place-items: center;
+    padding: 1.75rem;
+  }
+
+  .plypto-card {
+    flex: none;
+    /* Narrow enough that the portrait field still fits above the bar. */
+    width: min(22rem, calc((100dvh - 15rem) * 360 / 640));
+    height: min(46rem, calc(100dvh - 3.5rem));
+  }
 }

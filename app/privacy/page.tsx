@@ -283,6 +283,15 @@ export default function PrivacyPage() {
             parties. If you do not want it, do not use an invite link, or clear the cookie
             before you register.
           </p>
+          <h3>Partner attribution (30 days)</h3>
+          <p>
+            A partner campaign link (<code className="text-ink">/p/…</code>) sets an HttpOnly{" "}
+            <code className="text-ink">breeq-partner</code> cookie (SameSite=Lax). It records which
+            partner sent you and, when the partner includes it, the email address they hold for you.
+            When you sign in or create an account, we copy those two values onto your account so we
+            can see which players arrived from that partner. The cookie is then removed. If you do
+            not want this, do not use the partner link, or clear the cookie before you sign in.
+          </p>
           <h3>Local and session storage</h3>
           <p>
             The browser may hold a theme audition key, a short-lived skip-to-shop intent,

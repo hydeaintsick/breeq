@@ -13,6 +13,7 @@ import { CLAIM_BACK_COOKIE, CLAIM_COOKIE, isGuestPlaceholder, safeNext } from "@
 import { SIWE_NONCE_COOKIE, siweMessage } from "@/lib/auth/siwe";
 import { normalizeUsername, uniqueUsername } from "@/lib/auth/username";
 import { stampSignup } from "@/lib/presence";
+import { applyPartner } from "@/lib/partner";
 import { applyReferral } from "@/lib/referrals";
 
 const googleEnabled = isGoogleEnabled();
@@ -123,6 +124,7 @@ async function authorizeWallet(addressRaw: string, signature: string) {
     },
   });
   await applyReferral(created.id);
+  await applyPartner(created.id);
   await stampSignup(created.id, "wallet");
 
   return toAuthUser(created);
@@ -229,6 +231,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Google sign-ups: the adapter has just created the row. Same referral
       // cookie as the other doors; the note wants the username set above.
       await applyReferral(user.id);
+      await applyPartner(user.id);
       await stampSignup(user.id, "google");
     },
     async linkAccount({ user, account }) {
@@ -273,6 +276,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const userId = user?.id ?? (trigger === "update" ? token.sub : undefined);
 
       if (userId) {
+        // A returning player who arrived through a partner link. New accounts
+        // are tagged at creation; this covers the next sign-in if that missed.
+        if (user?.id) await applyPartner(userId);
+
         const dbUser = await prisma.user.findUnique({
           where: { id: userId },
           select: { role: true, username: true, email: true, name: true },

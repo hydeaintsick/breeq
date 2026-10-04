@@ -22,6 +22,14 @@ export const proxy = auth((req) => {
   const isLoggedIn = Boolean(req.auth?.user);
   const userAgent = req.headers.get("user-agent");
 
+  // Partner previews (Plypto and the like). Public, unindexed, and allowed
+  // to be framed. The header lets the root layout skip the leaderboard read.
+  if (pathname === "/embed" || pathname.startsWith("/embed/")) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-breeq-embed", "1");
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   // The guest mint reads the install header. A redirect would drop it.
   if (pathname === ENTER_PATH) {
     return NextResponse.next();
@@ -87,5 +95,5 @@ export const proxy = auth((req) => {
 });
 
 export const config = {
-  matcher: ["/login", "/login/:path*", "/game/:path*", "/admin/:path*", "/auth/:path*"],
+  matcher: ["/login", "/login/:path*", "/game/:path*", "/admin/:path*", "/auth/:path*", "/embed", "/embed/:path*"],
 };

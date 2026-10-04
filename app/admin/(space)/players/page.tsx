@@ -28,6 +28,8 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
             { username: { contains: q, mode: "insensitive" } },
             { email: { contains: q, mode: "insensitive" } },
             { name: { contains: q, mode: "insensitive" } },
+            { partner: { contains: q, mode: "insensitive" } },
+            { partnerEmail: { contains: q, mode: "insensitive" } },
           ],
         }
       : undefined,
@@ -52,6 +54,8 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       lastAppVersion: true,
       lastModel: true,
       lastUserAgent: true,
+      partner: true,
+      partnerEmail: true,
     },
   });
 
@@ -68,6 +72,8 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       id: user.id,
       username: user.username ?? user.name ?? "player",
       email: isGuestPlaceholder(user.email) ? null : user.email,
+      partner: user.partner,
+      partnerEmail: user.partnerEmail,
       role: user.role,
       joined: user.createdAt.toLocaleDateString("en-US"),
       playTime: formatPlayTime(user.playSeconds ?? 0),
@@ -86,7 +92,7 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
           name="q"
           defaultValue={q}
           className="field min-w-0 flex-1"
-          placeholder="Search by username or email"
+          placeholder="Search by username, email, or partner"
           aria-label="Search players"
         />
         <button type="submit" className="btn-glass min-h-11">

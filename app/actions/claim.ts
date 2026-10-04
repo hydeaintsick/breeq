@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
 import { CLAIM_BACK_COOKIE, CLAIM_COOKIE, isGuestPlaceholder, safeNext } from "@/lib/guest-door";
 import { isUnclaimed, sessionCookie } from "@/lib/guest";
+import { applyPartner } from "@/lib/partner";
 import { applyReferral } from "@/lib/referrals";
 
 function claimCookieOptions() {
@@ -89,5 +90,6 @@ export async function claimWithPassword(input: {
   }
 
   await applyReferral(user.id);
+  await applyPartner(user.id);
   return { ok: true };
 }

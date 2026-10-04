@@ -7,6 +7,7 @@ import { isAdminEmail } from "@/lib/auth/paths";
 import { isValidUsername, normalizeUsername } from "@/lib/auth/username";
 import { isGuestPlaceholder } from "@/lib/guest-door";
 import { stampSignup } from "@/lib/presence";
+import { applyPartner } from "@/lib/partner";
 import { applyReferral } from "@/lib/referrals";
 
 export async function registerAccount(input: {
@@ -45,6 +46,7 @@ export async function registerAccount(input: {
       select: { id: true },
     });
     await applyReferral(created.id);
+    await applyPartner(created.id);
     await stampSignup(created.id, "password");
   } catch (error) {
     if (

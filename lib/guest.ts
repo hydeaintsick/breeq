@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/auth/paths";
 import { guestUsername, isStockGuestHandle } from "@/lib/auth/username";
 import { stampSignup } from "@/lib/presence";
+import { applyPartner } from "@/lib/partner";
 import { applyReferral } from "@/lib/referrals";
 import { doorKeyOk, guestPlaceholderEmail, isGuestPlaceholder } from "@/lib/guest-door";
 
@@ -139,6 +140,7 @@ export async function resumeOrCreateGuest(installKey: string): Promise<GuestUser
       select: { id: true, role: true, username: true, name: true, email: true },
     });
     await stampSignup(created.id, "guest");
+    await applyPartner(created.id);
     return created;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -225,6 +227,7 @@ export async function attachGoogleClaim(input: GoogleLink): Promise<"linked" | "
   }
 
   await applyReferral(guest.id);
+  await applyPartner(guest.id);
   return "linked";
 }
 
