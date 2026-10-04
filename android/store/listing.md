@@ -6,16 +6,16 @@ Everything Play Console asks for, in the order it asks. Assets live next to this
 | --- | --- | --- |
 | App icon | `icon-512.png` | 512×512 PNG, 32-bit, ≤ 1 MB |
 | Feature graphic | `feature-1024x500.png` | 1024×500 PNG/JPEG, no alpha |
-| Phone screenshots (8) | `screenshots/phone/01…08.png` | 1080×1920, 9:16, 24-bit PNG |
-| 7-inch tablet (8) | `screenshots/tablet-7/01…08.png` | 1440×2560 |
-| 10-inch tablet (8) | `screenshots/tablet-10/01…08.png` | 2160×3840 |
+| Phone screenshots (5) | `screenshots/phone/01…05.png` | 1080×1920, 9:16, 24-bit PNG |
+| 7-inch tablet (5) | `screenshots/tablet-7/01…05.png` | 1440×2560 |
+| 10-inch tablet (5) | `screenshots/tablet-10/01…05.png` | 2160×3840 |
 | Release bundle | `../dist/breeq-<version>-<code>.aab` | built by `pnpm android:release` |
 
-Screenshots are composed from real captures of the release build on a Pixel-class
-emulator (1080×2400) signed in as the review account; the composer lives outside the
-repo (a one-off `sharp` script). Upload them in numeric order: the first three read as
-a triptych (Story → Play → Build) and share one sky; 04–06 and 07–08 share theirs.
-Panels 01, 06 and 07 carry the story (the Book of Kal, an episode map, the galaxy map).
+Screenshots are real captures. Upload them in numeric order. The first frame in
+search is the board, then the "one more wall" loop, then Kal. Earn, the ETH pot,
+and the "go on sale" editor are in `screenshots/retired/` and stay out of this
+listing. The feature graphic is `feature-1024x500.png`: the board, "Break the wall.",
+no Earn and no ETH. The previous banner is kept in `screenshots/retired/`.
 
 ---
 
@@ -24,62 +24,69 @@ Panels 01, 06 and 07 carry the story (the Book of Kal, an episode map, the galax
 ### App name (30 characters max)
 
 ```
-Breeq: Brick Breaker & Earn
+Bricks Breaker: Breeq
 ```
 
-27 characters. "Brick breaker" is the genre search term; "Earn" is the hook.
+21 characters. The words people type, first, then the name. "Story" stays in the
+short description: almost nobody searches it, and it spends title characters
+that should match "bricks breaker". "Earn" and "ETH" stay out.
 
 ### Short description (80 characters max)
 
 ```
-Break neon bricks on player-made walls. Clear them, earn gems, win pots in ETH.
+Break neon bricks across 240 walls. One story. No ads. One more ball.
 ```
 
-79 characters.
+69 characters. This line sits under the name in search, so it sells the tap:
+no ads, one more ball, and the story. The title already carries the search term.
 
 ### Full description (4000 characters max)
 
 ```
-Breeq is a brick breaker with a story to finish and walls built by players.
+Breeq is a brick breaker with a road home.
 
-Every wall is glass: neon bricks over a photo, bonus rings that bend the ball, a paddle under your thumb. Clear it, and the next one is waiting.
+Kal hatched alone on the wrong moon. Clear a wall and the next one is already waiting: 24 episodes, 240 walls, three stars if the ball stays up, and a page in the Book of Kal every time a chapter falls.
 
-HELP KAL FIND HOME
-Kal is a galactic gecko who hatched alone on a grey moon, far from Vitra, the glass-sky world his egg left behind. All he has is a pod, a star chart with one star circled, and a heartbeat he remembers from inside the egg. Walk him home: 24 hand-built episodes and 240 walls across three seasons, past the Lanterns that guard his sky, the peoples of the Long Migration, and the Hush, the dark that eats light. Every clear pays XP and turns a page in the Book of Kal; the galaxy map fills in behind you, one world at a time.
+ONE MORE WALL
+Each wall is a minute and a decision. The ball comes back hotter. A clean run pays three stars. Miss, and the same wall is still there. The story does not move on without you.
 
 RINGS THAT BEND THE BALL
-Slow rings, ×2 and ×3 speed rings, split rings that spawn a second ball, portals that teleport it. Locks and keys, explosive bricks, regenerating bricks, bumpers, rails, fans and black holes. Each episode teaches one new piece and then makes you use it.
+Slow rings, ×2 and ×3, a split that throws a second ball, portals, locks and keys, bricks that explode, bricks that grow back, bumpers, rails, fans, and a black hole you have to read before you fire. Every episode teaches one piece, then asks you to use it.
 
-BUILD YOUR OWN WALL
-The editor is the game. Place bricks over your own photo or one of twenty skies, drop the rings, set the rules. A robot proves your wall can be cleared before anyone pays to try it, and every published wall gets a difficulty score from Gentle to Brutal.
+A ROAD YOU CAN SEE
+The galaxy map fills in behind you, one world at a time. Twenty-four episodes, ten walls each. You always know the next one, and you always know you have not finished.
 
-EARN
-From level 5, the Earn store opens. Players publish walls with a pot in ETH. You pay a ticket in gems to try one; a clear pays the pot to your balance, once per wall. Publish your own walls, set the ticket price, and earn from every attempt. Withdraw to your own address whenever you want.
+HELP KAL FIND HOME
+Kal is a galactic gecko. All he has is a pod, a star chart with one star circled, and a heartbeat he remembers from inside the egg. Walk him home, past the Lanterns, the peoples of the Long Migration, and the Hush, the dark that eats light.
 
 MADE FOR ONE THUMB
-Portrait only. A canvas that fills the screen, a paddle that follows your finger, a slider for precise aim. Sound designed in each level's key, haptics on every hit, both optional.
+Portrait only. The board fills the screen. The paddle follows your finger. Sound is written in the key of the level. Haptics land with the brick. Both can be switched off.
 
-INVITE FRIENDS
-Share a cleared wall on X, WhatsApp, Telegram or Facebook. Friends who sign up through your link earn you gems.
+THE STORY IS FREE
+No ads. No subscription. Gems are optional: they recharge a run, or skip a wall you are stuck on. Sign in with Google or email. Your XP and your place on the road are the same in the app and on breeq.space.
 
-ONE ACCOUNT EVERYWHERE
-Sign in with Google or email. Your XP, gems, ETH balance and walls are the same here and on breeq.space.
-
-No ads. No subscription. Gems are optional; the story is free.
+Share a clear on X, WhatsApp, Telegram, or Facebook. Friends who join from your link earn you gems.
 ```
 
-About 2,150 characters. Plain text only: Play strips markdown, and emoji in
-descriptions read as spam to reviewers.
+About 1,700 characters. The first two sentences are what Play shows before
+"Read more", so they carry the search term and the hook. Plain text only: Play
+strips markdown, and emoji in descriptions read as spam to reviewers. No ETH,
+no player editor, no "play to earn": those screens are not in the app while
+Earn is switched off, and a listing that promises them is a misleading-claims
+rejection.
 
 ### What's new (500 characters max, per release)
 
 ```
-First release.
-• Help Kal, a gecko hatched on the wrong moon, find his way home: 24 episodes, 240 walls, the Book of Kal and a galaxy map.
-• Wall editor with photo backgrounds, twenty skies and a robot proof.
-• Earn store: publish walls, buy tickets in gems, clear for pots in ETH.
-• Sound in each level's key, haptics, portrait one-thumb play.
+The story is the game.
+• 24 episodes, 240 walls, the Book of Kal, and a galaxy map that fills in as you clear.
+• Rings that slow the ball, double it, split it, or send it through a portal.
+• One thumb, portrait, sound in the level's key. No ads.
 ```
+
+"What's new" only changes when you ship a release. The title, the short
+description, the full description, and the screenshots can be saved on the
+listing without a new app bundle.
 
 ---
 
@@ -87,7 +94,7 @@ First release.
 
 - **App or game:** Game
 - **Category:** Arcade
-- **Tags (up to 5):** Brick breaker, Arcade, Casual, Level editor, Play-to-earn
+- **Tags (up to 5):** Brick breaker, Arcade, Casual, Single player, Stylized. Drop "Play-to-earn" and "Level editor"; the console only accepts tags it offers, so skip any of these it does not list.
 - **Email:** the address you monitor for Play (shown publicly)
 - **Website:** https://breeq.space
 - **Privacy policy:** https://breeq.space/privacy
@@ -103,22 +110,20 @@ declaration blocks the release.
   - Name: `Review account`
   - Username: `playreview@breeq.space`
   - Password: `Paddle-Review-2026!`
-  - Instructions: "Sign in with the email tab. The account is level 7 with story
-    episodes 1–2 cleared and Glass Sky in progress; it has gems to buy Earn tickets
-    and owns one published wall (Twin Suns Remix)."
+  - Instructions: "Sign in with the email tab. Open Play. Story is the only mode
+    on the menu. Earn is switched off and does not appear."
 - **Content rating:** IARC questionnaire, category *Game*. Answer No to violence,
-  sexuality, language, controlled substances. Answer **Yes** to "does the app allow
-  users to spend real money" (gem packs) and **Yes** to "does the app let users
-  interact / share user-generated content" (published walls, referral links). The
-  real-money question about "gambling / wagering" is the one to read carefully, see
-  the policy note below. Expected rating: Teen (simulated gambling) or Everyone 10+,
-  depending on how the Earn store is declared.
-- **Target audience:** 18 and over. Do not select any age group under 18: the ETH
-  payouts make the app unsuitable for the Families program.
+  sexuality, language, controlled substances, and to gambling / wagering: there
+  is no pot, no ticket, and no payout while Earn is closed. Answer **Yes** to
+  "does the app allow users to spend real money" (gem packs). For user interaction,
+  the share links still exist; published walls do not, so do not describe player
+  walls as something a reviewer can open.
+- **Target audience:** leave the current rating in place until you resubmit the
+  questionnaire. Do not opt into the Families program. Gem packs are real-money
+  purchases, and the story is not a children's app.
 - **News app:** No. **COVID-19 tracing:** No. **Government app:** No.
-- **Financial features:** declare "Other" financial features and describe the ETH
-  balance and withdrawal by request. This is the honest answer for a stored balance
-  paid out in crypto.
+- **Financial features:** none, while Earn is closed. The ETH balance and the
+  withdrawal form are not reachable. Declare them again only when Earn reopens.
 - **Health:** none.
 - **Data safety:** see the table below.
 
@@ -130,7 +135,7 @@ declaration blocks the release.
 | Name | Yes (Google display name) | No | Account management | Username shown in the game |
 | Photos | Yes, user-picked | No | App functionality | Wall backgrounds, uploaded to Cloudinary |
 | Purchase history | Yes | No | App functionality | Gem packs via Stripe, ledger |
-| Financial info (wallet address) | Yes, optional | No | App functionality | Only when the player requests a withdrawal |
+| Financial info (wallet address) | No, while Earn is closed | – | – | The withdrawal form is not reachable. Switch this back to Yes when Earn reopens. |
 | App interactions | Yes | No | Analytics, app functionality | Runs, clears, XP |
 | Crash logs | No | – | – | No SDK |
 | Device or other IDs | No | – | – | – |
@@ -148,13 +153,11 @@ no analytics or ads library.
    the gem shop when the page runs inside the app (`navigator.userAgent` contains
    `BreeqApp/`, or `window.BreeqAndroid` exists) and let players top up on the web. Option (b) is the one-day fix;
    the listing copy above does not mention prices or Stripe.
-2. **Real-money gaming.** Pots paid in ETH for clearing a wall are skill-based prizes,
-   not chance, but Play treats crypto payouts under the Real-Money Gambling, Games and
-   Contests policy and only allows them in listed countries with a license, or as a
-   "contest" with an approved application. Declare it truthfully in the content rating
-   and in App content → Financial features. If the review pushes back, ship the Story
-   and the editor first and gate Earn behind a server flag (`earnEnabled` already
-   exists) for the Play build.
+2. **Real-money gaming.** With Earn closed, the app does not pay a pot and does
+   not show one. Answer No to wagering, and do not describe ETH anywhere on the
+   listing or in the screenshots. The policy comes back the day Earn reopens:
+   a pot in ETH is a real-money contest whether or not the win is skill. Leave
+   `earnEnabled` off until a clear is settled by the server, not by the phone.
 3. **Crypto.** Withdrawals are manual, the app never holds keys and never mines: no
    "cryptocurrency exchange" or "mining" declaration is needed.
 
@@ -195,14 +198,15 @@ website.
 2. Graphics:
    - App icon → `icon-512.png`
    - Feature graphic → `feature-1024x500.png`
-   - Phone screenshots → drag `screenshots/phone/01…08.png` in order (the uploader
-     keeps drop order; if it doesn't, reorder by dragging the thumbnails).
-   - 7-inch tablet → `screenshots/tablet-7/*`
-   - 10-inch tablet → `screenshots/tablet-10/*`
+   - Phone screenshots → drag `screenshots/phone/01…05.png` in order (the uploader
+     keeps drop order; if it doesn't, reorder by dragging the thumbnails). Do not
+     add anything from `screenshots/retired/`.
+   - 7-inch tablet → `screenshots/tablet-7/01…05.png`
+   - 10-inch tablet → `screenshots/tablet-10/01…05.png`
    - Video: leave empty. A YouTube trailer is optional and only helps with a landscape
      16:9 clip; the app is portrait.
-3. **Save**, then **Preview** on the right: the first three screenshots should read as
-   one sky.
+3. **Save**, then **Preview** on the right: the banner says "Break the wall.",
+   the first screenshot is the board, the second is the next wall, the third is Kal.
 
 ### 5. Testing track first
 

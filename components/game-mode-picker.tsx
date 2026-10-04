@@ -16,8 +16,11 @@ export function GameModePicker({
 }: {
   /** Where the player stands on Kal's route: the Story card's galaxy and its continue line. */
   stand: RouteStand;
-  /** The Earn floor in numbers: walls, the biggest pot, what has been paid. */
-  teaser: EarnTeaser;
+  /**
+   * The Earn floor in numbers. Null when Earn is switched off: the card is
+   * not rendered, and the menu does not mention it.
+   */
+  teaser: EarnTeaser | null;
   earnLocked: boolean;
   earnLockedHint?: string;
   /** The tutorial is on and this player has not finished it: Story opens on it. */
@@ -26,7 +29,9 @@ export function GameModePicker({
   return (
     <div className="grid w-full justify-items-stretch gap-6 md:grid-cols-2 md:justify-items-start">
       <StoryCard href={STORY_PATH} stand={stand} tutorialRequired={tutorialRequired} />
-      <EarnCard teaser={teaser} locked={earnLocked} lockedHint={earnLockedHint} />
+      {teaser ? (
+        <EarnCard teaser={teaser} locked={earnLocked} lockedHint={earnLockedHint} />
+      ) : null}
     </div>
   );
 }

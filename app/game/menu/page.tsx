@@ -7,25 +7,30 @@ import { getStoryShelf } from "@/lib/story";
 import { routeStand } from "@/lib/story-route";
 import { getSiteSettings, getTutorialStatus } from "@/lib/tutorial";
 
-export const metadata: Metadata = {
-  title: "Play",
-  description: "Choose Story or Earn and take the paddle.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  return {
+    title: "Play",
+    description: settings.earnEnabled
+      ? "Choose Story or Earn and take the paddle."
+      : "Take the paddle. Walk Kal home.",
+  };
+}
 
 export default async function GameMenuPage() {
   const { user, progress } = await requireProgress();
-  const [settings, tutorial, { episodes }, teaser] = await Promise.all([
+  const [settings, tutorial, { episodes }] = await Promise.all([
     getSiteSettings(),
     getTutorialStatus(user.id),
     getStoryShelf(user.id),
-    getEarnTeaser(),
   ]);
+  // Closed means absent: no card, no "closed for now", no teaser query.
+  const teaser = settings.earnEnabled ? await getEarnTeaser() : null;
   const stand = routeStand(episodes, tutorial.enabled ? { done: tutorial.done } : null);
   const label = user.username ?? user.name ?? "Player";
-  const earnLocked = !canPlayEarn(user.role, progress.level, settings.earnEnabled);
-  const earnLockedHint = settings.earnEnabled
-    ? `Reach level ${EARN_UNLOCK_LEVEL} in Story to unlock.`
-    : "Earn is closed for now.";
+  const earnLocked = settings.earnEnabled
+    ? !canPlayEarn(user.role, progress.level, settings.earnEnabled)
+    : false;
 
   return (
     <section className="page-gutter flex min-h-[100svh] flex-col justify-center pb-16 pt-28">
@@ -39,14 +44,18 @@ export default async function GameMenuPage() {
       <p className="mt-4 max-w-xl text-lg leading-8 text-ink-muted">
         {settings.earnEnabled
           ? `Two ways in. Story is the campaign. Earn opens at level ${EARN_UNLOCK_LEVEL}.`
-          : "Story is the campaign. Earn is closed for now."}
+          : "Story is the campaign. One wall, then the next."}
       </p>
       <div className="mt-10">
         <GameModePicker
           stand={stand}
           teaser={teaser}
           earnLocked={earnLocked}
-          earnLockedHint={earnLockedHint}
+          earnLockedHint={
+            settings.earnEnabled
+              ? `Reach level ${EARN_UNLOCK_LEVEL} in Story to unlock.`
+              : undefined
+          }
           tutorialRequired={tutorial.required}
         />
       </div>
