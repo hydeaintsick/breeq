@@ -6016,6 +6016,7 @@ html[data-theme="dark"] .lore-halo-photo {
 /* --- Admin space ---------------------------------------------------------- */
 .admin-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   width: 100%;
   max-width: 80rem;
@@ -6033,26 +6034,50 @@ html[data-theme="dark"] .lore-halo-photo {
 
 .admin-nav {
   display: flex;
+  flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
+}
+
+.admin-nav-links {
+  display: flex;
+  gap: 0.35rem;
+  min-width: 0;
   margin-inline: calc(-1 * var(--page-gutter));
   padding: 0.25rem var(--page-gutter);
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.admin-nav::-webkit-scrollbar {
+.admin-nav-links::-webkit-scrollbar {
   display: none;
+}
+
+.admin-nav-note {
+  margin: 0;
+  padding: 0 0.15rem;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
 }
 
 @media (min-width: 1024px) {
   .admin-nav {
     position: sticky;
     top: calc(max(1rem, env(safe-area-inset-top)) + 4.5rem);
+    gap: 0.35rem;
+    padding: 0.5rem;
+  }
+
+  .admin-nav-links {
     flex-direction: column;
     gap: 0.2rem;
     margin: 0;
-    padding: 0.5rem;
+    padding: 0;
     overflow: visible;
+  }
+
+  .admin-nav-note {
+    padding: 0.35rem 0.75rem 0.15rem;
   }
 }
 

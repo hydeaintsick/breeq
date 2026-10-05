@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdminPlayers, type AdminPlayerRow } from "@/components/admin-players";
 import { countryName, formatPlayTime, modelFromUserAgent, supportLine } from "@/lib/acquisition";
+import { formatAdminWhen } from "@/lib/admin-time";
 import { requireAdmin } from "@/lib/auth/session";
 import { isGuestPlaceholder } from "@/lib/guest-door";
 import { prisma } from "@/lib/prisma";
@@ -75,7 +76,7 @@ export default async function AdminPlayersPage({ searchParams }: PageProps<"/adm
       partner: user.partner,
       partnerEmail: user.partnerEmail,
       role: user.role,
-      joined: user.createdAt.toLocaleDateString("en-US"),
+      joined: formatAdminWhen(user.createdAt),
       playTime: formatPlayTime(user.playSeconds ?? 0),
       country: countryCell(user.lastCountry ?? user.signupCountry),
       channel: support.channel,

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { gweiToEth } from "@/lib/economy";
+import { parisDayKey, recentParisDays } from "@/lib/admin-time";
 
-const DAY = 24 * 60 * 60 * 1000;
 export const SERIES_DAYS = 14;
 
 /**
@@ -13,18 +13,19 @@ export const countedAccount = {
   OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
 };
 
-/** Counts per day for the last `SERIES_DAYS`, oldest first. */
-function bucket(dates: Date[], now: number): number[] {
-  const series = new Array<number>(SERIES_DAYS).fill(0);
-  const start = now - (SERIES_DAYS - 1) * DAY;
+/** Counts per Paris calendar day, oldest first, aligned with `days`. */
+function bucket(dates: Date[], days: { key: string }[]): number[] {
+  const counts = new Map(days.map((day) => [day.key, 0]));
   for (const date of dates) {
-    const index = Math.floor((date.getTime() - start) / DAY);
-    if (index >= 0 && index < SERIES_DAYS) series[index] += 1;
+    const key = parisDayKey(date);
+    if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return series;
+  return days.map((day) => counts.get(day.key) ?? 0);
 }
 
 export type AdminStats = {
+  /** Paris calendar labels for `series`, oldest first. */
+  days: string[];
   players: { total: number; week: number; series: number[] };
   story: { clears: number; chapters: number };
   earn: {
@@ -48,10 +49,9 @@ export type AdminStats = {
 };
 
 export async function getAdminStats(): Promise<AdminStats> {
-  const now = Date.now();
-  const since = new Date(now - (SERIES_DAYS - 1) * DAY);
-  since.setHours(0, 0, 0, 0);
-  const week = new Date(now - 7 * DAY);
+  const days = recentParisDays(SERIES_DAYS);
+  const since = days[0].start;
+  const week = days[SERIES_DAYS - 7].start;
 
   const [
     players,
@@ -94,14 +94,15 @@ export async function getAdminStats(): Promise<AdminStats> {
   ]);
 
   return {
-    players: { total: players, week: playersWeek, series: bucket(playerDates.map((row) => row.createdAt), since.getTime() + (SERIES_DAYS - 1) * DAY) },
+    days: days.map((day) => day.label),
+    players: { total: players, week: playersWeek, series: bucket(playerDates.map((row) => row.createdAt), days) },
     story: { clears, chapters },
     earn: {
       maps,
       runs,
       wins,
       runsWeek,
-      series: bucket(runDates.map((row) => row.createdAt), since.getTime() + (SERIES_DAYS - 1) * DAY),
+      series: bucket(runDates.map((row) => row.createdAt), days),
       ticketsGems: Math.abs(tickets._sum.gems ?? 0),
       payoutEth: gweiToEth(payouts._sum.ethGwei ?? 0n),
     },

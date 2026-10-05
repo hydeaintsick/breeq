@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminEarnMaps, type AdminMapRow } from "@/components/admin-earn-maps";
 import { requireAdmin } from "@/lib/auth/session";
 import { EARN_PATH } from "@/lib/auth/paths";
+import { formatAdminDate } from "@/lib/admin-time";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -42,7 +43,7 @@ export default async function AdminEarnPage() {
     featured: map.featured,
     featuredOrder: map.featuredOrder,
     status: map.status,
-    createdAt: map.createdAt.toISOString(),
+    createdAt: formatAdminDate(map.createdAt),
   }));
   const featured = rows.filter((row) => row.featured && row.status === "PUBLISHED").length;
 

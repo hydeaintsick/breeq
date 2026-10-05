@@ -4,6 +4,8 @@
  * writer both read these shapes.
  */
 
+import { formatAdminWhen } from "@/lib/admin-time";
+
 const UA_MAX = 240;
 
 export type Platform = "android-app" | "android-web" | "ios" | "desktop" | "other";
@@ -82,7 +84,7 @@ export function modelFromUserAgent(ua: string): string | null {
   return null;
 }
 
-/** Platform, OS, app version (`BreeqApp/<version>`), and model. */
+/** Platform, OS, app version (`BreeqApp/<name>+<code>`), and model. */
 export function parseUserAgent(uaRaw: string): Pick<DeviceSnapshot, "platform" | "os" | "appVersion" | "model" | "userAgent"> {
   const userAgent = uaRaw.replace(/\s+/g, " ").trim().slice(0, UA_MAX) || null;
   const ua = userAgent ?? "";
@@ -151,6 +153,13 @@ export function cleanClientPresence(input: ClientPresence): CleanClientPresence 
   return { screen, timezone, language, touch, model };
 }
 
+/** `1.0.1+4` from the shell becomes `1.0.1 (4)`. Older builds stored the name alone. */
+export function formatAppVersion(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const tagged = /^(\d+(?:\.\d+){0,2})\+(\d+)$/.exec(raw);
+  return tagged ? `${tagged[1]} (${tagged[2]})` : raw;
+}
+
 /** What the players table shows: Android app and its version, or Web, plus the phone when we know it. */
 export function supportLine(input: {
   platform: string | null | undefined;
@@ -160,7 +169,8 @@ export function supportLine(input: {
   if (!input.platform) return { channel: "—", model: null };
   const model = input.model ?? (input.platform === "desktop" ? "Desktop" : null);
   if (input.platform === "android-app") {
-    return { channel: input.appVersion ? `Android app ${input.appVersion}` : "Android app", model };
+    const version = formatAppVersion(input.appVersion);
+    return { channel: version ? `Android app ${version}` : "Android app", model };
   }
   return { channel: "Web", model };
 }
@@ -225,6 +235,5 @@ export function formatPlayTime(seconds: number): string {
 }
 
 export function formatWhen(value: Date | null | undefined): string {
-  if (!value) return "—";
-  return value.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+  return formatAdminWhen(value);
 }

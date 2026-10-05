@@ -53,7 +53,7 @@ export function AdminEarnMaps({ rows }: { rows: AdminMapRow[] }) {
                 <td>
                   <p className="font-medium text-ink">{row.title}</p>
                   <p className="text-xs text-ink-muted">
-                    by {row.author} · {new Date(row.createdAt).toLocaleDateString("en-US")}
+                    by {row.author} · {row.createdAt}
                   </p>
                 </td>
                 <td className="whitespace-nowrap">

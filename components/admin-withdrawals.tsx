@@ -53,7 +53,7 @@ export function AdminWithdrawals({ rows }: { rows: AdminWithdrawalRow[] }) {
               </p>
               <p className="mt-1 break-all font-mono text-xs text-ink-muted">{row.toAddress}</p>
               <p className="mt-1 text-xs text-ink-muted">
-                {new Date(row.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                {row.createdAt}
                 {row.status !== "PENDING" ? ` · ${row.status === "PAID" ? "Paid" : "Returned"}` : ""}
                 {row.txHash ? ` · ${row.txHash.slice(0, 12)}…` : ""}
                 {row.note ? ` · ${row.note}` : ""}

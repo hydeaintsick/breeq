@@ -39,16 +39,19 @@ export function AdminNav({ pending = 0 }: { pending?: number }) {
 
   return (
     <nav className="admin-nav lg:glass" aria-label="Admin space">
-      {links.map((link) => {
-        const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
-        return (
-          <Link key={link.href} href={link.href} className="admin-nav-link" data-active={active} aria-current={active ? "page" : undefined}>
-            <link.Icon />
-            {link.label}
-            {link.badge ? <span className="admin-nav-badge">{link.badge}</span> : null}
-          </Link>
-        );
-      })}
+      <div className="admin-nav-links">
+        {links.map((link) => {
+          const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
+          return (
+            <Link key={link.href} href={link.href} className="admin-nav-link" data-active={active} aria-current={active ? "page" : undefined}>
+              <link.Icon />
+              {link.label}
+              {link.badge ? <span className="admin-nav-badge">{link.badge}</span> : null}
+            </Link>
+          );
+        })}
+      </div>
+      <p className="admin-nav-note">Times in Paris</p>
     </nav>
   );
 }

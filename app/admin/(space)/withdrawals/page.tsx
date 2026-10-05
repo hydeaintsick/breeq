@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdminWithdrawals, type AdminWithdrawalRow } from "@/components/admin-withdrawals";
 import { countedAccount } from "@/lib/admin-stats";
 import { requireAdmin } from "@/lib/auth/session";
+import { formatAdminWhen } from "@/lib/admin-time";
 import { formatEth, gweiToEth } from "@/lib/economy";
 import { prisma } from "@/lib/prisma";
 
@@ -34,7 +35,7 @@ export default async function AdminWithdrawalsPage() {
     status: row.status,
     txHash: row.txHash,
     note: row.note,
-    createdAt: row.createdAt.toISOString(),
+    createdAt: formatAdminWhen(row.createdAt),
   });
   const owed = pending.reduce((sum, row) => sum + gweiToEth(row.amountGwei), 0);
 
