@@ -4,7 +4,7 @@ import { requireProgress } from "@/lib/auth/session";
 import { getStoryShelf } from "@/lib/story";
 import { routeStand } from "@/lib/story-route";
 import { getTutorialStatus } from "@/lib/tutorial";
-import { requestOrigin } from "@/lib/guest-door";
+import { canonicalOrigin, requestOrigin } from "@/lib/guest-door";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const { user } = await requireProgress();
   const tutorial = await getTutorialStatus(user.id);
-  const origin = requestOrigin(request.headers, request.nextUrl.origin);
+  const origin = canonicalOrigin(requestOrigin(request.headers, request.nextUrl.origin));
 
   if (tutorial.required) {
     return NextResponse.redirect(new URL(TUTORIAL_PATH, origin));

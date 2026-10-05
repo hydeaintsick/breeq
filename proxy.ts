@@ -9,11 +9,13 @@ import {
 } from "@/lib/auth/paths";
 import {
   DOOR_PARAM,
-  INSTALL_HEADER,
   LAUNCH_HEADER,
+  canonicalOrigin,
   doorQueryMatches,
-  isAndroidGuest,
+  isAppDocument,
   isAppLaunch,
+  isBreeqApp,
+  requestOrigin,
 } from "@/lib/guest-door";
 
 export const proxy = auth((req) => {
@@ -51,30 +53,35 @@ export const proxy = auth((req) => {
   }
 
   if (pathname.startsWith("/game")) {
+    const origin = canonicalOrigin(requestOrigin(req.headers, req.nextUrl.origin));
     if (!isLoggedIn) {
-      const install = req.headers.get(INSTALL_HEADER);
-      const guest =
-        isAndroidGuest(userAgent, install) || doorQueryMatches(req.nextUrl.searchParams.get(DOOR_PARAM));
+      // The app, with or without the install header. A browser needs the door token.
+      const guest = isBreeqApp(userAgent) || doorQueryMatches(req.nextUrl.searchParams.get(DOOR_PARAM));
       if (guest) {
-        const url = req.nextUrl.clone();
-        url.pathname = ENTER_PATH;
+        // Same host the WebView asked for. Rewriting onto the apex (AUTH_URL)
+        // makes it follow the 308 and arrive at the door signed out again.
+        const url = new URL(ENTER_PATH, origin);
+        const door = req.nextUrl.searchParams.get(DOOR_PARAM);
+        if (door) url.searchParams.set(DOOR_PARAM, door);
         url.searchParams.set("next", pathname);
         if (isAppLaunch(userAgent, req.headers.get(LAUNCH_HEADER))) {
           url.searchParams.set("launch", "1");
         }
         return NextResponse.rewrite(url);
       }
-      const url = new URL(LOGIN_PATH, req.nextUrl);
+      const url = new URL(LOGIN_PATH, origin);
       url.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(url);
     }
 
-    // Cold start only. A tap on the menu inside the app has no launch header.
+    // Cold start only. A tap on the menu is a client navigation and stays there.
+    // The launch header dies on the apex redirect, so a real page load counts too.
     if (
       pathname === GAME_MENU_PATH &&
-      isAppLaunch(userAgent, req.headers.get(LAUNCH_HEADER))
+      isBreeqApp(userAgent) &&
+      (isAppLaunch(userAgent, req.headers.get(LAUNCH_HEADER)) || isAppDocument(req.headers))
     ) {
-      return NextResponse.redirect(new URL(CONTINUE_PATH, req.nextUrl));
+      return NextResponse.redirect(new URL(CONTINUE_PATH, origin));
     }
     return NextResponse.next();
   }
