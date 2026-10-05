@@ -300,3 +300,32 @@ export async function skipChapter(chapterId: string): Promise<ChapterSkipResult 
     throw error;
   }
 }
+
+const STORY_LOSS_REASONS = ["lives", "timeout", "crushed"] as const;
+export type StoryLossReason = (typeof STORY_LOSS_REASONS)[number];
+
+/**
+ * The lose screen stayed up: the run was not revived. The overview reads these
+ * so a wall people keep dying on still shows. A revive deletes the row.
+ */
+export async function recordStoryLoss(
+  chapterId: string,
+  run: { score: number; reason: StoryLossReason },
+): Promise<{ id: string } | null> {
+  const user = await requireUser();
+  if (!STORY_LOSS_REASONS.includes(run.reason)) return null;
+  const chapter = await prisma.chapter.findUnique({ where: { id: chapterId }, select: { id: true } });
+  if (!chapter) return null;
+  const score = Number.isFinite(run.score) ? Math.max(0, Math.min(1_000_000_000, Math.round(run.score))) : 0;
+  return prisma.storyLoss.create({
+    data: { userId: user.id, chapterId, reason: run.reason, score },
+    select: { id: true },
+  });
+}
+
+/** The heart landed: that loss never finished. */
+export async function forgetStoryLoss(id: string): Promise<void> {
+  const user = await requireUser();
+  if (!/^[a-f\d]{24}$/i.test(id)) return;
+  await prisma.storyLoss.deleteMany({ where: { id, userId: user.id } });
+}

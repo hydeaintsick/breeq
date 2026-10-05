@@ -12,6 +12,8 @@ import {
   EARN_PATH,
 } from "@/lib/auth/paths";
 import { formatEth, formatGems, formatUsd } from "@/lib/economy";
+import { AdminActivityList } from "@/components/admin-activity-list";
+import { ADMIN_ACTIVITY_LIMIT, recentAdminActivity } from "@/lib/admin-activity";
 import { getAdminStats, SERIES_DAYS } from "@/lib/admin-stats";
 import { getSiteSettings } from "@/lib/tutorial";
 
@@ -26,7 +28,7 @@ function n(value: number) {
 
 export default async function AdminDashboardPage() {
   const user = await requireAdmin();
-  const [stats, settings] = await Promise.all([getAdminStats(), getSiteSettings()]);
+  const [stats, settings, activity] = await Promise.all([getAdminStats(), getSiteSettings(), recentAdminActivity()]);
   const label = user.username ?? user.name ?? "Admin";
   const winRate = stats.earn.runs > 0 ? Math.round((stats.earn.wins / stats.earn.runs) * 100) : 0;
 
@@ -43,13 +45,23 @@ export default async function AdminDashboardPage() {
         .
       </p>
 
+      <h2 className="mt-10 text-lg font-semibold tracking-tight text-ink">Activity</h2>
+      <p className="mt-1 text-sm leading-6 text-ink-muted">
+        The latest {ADMIN_ACTIVITY_LIMIT}. A level cleared, a run lost, an Earn ticket, a sign-up, or a gem pack.
+      </p>
+      {activity.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-muted">Nothing yet.</p>
+      ) : (
+        <AdminActivityList items={activity} />
+      )}
+
       <h2 className="mt-10 text-lg font-semibold tracking-tight text-ink">Players</h2>
       <div className="stat-grid mt-3">
         <Stat label="Signed up" value={n(stats.players.total)} sub={`+${n(stats.players.week)} this week`} />
         <Stat label="Story walls cleared" value={n(stats.story.clears)} sub={`${n(stats.story.chapters)} chapters live`} />
         <div className="stat glass col-span-2">
           <p className="stat-label">Sign-ups, last {SERIES_DAYS} days</p>
-          <Spark series={stats.players.series} />
+          <Spark series={stats.players.series} labels={stats.days} />
         </div>
       </div>
 
@@ -75,7 +87,7 @@ export default async function AdminDashboardPage() {
         />
         <div className="stat glass col-span-2">
           <p className="stat-label">Tickets, last {SERIES_DAYS} days</p>
-          <Spark series={stats.earn.series} />
+          <Spark series={stats.earn.series} labels={stats.days} />
         </div>
       </div>
 
@@ -138,12 +150,16 @@ function Stat({ label, value, sub, href }: { label: string; value: React.ReactNo
   );
 }
 
-function Spark({ series }: { series: number[] }) {
+function Spark({ series, labels }: { series: number[]; labels: string[] }) {
   const max = Math.max(1, ...series);
   return (
-    <div className="spark mt-3" aria-label={`Daily counts: ${series.join(", ")}`}>
+    <div className="spark mt-3" aria-label={`Daily counts, Paris time: ${series.join(", ")}`}>
       {series.map((value, index) => (
-        <span key={index} style={{ height: `${Math.max(3, (value / max) * 100)}%` }} title={String(value)} />
+        <span
+          key={labels[index] ?? index}
+          style={{ height: `${Math.max(3, (value / max) * 100)}%` }}
+          title={`${labels[index] ?? ""}: ${value}`}
+        />
       ))}
     </div>
   );

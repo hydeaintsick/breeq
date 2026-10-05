@@ -28,7 +28,7 @@ import { SwipeToggle } from "@/components/swipe-toggle";
 import { useImmersive } from "@/components/use-immersive";
 import { useStoryTheme } from "@/components/use-story-theme";
 import { startStoryRun } from "@/app/actions/energy";
-import type { ChapterClearResult, ChapterSkipResult } from "@/app/actions/progress";
+import { forgetStoryLoss, recordStoryLoss, type ChapterClearResult, type ChapterSkipResult } from "@/app/actions/progress";
 import { buyRevive, type ReviveBought } from "@/app/actions/revive";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import { playSheetAppear, playSheetBuy } from "@/game/breakout/audio";
@@ -247,6 +247,8 @@ export function StoryShelf({
     result: ChapterClearResult | null;
   } | null>(null);
   const [lost, setLost] = useState<{ score: number; reason: "lives" | "timeout" | "crushed" } | null>(null);
+  /** The loss row for this game-over, deleted if the heart lands. */
+  const lossNote = useRef<Promise<{ id: string } | null> | null>(null);
   const restored = useRef(false);
   useLayoutEffect(() => {
     if (restored.current) return;
@@ -718,6 +720,13 @@ export function StoryShelf({
 
   /** The heart is paid: the game over screen goes, the light gathers over the board, the engine is revived on the beat. */
   function startRevive() {
+    const note = lossNote.current;
+    lossNote.current = null;
+    if (note) {
+      void note.then((row) => {
+        if (row) void forgetStoryLoss(row.id);
+      });
+    }
     setReviving(false);
     setReviveError(null);
     setRevives((n) => n + 1);
@@ -1054,6 +1063,7 @@ export function StoryShelf({
                       setPaused(false);
                       setCleared(null);
                       setLost({ score, reason });
+                      lossNote.current = recordStoryLoss(playing.id, { score, reason }).catch(() => null);
                     }}
                     onHandle={(handle) => {
                       boardRef.current = handle;

@@ -2,18 +2,21 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminActivityList } from "@/components/admin-activity-list";
 import { AdminGrant } from "@/components/admin-grant";
 import { BoltGlyph, EthGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { requireAdmin } from "@/lib/auth/session";
 import { ADMIN_PLAYERS_PATH } from "@/lib/auth/paths";
 import {
   countryLabel,
+  formatAppVersion,
   formatPlayTime,
-  formatWhen,
   modelFromUserAgent,
   platformLabel,
   signupMethodLabel,
 } from "@/lib/acquisition";
+import { PLAYER_PLAY_LIMIT, recentPlayForUser } from "@/lib/admin-activity";
+import { formatAdminWhen } from "@/lib/admin-time";
 import { gweiToEth, formatEth, formatGems } from "@/lib/economy";
 import { isGuestPlaceholder } from "@/lib/guest-door";
 import { readEnergy } from "@/lib/energy-store";
@@ -53,12 +56,16 @@ function phoneLabel(stored: string | null, ua: string | null) {
   return stored ?? modelFromUserAgent(ua ?? "") ?? "—";
 }
 
+function appVersionLabel(stored: string | null, seen: boolean) {
+  return formatAppVersion(stored) ?? (seen ? "Web" : "—");
+}
+
 export default async function AdminPlayerPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
   const { id } = await params;
   if (!isObjectId(id)) notFound();
 
-  const [user, wins, paidPacks, settings] = await Promise.all([
+  const [user, wins, paidPacks, settings, play] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
       select: {
@@ -112,6 +119,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
     prisma.earnRun.count({ where: { userId: id, outcome: "WON" } }),
     prisma.gemPurchase.count({ where: { userId: id, status: "PAID" } }),
     getSiteSettings(),
+    recentPlayForUser(id),
   ]);
 
   if (!user) notFound();
@@ -125,24 +133,24 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
     { label: "Signed up with", value: signupMethodLabel(user.signupMethod) },
     { label: "Partner", value: user.partner ?? "—" },
     { label: "Partner email", value: user.partnerEmail ?? "—" },
-    { label: "Tagged", value: user.partnerAt ? formatWhen(user.partnerAt) : "—" },
+    { label: "Tagged", value: user.partnerAt ? formatAdminWhen(user.partnerAt) : "—" },
     { label: "Country", value: countryLabel(user.signupCountry) },
     { label: "Device", value: platformLabel(user.signupPlatform) },
     { label: "System", value: user.signupOs ?? "—" },
     { label: "Model", value: phoneLabel(user.signupModel, user.signupUserAgent) },
-    { label: "Android app", value: user.signupAppVersion ?? (user.signupAt ? "Web" : "—") },
+    { label: "App version", value: appVersionLabel(user.signupAppVersion, user.signupAt != null) },
     { label: "Language", value: user.signupLocale ?? "—" },
     { label: "Screen", value: screenLabel(user.signupScreen) },
     { label: "Time zone", value: user.signupTimezone ?? "—" },
   ];
 
   const latestRows = [
-    { label: "Last seen", value: formatWhen(user.lastSeenAt) },
+    { label: "Last seen", value: formatAdminWhen(user.lastSeenAt) },
     { label: "Country", value: countryLabel(user.lastCountry) },
     { label: "Device", value: platformLabel(user.lastPlatform) },
     { label: "System", value: user.lastOs ?? "—" },
     { label: "Model", value: phoneLabel(user.lastModel, user.lastUserAgent) },
-    { label: "Android app", value: user.lastAppVersion ?? (user.lastSeenAt ? "Web" : "—") },
+    { label: "App version", value: appVersionLabel(user.lastAppVersion, user.lastSeenAt != null) },
     { label: "Language", value: user.lastLocale ?? "—" },
     { label: "Screen", value: screenLabel(user.lastScreen) },
     { label: "Time zone", value: user.lastTimezone ?? "—" },
@@ -164,7 +172,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         ) : null}
       </h1>
       <p className="mt-2 text-sm text-ink-muted">
-        {user.email && !isGuestPlaceholder(user.email) ? user.email : "No email yet"} · joined {formatWhen(user.createdAt)}
+        {user.email && !isGuestPlaceholder(user.email) ? user.email : "No email yet"} · joined {formatAdminWhen(user.createdAt)}
         {referrer ? (
           <>
             {" "}
@@ -225,12 +233,22 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
 
       {user.deletedAt ? (
         <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-muted">
-          Removed from admin stats on {formatWhen(user.deletedAt)}. The account and its history are still stored.
+          Removed from admin stats on {formatAdminWhen(user.deletedAt)}. The account and its history are still stored.
         </p>
       ) : (
         <div className="mt-4">
           <AdminGrant userId={user.id} />
         </div>
+      )}
+
+      <h2 className="mt-10 text-lg font-semibold tracking-tight text-ink">Recent play</h2>
+      <p className="mt-1 text-sm leading-6 text-ink-muted">
+        The latest {PLAYER_PLAY_LIMIT} levels cleared, runs lost, and Earn tickets.
+      </p>
+      {play.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-muted">No runs yet.</p>
+      ) : (
+        <AdminActivityList items={play} linked={false} />
       )}
 
       <h2 className="mt-10 text-lg font-semibold tracking-tight text-ink">Recent activity</h2>
@@ -250,7 +268,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
             <tbody>
               {user.ledger.map((line) => (
                 <tr key={line.id}>
-                  <td className="whitespace-nowrap text-ink-muted">{formatWhen(line.createdAt)}</td>
+                  <td className="whitespace-nowrap text-ink-muted">{formatAdminWhen(line.createdAt)}</td>
                   <td>
                     <p>{LEDGER[line.kind] ?? line.kind}</p>
                     {line.note ? <p className="text-xs text-ink-muted">{line.note}</p> : null}

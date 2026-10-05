@@ -98,6 +98,7 @@ model User {
   accounts       Account[]
   sessions       Session[]
   chapterClears  ChapterClear[]
+  storyLosses    StoryLoss[]
   earnMaps       EarnMap[]
   earnRuns       EarnRun[]
   purchases      GemPurchase[]
@@ -178,6 +179,7 @@ model Chapter {
   intro     String?
   level     Json
   clears    ChapterClear[]
+  losses    StoryLoss[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
@@ -212,6 +214,23 @@ model ChapterClear {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, chapterId])
+}
+
+/// A story run that ended on the lose screen and was not revived.
+/// A revive deletes its row; clears stay on `ChapterClear`.
+model StoryLoss {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  chapterId String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  /// "lives" | "timeout" | "crushed"
+  reason    String
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 // -----------------------------------------------------------------------------
