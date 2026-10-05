@@ -9340,14 +9340,15 @@ html[data-theme="dark"] .btn-danger {
 }
 
 /* --- Plypto embed ----------------------------------------------------------
-   A partner card: the live board, then one play link that leaves in a new
-   tab. The frame is whatever height the host gives it; the board stays
-   whole and centered inside the room above the bar. */
+   A gameplay clip for their bounty card. The host already has the title,
+   the reward and the button, so the frame is only the live board. The whole
+   field stays in view: bricks at the top, paddle at the bottom. */
 
 html[data-embed="true"],
 html[data-embed="true"] body {
   height: 100%;
-  min-height: 100dvh;
+  min-height: 100%;
+  background: #0b0d1a;
 }
 
 html[data-embed="true"] body {
@@ -9359,71 +9360,37 @@ html[data-embed="true"] main {
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
+  background: #0b0d1a;
 }
 
 .plypto-embed {
   display: flex;
   flex: 1 1 auto;
-  box-sizing: border-box;
-  min-height: 0;
-  padding: 0.75rem;
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-}
-
-.plypto-card {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
-  border-radius: 1.35rem;
   background: #0b0d1a;
-  color: var(--ink);
-  text-decoration: none;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.82),
-    0 0 0 2px rgba(15, 17, 23, 0.06),
-    0 28px 70px rgba(15, 17, 23, 0.16);
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.plypto-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
 }
 
 .plypto-stage {
   container-type: size;
   position: relative;
-  display: grid;
   flex: 1 1 auto;
-  place-items: center;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
   background: #0b0d1a;
 }
 
-/* A frame taller than 4:3 holds the whole field. A shorter one fills the
-   width and keeps the wall — the portrait board would otherwise shrink
-   into a gutter. */
+/* Fit the whole portrait field in the slot. A wide frame gets dark bars
+   beside the board; the paddle is never cropped off the bottom. */
 .plypto-stage > figure {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: min(100cqw, calc(100cqh * 360 / 640));
   max-width: none;
   margin: 0;
-  justify-self: center;
-  align-self: center;
-}
-
-@container (min-aspect-ratio: 3 / 4) {
-  .plypto-stage > figure {
-    width: 100cqw;
-    align-self: start;
-  }
+  transform: translate(-50%, -50%);
 }
 
 .plypto-stage .board-stage {
@@ -9442,74 +9409,4 @@ html[data-embed="true"] main {
   display: block;
   width: 100%;
   height: auto;
-}
-
-.plypto-bar {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  padding: 0.85rem 1rem 1rem;
-  background: var(--surface);
-}
-
-.plypto-kicker {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  color: var(--accent);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.plypto-kicker svg {
-  flex: none;
-}
-
-.plypto-dot {
-  width: 0.22rem;
-  height: 0.22rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 55%, white);
-}
-
-.plypto-title {
-  margin: 0.4rem 0 0;
-  color: var(--ink);
-  font-size: 1.7rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-}
-
-.plypto-lede {
-  margin: 0.3rem 0 0.75rem;
-  color: var(--ink-muted);
-  font-size: 0.92rem;
-  line-height: 1.35;
-}
-
-.plypto-play {
-  width: 100%;
-  min-height: 3rem;
-  gap: 0.4rem;
-  font-size: 1rem;
-}
-
-@media (min-width: 720px) {
-  .plypto-embed {
-    display: grid;
-    place-items: center;
-    padding: 1.75rem;
-  }
-
-  .plypto-card {
-    flex: none;
-    /* Narrow enough that the portrait field still fits above the bar. */
-    width: min(22rem, calc((100dvh - 15rem) * 360 / 640));
-    height: min(46rem, calc(100dvh - 3.5rem));
-  }
 }
