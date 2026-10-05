@@ -89,7 +89,11 @@ export default function PrivacyPage() {
             <li>
               Earn runs (ticket, seed, score, locked payout, outcome, timestamps);
             </li>
-            <li>ledger lines for every gem and ETH movement.</li>
+            <li>ledger lines for every gem and ETH movement;</li>
+            <li>
+              paddle inputs of a Story, tutorial, or Earn run, with the level and the seed, so
+              that run can be replayed in the game itself.
+            </li>
           </ul>
           <h3>Push notifications</h3>
           <p>
@@ -160,8 +164,9 @@ export default function PrivacyPage() {
             </li>
             <li>
               when an OpenReplay project is configured, a session recording: a
-              reconstruction of the pages you open, your clicks and scrolls, and the
-              game canvas, so we can replay a visit. Once you are signed in, that
+              reconstruction of the pages you open, your clicks and scrolls, so we can
+              replay a visit. The game canvas is not part of that recording. Once you
+              are signed in, that
               recording is labeled with your email, or your username if the account has
               no email. Password fields are left out. Payment return parameters and the
               guest door token are stripped from the address before it is stored.
@@ -296,8 +301,10 @@ export default function PrivacyPage() {
           <h3>Session replay</h3>
           <p>
             When an OpenReplay project key is configured, the browser loads OpenReplay
-            and records the visit as a reconstruction of the pages, clicks, scrolls, and
-            the game canvas. It is not a video file. A signed-in recording is labeled
+            and records the visit as a reconstruction of the pages, clicks, and scrolls.
+            The game canvas is left out. A Story, tutorial, or Earn run is replayed from
+            the paddle inputs stored with your account, inside the game itself. It is not
+            a video file. A signed-in recording is labeled
             with your email, or your username when the account has no email. Password
             fields stay out of the recording. OpenReplay may keep a first-party token in
             localStorage so one visit stays one session. You can block it with your

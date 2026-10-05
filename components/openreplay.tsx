@@ -66,6 +66,9 @@ function client(): Promise<Tracker | null> {
           // Local http cannot start a session unless secure mode is off.
           __DISABLE_SECURE_MODE: window.location.protocol !== "https:",
           urls: { urlSanitizer: sanitizeUrl },
+          // The board is a canvas. Snapshots hitch the frame and replay as a blur.
+          // Runs are replayed from the engine instead.
+          canvas: { disableCanvas: true },
         });
         const started = await tracker.start(pendingLabel ? { userID: pendingLabel } : undefined);
         if (!started.success) {

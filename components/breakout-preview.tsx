@@ -5,6 +5,7 @@ import { useCosmetics } from "@/components/cosmetics-provider";
 import { HEART_PATH } from "@/components/currency-glyphs";
 import { useSwipe } from "@/components/swipe-provider";
 import { SHOWCASE_LEVELS } from "@/game/breakout/levels";
+import type { PlayTape } from "@/game/breakout/engine/tape";
 import type { Level } from "@/game/breakout/engine/types";
 import { mountBreakout, type BreakoutHandle, type HudState, type MountOptions, type SkinSet } from "@/game/breakout/preview";
 
@@ -54,6 +55,9 @@ export function BreakoutPreview({
   onOver,
   onEvent,
   onHandle,
+  record = false,
+  replay,
+  onReplay,
 }: {
   levels?: readonly Level[];
   start?: number;
@@ -87,6 +91,12 @@ export function BreakoutPreview({
   onEvent?: MountOptions["onEvent"];
   /** The mount handle once the board is live, `null` when it goes away. */
   onHandle?: (handle: BreakoutHandle | null) => void;
+  /** Record paddle inputs so the run can be replayed. Real games only. */
+  record?: boolean;
+  /** Play a recorded run on this board. The level must be the one that was recorded. */
+  replay?: PlayTape;
+  /** Replay progress. Kept off the mount deps: a new function must not restart the run. */
+  onReplay?: (step: number, steps: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
@@ -109,6 +119,10 @@ export function BreakoutPreview({
     skinsRef.current = skins;
     if (skins) handleRef.current?.setSkins(skins);
   }, [skins]);
+  const onReplayRef = useRef(onReplay);
+  useEffect(() => {
+    onReplayRef.current = onReplay;
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -134,6 +148,10 @@ export function BreakoutPreview({
       fit: contain ? fitRef.current : null,
       poster,
       skins: skinsRef.current,
+      paused: pausedRef.current,
+      record,
+      replay,
+      onReplay: (step, steps) => onReplayRef.current?.(step, steps),
     });
     handleRef.current = handle;
     if (pausedRef.current) handle.pause();
@@ -143,7 +161,7 @@ export function BreakoutPreview({
       handleRef.current = null;
       onHandle?.(null);
     };
-  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, poster, onCleared, onOver, onEvent, onHandle]);
+  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, poster, onCleared, onOver, onEvent, onHandle, record, replay]);
 
   useEffect(() => {
     if (paused) {

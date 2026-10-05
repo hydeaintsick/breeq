@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { finishEarnRun, forfeitEarnRun, startEarnRun, type RunEnd, type RunStart } from "@/app/actions/earn";
 import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { usePlayReplay } from "@/components/use-play-replay";
 import { PlayClock } from "@/components/play-clock";
 import { EthGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { TopUpButton } from "@/components/gem-shop";
@@ -65,6 +66,8 @@ export function EarnRun({
     parsed.author = card.author;
     return [applyBackgroundPhoto(parsed, photo)];
   }, [card]);
+
+  usePlayReplay({ handle: board, kind: "earn", title: card.title, refId: card.id, level: level[0] });
 
   // The run's music, in the level's key, on top of the store's theme while the
   // board is live; it steps aside in the pause menu and leaves on the end
@@ -288,6 +291,7 @@ export function EarnRun({
           onCleared={handleCleared}
           onOver={handleOver}
           onEvent={handleEvent}
+          record
         />
       </div>
 

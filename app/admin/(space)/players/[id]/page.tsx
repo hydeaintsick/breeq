@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminActivityList } from "@/components/admin-activity-list";
 import { AdminGrant } from "@/components/admin-grant";
+import { AdminReplays } from "@/components/admin-replays";
 import { BoltGlyph, EthGlyph, GemGlyph } from "@/components/currency-glyphs";
 import { requireAdmin } from "@/lib/auth/session";
 import { ADMIN_PLAYERS_PATH } from "@/lib/auth/paths";
@@ -67,7 +68,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
   const { id } = await params;
   if (!isObjectId(id)) notFound();
 
-  const [user, wins, paidPacks, settings, reviewEvents, play] = await Promise.all([
+  const [user, wins, paidPacks, settings, reviewEvents, play, replays] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
       select: {
@@ -137,6 +138,12 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
       select: { id: true, kind: true, clears: true, gems: true, createdAt: true },
     }),
     recentPlayForUser(id),
+    prisma.playReplay.findMany({
+      where: { userId: id },
+      orderBy: { updatedAt: "desc" },
+      take: 20,
+      select: { id: true, title: true, kind: true, outcome: true, score: true, steps: true, updatedAt: true },
+    }),
   ]);
 
   if (!user) notFound();
@@ -272,6 +279,18 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
           <AdminGrant userId={user.id} />
         </div>
       )}
+
+      <AdminReplays
+        rows={replays.map((row) => ({
+          id: row.id,
+          title: row.title,
+          kind: row.kind,
+          outcome: row.outcome,
+          score: row.score,
+          steps: row.steps,
+          when: formatAdminWhen(row.updatedAt),
+        }))}
+      />
 
       <h2 className="mt-10 text-lg font-semibold tracking-tight text-ink">Recent play</h2>
       <p className="mt-1 text-sm leading-6 text-ink-muted">

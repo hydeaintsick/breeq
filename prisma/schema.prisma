@@ -121,6 +121,7 @@ model User {
   storyLosses    StoryLoss[]
   earnMaps       EarnMap[]
   earnRuns       EarnRun[]
+  playReplays    PlayReplay[]
   purchases      GemPurchase[]
   ledger         LedgerEntry[]
   withdrawals    Withdrawal[]
@@ -255,6 +256,32 @@ model StoryLoss {
 
   @@index([createdAt])
   @@index([userId, createdAt])
+}
+
+/// One Story, tutorial, or Earn run, as the engine played it.
+/// The tape is the paddle input of every fixed step. Replaying it draws the
+/// real board, not a video of the canvas.
+model PlayReplay {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  /// Minted in the browser for this mount, so a periodic save updates one row.
+  clientKey String   @unique
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "story" | "tutorial" | "earn"
+  kind      String
+  title     String
+  /// Chapter id, "tutorial", or the Earn map id.
+  ref       String?
+  level     Json
+  tape      Json
+  steps     Int
+  score     Int      @default(0)
+  /// "cleared" | "lives" | "timeout" | "crushed" | "quit". Null while the run is open.
+  outcome   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
 }
 
 // -----------------------------------------------------------------------------

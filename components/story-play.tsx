@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { markDiscovered } from "@/app/actions/discoveries";
 import { awardChapterClear, type ChapterClearResult } from "@/app/actions/progress";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { usePlayReplay } from "@/components/use-play-replay";
 import { useSpotlight } from "@/components/use-spotlight";
 import { applyBackgroundPhoto, parseStoredLevel } from "@/game/breakout/engine";
 import type { GameEvent } from "@/game/breakout/engine/types";
@@ -90,6 +91,7 @@ export function StoryPlay({
 
   const rootRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
+  const [board, setBoard] = useState<BreakoutHandle | null>(null);
   const actionRef = useRef<HTMLButtonElement>(null);
   const [ready, setReady] = useState(false);
   const [lesson, setLesson] = useState<Discovery | null>(null);
@@ -101,6 +103,7 @@ export function StoryPlay({
 
   const takeHandle = useCallback((handle: BreakoutHandle | null) => {
     handleRef.current = handle;
+    setBoard(handle);
     // A fresh board (retry, next chapter) is a fresh run; the card is already down.
     if (handle) endedRef.current = false;
     setReady(handle !== null);
@@ -179,6 +182,8 @@ export function StoryPlay({
     [],
   );
 
+  usePlayReplay({ handle: board, kind: "story", title, refId: chapterId, level });
+
   const { hole, place, veilStyle } = useSpotlight({
     rootRef,
     handleRef,
@@ -205,6 +210,7 @@ export function StoryPlay({
         onOver={handleOver}
         onEvent={onEvent}
         onHandle={takeHandle}
+        record
       />
 
       <div

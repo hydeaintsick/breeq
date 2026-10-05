@@ -6,6 +6,7 @@ import type { ChapterClearResult } from "@/app/actions/progress";
 import { completeTutorial } from "@/app/actions/tutorial";
 import { AutopilotButton, AutopilotProvider } from "@/components/admin-autopilot";
 import { BreakoutPreview } from "@/components/breakout-preview";
+import { usePlayReplay } from "@/components/use-play-replay";
 import { PlayClock } from "@/components/play-clock";
 import { HapticsToggle } from "@/components/haptics-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
@@ -150,6 +151,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<BreakoutHandle | null>(null);
   const [board, setBoard] = useState<BreakoutHandle | null>(null);
+  usePlayReplay({ handle: board, kind: "tutorial", title: "Tutorial", refId: null, level: TUTORIAL });
   const seen = useRef<Set<StepId>>(new Set());
   const actionRef = useRef<HTMLButtonElement>(null);
   // Finishing refreshes the page with `done` flipped; the labels keep the
@@ -397,6 +399,7 @@ export function TutorialRun({ done: alreadyDone }: { done: boolean }) {
         onCleared={onCleared}
         onOver={onOver}
         onEvent={onEvent}
+        record
         onHandle={onHandle}
       />
 

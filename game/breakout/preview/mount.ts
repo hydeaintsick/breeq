@@ -10,6 +10,7 @@
 import { BreakoutSfx } from "../audio";
 import { Autopilot } from "../engine/autopilot";
 import { Game, RULES } from "../engine/game";
+import { TapeRecorder, inputAt, type PlayTape } from "../engine/tape";
 import { BreakoutHaptics } from "../haptics";
 import type { GameEvent, GameInput, GamePhase, GameState, Level, PaddleModKind, SpeedZoneKind } from "../engine/types";
 import { readNeonPalette } from "../render/palette";
@@ -78,6 +79,8 @@ export interface MountOptions {
   frozen?: boolean;
   /** When false, a finished wall stays on the end frame instead of rotating. */
   loop?: boolean;
+  /** Start paused, before the first step. Later pause and resume go through the handle. */
+  paused?: boolean;
   /**
    * Play the sound design for this mount. Off by default: showcase and menu
    * previews stay silent. Audio starts on the first pointer gesture and follows
@@ -124,6 +127,18 @@ export interface MountOptions {
    * plays the same. Swap them live with `setSkins`.
    */
   skins?: SkinSet;
+  /**
+   * Keep the paddle input of every step (`handle.tape()`). Real games only:
+   * the admin replays that tape on the real renderer.
+   */
+  record?: boolean;
+  /**
+   * Play a recorded run instead of taking input. The level passed in must be
+   * the one that was recorded. Ignores pointer, autopilot, and reduced motion.
+   */
+  replay?: PlayTape;
+  /** Replay progress, throttled. `step` is how many fixed steps have played. */
+  onReplay?: (step: number, steps: number) => void;
 }
 
 export interface BreakoutHandle {
@@ -161,6 +176,12 @@ export interface BreakoutHandle {
   project(x: number, y: number, w: number, h: number): CssRect;
   /** The live game state, read-only. */
   state(): Readonly<GameState>;
+  /** The inputs recorded so far, or null when this mount is not recording. */
+  tape(): PlayTape | null;
+  /** Jump a replay to this step by resimulating from the serve. No-op otherwise. */
+  seek(step: number): void;
+  /** Replay speed. 1 is the speed the player had. No-op otherwise. */
+  setReplayRate(rate: number): void;
 }
 
 const CAPTIONS = {
@@ -196,16 +217,17 @@ export function mountBreakout(
   const controls = options.mode === "edit" ? "auto" : (options.controls ?? "hybrid");
   const editMode = options.mode === "edit";
   const handoverDelay = options.handoverDelay ?? 3.5;
-  const loop = options.loop ?? true;
+  const playback = options.replay ?? null;
+  const loop = playback ? false : (options.loop ?? true);
   const rail = editMode ? null : (options.rail ?? null);
   const fit = options.fit ?? null;
   const poster = options.poster ?? false;
   const railGain = Math.max(1, options.railGain ?? 1.25);
   const forceFrozen = Boolean(options.frozen);
   let skins = options.skins ?? DEFAULT_SKIN_SET;
-  let seed = options.seed ?? 1;
+  let seed = playback?.seed ?? options.seed ?? 1;
   let levelIndex = (((options.start ?? 0) % rotation.length) + rotation.length) % rotation.length;
-  let paused = false;
+  let paused = options.paused ?? false;
   let simulating = false;
   const wantsAutoLaunch = () => (editMode ? simulating : controls !== "pointer");
 
@@ -242,13 +264,20 @@ export function mountBreakout(
   let assisted = false;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let frozen = forceFrozen || (!editMode && reducedMotion.matches);
+  // A replay is the thing being watched. Reduced motion must not replace it
+  // with a frozen showcase pose.
+  let frozen = playback ? false : forceFrozen || (!editMode && reducedMotion.matches);
   let visible = true;
   let hidden = document.visibilityState === "hidden";
 
   // Current level.
   let level = rotation[levelIndex];
-  let game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
+  let game = new Game(level, { seed, autoLaunch: playback ? false : wantsAutoLaunch() });
+  const recorder = options.record && !playback ? new TapeRecorder(seed) : null;
+  let replayStep = 0;
+  let reviveAt = 0;
+  let replayRate = 1;
+  let lastReplayReport = 0;
   let pilot = new Autopilot(level, { seed: seed * 7 });
   let assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
   let renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode, skins);
@@ -347,6 +376,7 @@ export function mountBreakout(
         break;
     }
     if (assisted && (s.phase === "serve" || s.phase === "play")) caption = CAPTIONS.assist;
+    if (playback && (s.phase === "serve" || s.phase === "play" || s.phase === "lost")) caption = "Replay";
     const next: HudState = {
       levelName: level.name,
       author: level.author,
@@ -375,7 +405,8 @@ export function mountBreakout(
   const applyLevel = (next: Level, { bumpSeed = true } = {}) => {
     level = next;
     if (bumpSeed) seed += 1;
-    game = new Game(level, { seed, autoLaunch: wantsAutoLaunch() });
+    game = new Game(level, { seed, autoLaunch: playback ? false : wantsAutoLaunch() });
+    recorder?.reset(seed);
     pilot = new Autopilot(level, { seed: seed * 7 });
     assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
     renderer = new BreakoutRenderer(canvas, level, palette, () => draw(), editMode, skins);
@@ -402,6 +433,7 @@ export function mountBreakout(
   const restart = () => {
     seed += 1;
     game.reset(seed);
+    recorder?.reset(seed);
     pilot = new Autopilot(level, { seed: seed * 7 });
     assistPilot = new Autopilot(level, { seed: seed * 13, skill: 1 });
     scene.trail.length = 0;
@@ -414,6 +446,7 @@ export function mountBreakout(
 
   const revive = (lives = 1): boolean => {
     if (destroyed || !game.revive(lives)) return false;
+    recorder?.markRevive(lives);
     // The run goes on: the end frame's hold is dropped, the trail and the aim
     // start clean, and the observers hear the moment like any other event.
     endHold = 0;
@@ -435,7 +468,24 @@ export function mountBreakout(
     // `paused` is checked per step: an event callback may pause mid-tick and
     // expects the world frozen right there, not a few steps later.
     while (!paused && accumulator >= game.dt && steps < maxSteps) {
-      applyEvents(game.step(input()));
+      if (playback) {
+        while (reviveAt < playback.revives.length && playback.revives[reviveAt].i === replayStep) {
+          const extra = playback.revives[reviveAt].lives;
+          reviveAt += 1;
+          if (game.revive(extra)) applyEvents(game.drain());
+        }
+        const sample = inputAt(playback, replayStep);
+        if (!sample) {
+          accumulator = 0;
+          break;
+        }
+        applyEvents(game.step(sample));
+        replayStep += 1;
+      } else {
+        const sample = input();
+        recorder?.push(sample);
+        applyEvents(game.step(sample));
+      }
       accumulator -= game.dt;
       steps += 1;
     }
@@ -507,7 +557,11 @@ export function mountBreakout(
     if (!live()) return;
     const dt = last === 0 ? 0 : Math.min(0.05, (now - last) / 1000);
     last = now;
-    tick(dt);
+    tick(playback ? dt * replayRate : dt);
+    if (playback && options.onReplay && (now - lastReplayReport > 100 || replayStep >= playback.steps)) {
+      lastReplayReport = now;
+      options.onReplay(replayStep, playback.steps);
+    }
     draw();
     raf = requestAnimationFrame(frame);
   };
@@ -540,7 +594,7 @@ export function mountBreakout(
   };
 
   const onReducedMotion = () => {
-    if (editMode || forceFrozen) return;
+    if (playback || editMode || forceFrozen) return;
     if (reducedMotion.matches) freeze();
     else {
       frozen = false;
@@ -654,7 +708,7 @@ export function mountBreakout(
     pointerAimX = null;
     pointerAimY = null;
   };
-  if (!editMode) {
+  if (!editMode && !playback) {
     if (controls === "pointer") {
       playSurface.style.touchAction = "none";
       playSurface.addEventListener("pointerdown", onPlayDown);
@@ -728,7 +782,7 @@ export function mountBreakout(
     if (railTap?.id === e.pointerId) railTap = null;
     rail!.dataset.active = "false";
   };
-  if (rail) {
+  if (rail && !playback) {
     rail.style.touchAction = "none";
     rail.dataset.touched = "false";
     rail.dataset.active = "false";
@@ -906,6 +960,38 @@ export function mountBreakout(
     },
     state() {
       return game.state;
+    },
+    tape() {
+      return recorder?.snapshot() ?? null;
+    },
+    seek(step) {
+      if (!playback || destroyed) return;
+      const target = Math.max(0, Math.min(playback.steps, Math.floor(step)));
+      game.reset(playback.seed);
+      scene.trail.length = 0;
+      scene.particles.length = 0;
+      scene.rings.length = 0;
+      replayStep = 0;
+      reviveAt = 0;
+      while (replayStep < target) {
+        while (reviveAt < playback.revives.length && playback.revives[reviveAt].i === replayStep) {
+          game.revive(playback.revives[reviveAt].lives);
+          game.drain();
+          reviveAt += 1;
+        }
+        const sample = inputAt(playback, replayStep);
+        if (!sample) break;
+        game.step(sample);
+        replayStep += 1;
+      }
+      endHold = 0;
+      syncHud();
+      draw();
+      options.onReplay?.(replayStep, playback.steps);
+    },
+    setReplayRate(rate) {
+      if (!playback) return;
+      replayRate = rate === 2 || rate === 4 ? rate : 1;
     },
   };
 }

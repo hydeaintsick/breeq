@@ -1,5 +1,6 @@
 export * from "./types";
 export { Game, RULES, predictX, serveDirection, type GameOptions, type PendingBrick } from "./game";
+export { TapeRecorder, inputAt, type PlayTape, type TapeRevive, type TapeSample } from "./tape";
 export { Autopilot, proveClearable, type AutopilotOptions, type Proof, type ProofOptions } from "./autopilot";
 export {
   rateDifficulty,
