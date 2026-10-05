@@ -93,6 +93,22 @@ model User {
   playSeconds      Int            @default(0)
   /// Wall clock of the last accepted play-time beat. Stops a client from inflating `playSeconds`.
   lastPlayAt       DateTime?
+  /// Play review ask. Null until they answer. LATER comes back after `reviewEvery` more clears.
+  /// OUT and RATED never see the sheet again.
+  reviewStatus   ReviewStatus?
+  /// Story clears on record when they last chose Not now.
+  reviewAnchor   Int            @default(0)
+  /// Times the sheet was shown.
+  reviewSeen     Int            @default(0)
+  /// Times they chose Not now.
+  reviewLater    Int            @default(0)
+  /// Gems paid when they gave the 5 stars. 0 until then.
+  reviewReward   Int            @default(0)
+  reviewSeenAt   DateTime?
+  reviewLaterAt  DateTime?
+  reviewRatedAt  DateTime?
+  reviewOptOutAt DateTime?
+  reviewEvents   ReviewEvent[]
   /// Set when an admin removes the account from the admin numbers. The row and its history stay.
   deletedAt        DateTime?
   accounts       Account[]
@@ -195,6 +211,10 @@ model SiteSettings {
   earnEnabled     Boolean  @default(true)
   /// Story energy: the gauge, the per-run cost, and the recharge shelf. Off means unlimited runs.
   energyEnabled   Boolean  @default(true)
+  /// Ask for a Play review every this many first story clears. 0 turns the ask off.
+  reviewEvery     Int      @default(3)
+  /// Gems paid once, when they open the store from the sheet.
+  reviewGems      Int      @default(50)
   updatedAt       DateTime @updatedAt
 }
 
@@ -376,6 +396,38 @@ enum LedgerKind {
   SKIN
   /// Story: gems spent on a heart after the last ball.
   REVIVE
+  /// Play review: gems granted when the player opens the store from the ask.
+  REVIEW
+}
+
+/// Where a player left the Play review ask. OUT and RATED are permanent.
+enum ReviewStatus {
+  LATER
+  OUT
+  RATED
+}
+
+enum ReviewEventKind {
+  SEEN
+  LATER
+  OUT
+  RATED
+}
+
+/// One step of the Play review ask: the sheet opened, Not now, never again, or 5 stars.
+model ReviewEvent {
+  id        String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String          @db.ObjectId
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      ReviewEventKind
+  /// First-time story clears on record at this step.
+  clears    Int
+  /// Gems credited. Only a RATED row carries them.
+  gems      Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
 }
 
 /// One sign-up through a share link. `referredId` is unique: an account is

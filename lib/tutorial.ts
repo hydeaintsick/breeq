@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { REVIEW_EVERY_DEFAULT, REVIEW_GEMS_DEFAULT } from "@/lib/review";
 
 export const SITE_SETTINGS_ID = "site";
 
@@ -15,13 +16,16 @@ export type TutorialStatus = {
 export const getSiteSettings = cache(async function getSiteSettings() {
   const row = await prisma.siteSettings.findUnique({
     where: { id: SITE_SETTINGS_ID },
-    select: { tutorialEnabled: true, earnEnabled: true, energyEnabled: true },
+    select: { tutorialEnabled: true, earnEnabled: true, energyEnabled: true, reviewEvery: true, reviewGems: true },
   });
   return {
     tutorialEnabled: row?.tutorialEnabled ?? true,
     earnEnabled: row?.earnEnabled ?? true,
     // Missing on a document written before the switch existed: energy stays on.
     energyEnabled: row?.energyEnabled ?? true,
+    // Missing on a document written before the ask existed: every 3 clears, 50 gems.
+    reviewEvery: row?.reviewEvery ?? REVIEW_EVERY_DEFAULT,
+    reviewGems: row?.reviewGems ?? REVIEW_GEMS_DEFAULT,
   };
 });
 

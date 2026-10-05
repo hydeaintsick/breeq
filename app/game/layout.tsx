@@ -8,6 +8,7 @@ import { GameShell } from "@/components/game-shell";
 import { GemShopProvider } from "@/components/gem-shop";
 import { PlayerBeacon } from "@/components/player-beacon";
 import { StoryChromeProvider } from "@/components/story-chrome";
+import { ReviewPromptProvider } from "@/components/review-prompt";
 import { requireProgress } from "@/lib/auth/session";
 import { getWardrobe } from "@/lib/cosmetics-store";
 import { getBalances, getEconomy } from "@/lib/earn";
@@ -18,7 +19,9 @@ import { canPlayEarn } from "@/lib/progress";
 import { earnSandbox, stripePublishableKey, stripeReady } from "@/lib/stripe";
 import { isGoogleEnabled } from "@/lib/auth/google";
 import { isUnclaimed } from "@/lib/guest";
+import { reviewDue } from "@/lib/review";
 import { getSiteSettings } from "@/lib/tutorial";
+import { prisma } from "@/lib/prisma";
 
 export default async function GameLayout({
   children,
@@ -27,21 +30,33 @@ export default async function GameLayout({
 }) {
   const { user, progress, stars } = await requireProgress();
   const settings = await getSiteSettings();
-  const [balances, economy, energy, wardrobe, board, unclaimed] = await Promise.all([
+  const [balances, economy, energy, wardrobe, board, unclaimed, reviewRow, storyClears] = await Promise.all([
     getBalances(user.id),
     getEconomy(),
     settings.energyEnabled ? getEnergy(user.id) : Promise.resolve(toEnergyState(ENERGY_MAX)),
     getWardrobe(user.id),
     getLeaderboard(user.id),
     isUnclaimed(user.id),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { reviewStatus: true, reviewAnchor: true },
+    }),
+    prisma.chapterClear.count({ where: { userId: user.id } }),
   ]);
   const earn = canPlayEarn(user.role, progress.level, settings.earnEnabled);
+  const reviewIsDue = reviewDue({
+    clears: storyClears,
+    every: settings.reviewEvery,
+    status: reviewRow?.reviewStatus ?? null,
+    anchor: reviewRow?.reviewAnchor ?? 0,
+  });
 
   return (
     <PlayAdminProvider admin={user.role === "ADMIN"}>
     <ClaimProvider needed={unclaimed} google={isGoogleEnabled()}>
     <StoryChromeProvider>
       <BalancesProvider initial={balances}>
+        <ReviewPromptProvider due={reviewIsDue} gems={settings.reviewGems}>
         <CosmeticsProvider initial={wardrobe}>
           <GemShopProvider
             economy={economy}
@@ -55,6 +70,7 @@ export default async function GameLayout({
             </EnergyProvider>
           </GemShopProvider>
         </CosmeticsProvider>
+        </ReviewPromptProvider>
       </BalancesProvider>
     </StoryChromeProvider>
     </ClaimProvider>

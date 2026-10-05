@@ -3721,6 +3721,35 @@ html[data-theme="dark"] {
   opacity: 0.85;
 }
 
+/* The Play ask: the same glass star, warmed to amber so it reads as a store rating. */
+.star-rating[data-tone="store"] .star-lit {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--neon-amber) 70%, transparent));
+}
+
+.star-rating[data-tone="store"] .star-face-hi {
+  stop-color: color-mix(in srgb, var(--neon-amber) 35%, white);
+}
+
+.star-rating[data-tone="store"] .star-face-mid {
+  stop-color: var(--neon-amber);
+}
+
+.star-rating[data-tone="store"] .star-face-lo {
+  stop-color: color-mix(in srgb, var(--neon-pink) 55%, var(--neon-amber));
+}
+
+.star-rating[data-tone="store"] .star-body-hi {
+  stop-color: color-mix(in srgb, var(--neon-amber) 50%, #0b0d1a);
+}
+
+.star-rating[data-tone="store"] .star-body-lo {
+  stop-color: color-mix(in srgb, var(--neon-pink) 28%, #0b0d1a);
+}
+
+.star-rating[data-tone="store"] .star-rim {
+  stroke: color-mix(in srgb, var(--neon-amber) 55%, white);
+}
+
 .story-clear-stars .star-lit {
   filter:
     drop-shadow(0 0 10px var(--neon-blue))
@@ -6742,6 +6771,85 @@ html[data-theme="dark"] .btn-danger {
 
 .energy-sheet.claim-sheet::before {
   background: rgba(5, 6, 12, 0.38);
+}
+
+/* Play review: night glass with an amber bloom, the store's five stars. */
+.energy-sheet.review-sheet {
+  z-index: 89;
+}
+
+.energy-sheet.review-sheet .energy-sheet-body {
+  background:
+    radial-gradient(78% 46% at 50% 0%, color-mix(in srgb, var(--neon-amber) 26%, transparent), transparent 68%),
+    radial-gradient(42% 28% at 82% 12%, color-mix(in srgb, var(--neon-pink) 14%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 40%),
+    rgba(11, 13, 26, 0.92);
+}
+
+.review-stars {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.2rem;
+}
+
+.review-stars .star-rating {
+  --star: 2.05rem;
+  gap: 0.32rem;
+}
+
+.review-rate {
+  flex-direction: column;
+  gap: 0.12rem;
+  min-height: 4.25rem;
+  padding-block: 0.7rem;
+}
+
+.review-rate-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.review-rate-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.72;
+}
+
+.review-rate-pay .gem-glyph {
+  font-size: 1rem;
+}
+
+.review-never {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.15rem;
+  padding: 0.35rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.92rem;
+}
+
+.review-never:hover {
+  color: #fff;
+}
+
+.review-never:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.review-never:disabled {
+  opacity: 0.5;
 }
 
 .story-clear[data-claim="open"] {

@@ -4,7 +4,7 @@ import { EarnSetting } from "@/components/earn-setting";
 import { EnergySetting } from "@/components/energy-setting";
 import { TutorialSetting } from "@/components/tutorial-setting";
 import { requireAdmin } from "@/lib/auth/session";
-import { EARN_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
+import { ADMIN_REVIEWS_PATH, EARN_PATH, TUTORIAL_PATH } from "@/lib/auth/paths";
 import { EARN_UNLOCK_LEVEL } from "@/lib/progress";
 import { getSiteSettings } from "@/lib/tutorial";
 
@@ -64,6 +64,19 @@ export default async function AdminSettingsPage() {
               : " It is off. Story runs are unlimited, and the shop does not sell energy."}
           </p>
           <EnergySetting enabled={settings.energyEnabled} />
+        </li>
+        <li className="glass p-6">
+          <h2 className="text-xl font-semibold tracking-tight text-ink">Play review</h2>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            {settings.reviewEvery === 0
+              ? "The ask is off. The Android app does not show it."
+              : `The Android app asks after every ${settings.reviewEvery} new story chapters and pays ${settings.reviewGems} gems. Players who rated, or who chose don't ask again, are never asked.`}
+          </p>
+          <p className="mt-4">
+            <Link href={ADMIN_REVIEWS_PATH} className="inline-flex min-h-11 items-center text-sm underline underline-offset-4">
+              Open reviews
+            </Link>
+          </p>
         </li>
       </ul>
     </section>

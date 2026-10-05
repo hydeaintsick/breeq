@@ -30,6 +30,7 @@ export const ADMIN_ECONOMY_PATH = "/admin/economy";
 export const ADMIN_PLAYERS_PATH = "/admin/players";
 export const ADMIN_WITHDRAWALS_PATH = "/admin/withdrawals";
 export const ADMIN_SETTINGS_PATH = "/admin/settings";
+export const ADMIN_REVIEWS_PATH = "/admin/reviews";
 export const LOGIN_PATH = "/login";
 
 export function storyEpisodePath(slug: string) {

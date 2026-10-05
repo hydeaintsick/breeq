@@ -23,6 +23,7 @@ import { readEnergy } from "@/lib/energy-store";
 import { prisma } from "@/lib/prisma";
 import { progressFromXp } from "@/lib/progress";
 import { getSiteSettings } from "@/lib/tutorial";
+import { reviewEventLabel, reviewStatusLabel, type ReviewChoice } from "@/lib/review";
 
 export const metadata: Metadata = {
   title: "Player — Admin",
@@ -42,6 +43,7 @@ const LEDGER: Record<string, string> = {
   ENERGY: "Energy recharge",
   SKIN: "Skin unlocked",
   REVIVE: "Revive",
+  REVIEW: "Play review",
 };
 
 function isObjectId(id: string) {
@@ -65,7 +67,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
   const { id } = await params;
   if (!isObjectId(id)) notFound();
 
-  const [user, wins, paidPacks, settings, play] = await Promise.all([
+  const [user, wins, paidPacks, settings, reviewEvents, play] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
       select: {
@@ -105,6 +107,15 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         lastTouch: true,
         playSeconds: true,
         deletedAt: true,
+        reviewStatus: true,
+        reviewSeen: true,
+        reviewLater: true,
+        reviewReward: true,
+        reviewAnchor: true,
+        reviewSeenAt: true,
+        reviewLaterAt: true,
+        reviewRatedAt: true,
+        reviewOptOutAt: true,
         referredBy: {
           select: { via: true, referrer: { select: { id: true, username: true, name: true } } },
         },
@@ -119,6 +130,12 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
     prisma.earnRun.count({ where: { userId: id, outcome: "WON" } }),
     prisma.gemPurchase.count({ where: { userId: id, status: "PAID" } }),
     getSiteSettings(),
+    prisma.reviewEvent.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      select: { id: true, kind: true, clears: true, gems: true, createdAt: true },
+    }),
     recentPlayForUser(id),
   ]);
 
@@ -231,6 +248,21 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ id
         <DeviceCard title="Latest device" empty={!user.lastSeenAt} rows={latestRows} agent={user.lastUserAgent} />
       </div>
 
+      <ReviewCard
+        status={(user.reviewStatus ?? null) as ReviewChoice}
+        seen={user.reviewSeen ?? 0}
+        later={user.reviewLater ?? 0}
+        reward={user.reviewReward ?? 0}
+        anchor={user.reviewAnchor ?? 0}
+        clears={user._count.chapterClears}
+        every={settings.reviewEvery}
+        seenAt={user.reviewSeenAt}
+        laterAt={user.reviewLaterAt}
+        ratedAt={user.reviewRatedAt}
+        optOutAt={user.reviewOptOutAt}
+        events={reviewEvents}
+      />
+
       {user.deletedAt ? (
         <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-muted">
           Removed from admin stats on {formatAdminWhen(user.deletedAt)}. The account and its history are still stored.
@@ -293,6 +325,97 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: st
       <p className="stat-label">{label}</p>
       <p className="stat-n">{value}</p>
       {sub ? <p className="mt-1 text-xs text-ink-muted">{sub}</p> : null}
+    </div>
+  );
+}
+
+function ReviewCard({
+  status,
+  seen,
+  later,
+  reward,
+  anchor,
+  clears,
+  every,
+  seenAt,
+  laterAt,
+  ratedAt,
+  optOutAt,
+  events,
+}: {
+  status: ReviewChoice;
+  seen: number;
+  later: number;
+  reward: number;
+  anchor: number;
+  clears: number;
+  every: number;
+  seenAt: Date | null;
+  laterAt: Date | null;
+  ratedAt: Date | null;
+  optOutAt: Date | null;
+  events: { id: string; kind: "SEEN" | "LATER" | "OUT" | "RATED"; clears: number; gems: number; createdAt: Date }[];
+}) {
+  const rows = [
+    { label: "Status", value: reviewStatusLabel(status, seen) },
+    { label: "Seen", value: seen === 0 ? "—" : `${seen.toLocaleString("en-US")} · ${formatAdminWhen(seenAt)}` },
+    { label: "Not now", value: later === 0 ? "—" : `${later.toLocaleString("en-US")} · ${formatAdminWhen(laterAt)}` },
+    { label: "5 stars", value: ratedAt ? `${formatGems(reward)} gems · ${formatAdminWhen(ratedAt)}` : "—" },
+    { label: "Don't ask again", value: optOutAt ? formatAdminWhen(optOutAt) : "—" },
+    {
+      label: "Next ask",
+      value:
+        status === "RATED" || status === "OUT"
+          ? "Never"
+          : every < 1
+            ? "Off"
+            : status === "LATER"
+              ? clears >= anchor + every
+                ? "Due now"
+                : `After ${anchor + every} chapters`
+              : clears >= every
+                ? "Due now"
+                : `After ${every} chapters`,
+    },
+  ];
+
+  return (
+    <div className="glass mt-4 p-5">
+      <h2 className="text-lg font-semibold tracking-tight text-ink">Play review</h2>
+      <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((row) => (
+          <div key={row.label} className="min-w-0">
+            <dt className="text-xs text-ink-muted">{row.label}</dt>
+            <dd className="mt-0.5 text-sm text-ink">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {events.length === 0 ? (
+        <p className="mt-4 text-sm text-ink-muted">No steps recorded.</p>
+      ) : (
+        <div className="admin-table-wrap mt-4">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Step</th>
+                <th>Chapters</th>
+                <th>Gems</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <tr key={event.id}>
+                  <td className="whitespace-nowrap text-ink-muted">{formatAdminWhen(event.createdAt)}</td>
+                  <td>{reviewEventLabel(event.kind)}</td>
+                  <td className="tabular-nums">{event.clears.toLocaleString("en-US")}</td>
+                  <td className="tabular-nums">{event.gems > 0 ? formatGems(event.gems) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

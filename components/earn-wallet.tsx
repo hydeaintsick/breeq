@@ -24,6 +24,7 @@ const KIND_LABEL: Record<string, string> = {
   ENERGY: "Energy recharge",
   SKIN: "Skin unlocked",
   REVIVE: "Revive",
+  REVIEW: "Play review",
 };
 
 const STATUS_LABEL: Record<string, string> = {

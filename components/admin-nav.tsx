@@ -10,6 +10,7 @@ import {
   SettingsIcon,
   WallIcon,
   WithdrawIcon,
+  StarIcon,
 } from "@/components/nav-icons";
 import {
   ADMIN_DASHBOARD_PATH,
@@ -17,6 +18,7 @@ import {
   ADMIN_ECONOMY_PATH,
   ADMIN_EDITOR_PATH,
   ADMIN_PLAYERS_PATH,
+  ADMIN_REVIEWS_PATH,
   ADMIN_SETTINGS_PATH,
   ADMIN_WITHDRAWALS_PATH,
 } from "@/lib/auth/paths";
@@ -33,6 +35,7 @@ export function AdminNav({ pending = 0 }: { pending?: number }) {
     { href: ADMIN_EARN_PATH, label: "Earn maps", Icon: WallIcon, exact: false },
     { href: ADMIN_ECONOMY_PATH, label: "Economy", Icon: GemIcon, exact: false },
     { href: ADMIN_PLAYERS_PATH, label: "Players", Icon: PeopleIcon, exact: false },
+    { href: ADMIN_REVIEWS_PATH, label: "Reviews", Icon: StarIcon, exact: false },
     { href: ADMIN_WITHDRAWALS_PATH, label: "Withdrawals", Icon: WithdrawIcon, exact: false, badge: pending },
     { href: ADMIN_SETTINGS_PATH, label: "Settings", Icon: SettingsIcon, exact: false },
   ];

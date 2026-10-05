@@ -83,24 +83,31 @@ function Star({ fill }: { fill: number }) {
   );
 }
 
-/** Three stars, each empty / partial / filled. `value` is 0..3. */
+/** Three stars by default (a clear's grade), or `count` of them. `value` is 0..count. */
 export function StarRating({
   value,
   size = "md",
   label,
+  count = STARS_PER_CLEAR,
+  tone,
 }: {
   value: number;
   size?: "sm" | "md" | "lg";
   /** Accessible name. Defaults to "N of 3 stars". */
   label?: string;
+  /** How many stars to draw. The story grade stays at 3. */
+  count?: number;
+  /** "store" paints them amber, for the Play review ask. */
+  tone?: "store";
 }) {
-  const safe = Math.max(0, Math.min(STARS_PER_CLEAR, value));
+  const max = Math.max(1, count);
+  const safe = Math.max(0, Math.min(max, value));
   const rounded = Math.round(safe * 10) / 10;
-  const summary = label ?? `${rounded} of ${STARS_PER_CLEAR} stars`;
+  const summary = label ?? `${rounded} of ${max} stars`;
 
   return (
-    <span className="star-rating" data-size={size} role="img" aria-label={summary}>
-      {Array.from({ length: STARS_PER_CLEAR }, (_, i) => (
+    <span className="star-rating" data-size={size} data-tone={tone} role="img" aria-label={summary}>
+      {Array.from({ length: max }, (_, i) => (
         <Star key={i} fill={safe - i} />
       ))}
     </span>

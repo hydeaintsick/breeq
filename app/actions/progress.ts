@@ -12,6 +12,7 @@ import { formatGems } from "@/lib/economy";
 import { parseStoredLevel, starsForClear, clampStar, type StarCount } from "@/game/breakout/engine";
 import { ENERGY_CLEAR_REFUND, ENERGY_MAX, nextEnergyReset } from "@/lib/energy";
 import { refundEnergy } from "@/lib/energy-store";
+import { shouldAskReview } from "@/lib/review-store";
 import { getSiteSettings } from "@/lib/tutorial";
 import { progressFromXp, xpAfter, SKIP_CHAPTER_GEMS, XP_PER_STORY_CLEAR, type Progress } from "@/lib/progress";
 
@@ -40,6 +41,11 @@ export type ChapterClearResult = {
   improved?: boolean;
   /** The gauge before and after the clear's refund (`ENERGY_CLEAR_REFUND`, never past the max). Omitted for a skip or the tutorial. */
   energy?: ClearEnergy;
+  /**
+   * Ask for a Play review on this victory. True when the interval has been
+   * reached and they have not rated or opted out. Never set for the tutorial.
+   */
+  askReview?: boolean;
 };
 
 export type ClearEnergy = {
@@ -104,6 +110,7 @@ async function paidResult(
   improved: boolean,
   xp?: { before: number; after: number; gained: number },
   energy?: ClearEnergy,
+  askReview = false,
 ): Promise<ChapterClearResult> {
   const row = xp
     ? null
@@ -125,6 +132,7 @@ async function paidResult(
     bestStars,
     improved,
     ...(energy ? { energy } : {}),
+    askReview,
   };
 }
 
@@ -197,6 +205,7 @@ export async function awardChapterClear(
 
     const energy = await clearEnergy(user.id);
     revalidatePath(GAME_ROOT_PATH, "layout");
+    const askReview = await shouldAskReview(user.id);
 
     return paidResult(
       user.id,
@@ -209,6 +218,7 @@ export async function awardChapterClear(
         gained: xpGained,
       },
       energy,
+      askReview,
     );
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -217,7 +227,8 @@ export async function awardChapterClear(
         select: { stars: true },
       });
       const bestStars = clampStar(Math.max(row?.stars ?? 1, grade.stars));
-      return paidResult(user.id, grade.stars, bestStars, grade.stars > (row?.stars ?? 0));
+      const askReview = await shouldAskReview(user.id);
+      return paidResult(user.id, grade.stars, bestStars, grade.stars > (row?.stars ?? 0), undefined, undefined, askReview);
     }
     throw error;
   }
@@ -289,7 +300,16 @@ export async function skipChapter(chapterId: string): Promise<ChapterSkipResult 
 
     revalidatePath(GAME_ROOT_PATH, "layout");
 
-    const result = await paidResult(user.id, 1, 1, true, { before: xpBefore, after: updated.xp, gained: xpGained });
+    const askReview = await shouldAskReview(user.id);
+    const result = await paidResult(
+      user.id,
+      1,
+      1,
+      true,
+      { before: xpBefore, after: updated.xp, gained: xpGained },
+      undefined,
+      askReview,
+    );
     return { cost, before, balances: toBalances(updated), result };
   } catch (error) {
     // Two taps raced: the first one bought the clear. Give these gems back.

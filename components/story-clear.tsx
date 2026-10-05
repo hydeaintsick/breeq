@@ -14,6 +14,7 @@ import { progressFromXp, type Progress } from "@/lib/progress";
 import { clearShareText, REFERRAL_GEMS, REFERRAL_MAX_PAID } from "@/lib/share";
 import { claimLater, type ClaimView } from "@/lib/claim-view";
 import { useClaim } from "@/components/claim-provider";
+import { useReviewPrompt } from "@/components/review-prompt";
 
 /** Timeline, in ms from mount. */
 const T = {
@@ -165,7 +166,9 @@ export function StoryClear({
   const levelUps = result && (skip || replay) ? result.progress.level - result.before.level : levelUpsAnim;
   const buttons = skip || buttonsTimed;
   const claim = useClaim();
+  const review = useReviewPrompt();
   const asked = useRef(false);
+  const reviewSeen = useRef(false);
 
   useEffect(() => {
     if (asked.current || !claimStory || !buttons || !result || result.xpGained <= 0) return;
@@ -204,6 +207,19 @@ export function StoryClear({
     score,
     title,
   ]);
+
+  useEffect(() => {
+    if (reviewSeen.current || !buttons || !result?.askReview) return;
+    if (claimStory?.kind !== "story") return;
+    const claimOpening =
+      claim.needed &&
+      !claimLater() &&
+      result.xpGained > 0 &&
+      !new URLSearchParams(window.location.search).get("claim");
+    const placed = claimOpening || claim.active ? review.defer() : review.place();
+    if (placed !== "wait") reviewSeen.current = true;
+  }, [buttons, claim, claimStory, result, review]);
+
   const improved = Boolean(result?.improved && replay);
 
   useEffect(() => {

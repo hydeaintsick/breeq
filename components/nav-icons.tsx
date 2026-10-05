@@ -361,3 +361,17 @@ export function SettingsIcon() {
     </svg>
   );
 }
+
+export function StarIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M8 1.7 9.55 5.5l4.05.35-3.1 2.7.95 3.95L8 10.6 4.55 12.5l.95-3.95-3.1-2.7 4.05-.35Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
