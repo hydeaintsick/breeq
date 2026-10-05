@@ -6227,6 +6227,353 @@ html[data-theme="dark"] .lore-halo-photo {
   opacity: 0.85;
 }
 
+/* Decision dashboard: one panel tells one story. Neon is only the chart mark. */
+.brief-panel {
+  min-width: 0;
+  padding: 1.1rem 1.15rem 1.15rem;
+}
+
+.brief-panel .stat {
+  padding: 0.2rem 0.15rem 0.55rem;
+}
+
+.brief-panel a.stat:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 0.6rem;
+}
+
+.stat-grid.six {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .stat-grid.six {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.brief-split {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 1100px) {
+  .brief-split {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  }
+}
+
+.brief-kicker {
+  margin: 1.1rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.brief-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.9rem;
+}
+
+.brief-facts span {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+}
+
+.brief-facts strong {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.brief-facts em {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.brief-track {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.brief-track-row {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  min-height: 1.6rem;
+  font-size: 0.8rem;
+}
+
+.brief-track-row > span:first-child {
+  color: var(--ink-muted);
+}
+
+.brief-track-row > span:last-child {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-track-bar,
+.brief-country-bar,
+.brief-share {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.brief-track-bar {
+  display: block;
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.brief-track-bar > span,
+.brief-country-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.brief-share {
+  display: flex;
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.brief-share i {
+  display: block;
+  height: 100%;
+}
+
+.brief-chart {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 8.5rem auto;
+  column-gap: 0.55rem;
+  min-width: 0;
+  margin-top: 0.85rem;
+}
+
+.brief-chart-y {
+  display: flex;
+  grid-area: 1 / 1;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-chart svg {
+  grid-area: 1 / 2;
+  width: 100%;
+  height: 8.5rem;
+  overflow: visible;
+}
+
+.brief-chart-x {
+  display: flex;
+  grid-area: 2 / 2;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+}
+
+.brief-details {
+  margin-top: 0.35rem;
+}
+
+.brief-details summary {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--ink-muted);
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.brief-details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.brief-details ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brief-details li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 1.7rem;
+  border-top: 1px solid var(--hairline);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brief-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.brief-legend i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.brief-legend-n {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-legend-pct {
+  margin-left: 0.3rem;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.brief-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  border-top: 1px solid var(--hairline);
+  color: inherit;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.brief-line span:last-child {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-line:focus-visible,
+.brief-country-row:focus-visible,
+.admin-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.brief-country-row {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brief-country-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.brief-country-name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.brief-country-n {
+  flex: none;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.brief-country-bar {
+  display: block;
+  height: 0.35rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.brief-country-bar > span {
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-blue));
+}
+
+.admin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--ink);
+  font-size: 0.84rem;
+  text-decoration: none;
+}
+
+.admin-chip[data-active="true"] {
+  border-color: transparent;
+  background: var(--cta);
+  color: var(--on-cta);
+}
+
+.admin-live {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-right: 0.35rem;
+  border-radius: 999px;
+  background: var(--neon-lime);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--neon-lime) 28%, transparent);
+  vertical-align: 0.05em;
+}
+
+.admin-table.players {
+  min-width: 48rem;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

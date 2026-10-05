@@ -216,6 +216,12 @@ export function countryName(code: string | null | undefined): string {
   }
 }
 
+/** Regional-indicator flag for an ISO code. Empty when the code is not one. */
+export function countryFlag(code: string | null | undefined): string {
+  if (!code || !/^[A-Z]{2}$/.test(code)) return "";
+  return [...code].map((char) => String.fromCodePoint(127397 + char.charCodeAt(0))).join("");
+}
+
 /** "France (FR)", or "Unknown" when the edge had no country. */
 export function countryLabel(code: string | null | undefined): string {
   if (!code) return "Unknown";

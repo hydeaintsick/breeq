@@ -13,6 +13,9 @@ export type AdminPlayerRow = {
   partnerEmail: string | null;
   role: string;
   joined: string;
+  seen: string;
+  playing: boolean;
+  deposited: string | null;
   playTime: string;
   country: string;
   channel: string;
@@ -103,10 +106,11 @@ export function AdminPlayers({ rows, selfId }: { rows: AdminPlayerRow[]; selfId:
   return (
     <>
       <div className="admin-table-wrap mt-6">
-        <table className="admin-table">
+        <table className="admin-table players">
           <thead>
             <tr>
               <th>Player</th>
+              <th>Deposited</th>
               <th>Joined</th>
               <th>Play time</th>
               <th>Country</th>
@@ -134,7 +138,21 @@ export function AdminPlayers({ rows, selfId }: { rows: AdminPlayerRow[]; selfId:
                     ) : null}
                   </Link>
                 </td>
-                <td className="whitespace-nowrap text-ink-muted">{row.joined}</td>
+                <td className={`whitespace-nowrap ${row.deposited ? "font-medium text-ink" : "text-ink-muted"}`}>
+                  {row.deposited ?? "—"}
+                </td>
+                <td className="whitespace-nowrap text-ink-muted">
+                  <span className="block">{row.joined}</span>
+                  <span className="mt-0.5 block text-xs">
+                    {row.playing ? (
+                      <>
+                        <span className="admin-live" aria-hidden="true" />
+                        <span className="sr-only">Playing now. </span>
+                      </>
+                    ) : null}
+                    {row.seen === "—" ? "Not seen yet" : `Seen ${row.seen}`}
+                  </span>
+                </td>
                 <td className="whitespace-nowrap">{row.playTime}</td>
                 <td className="whitespace-nowrap">{row.country}</td>
                 <td>
