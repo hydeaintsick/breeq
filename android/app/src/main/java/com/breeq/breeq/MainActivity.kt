@@ -36,7 +36,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 
 /**
- * Breeq on Android: one WebView on the game menu, portrait only.
+ * Breeq on Android: one WebView that cold-starts on /auth/enter, portrait only.
  *
  * The page is the product; this shell only does what a browser tab cannot:
  * fill the screen under the system bars and paint them in the page's colors,
@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
         web = findViewById(R.id.web)
         offline = findViewById(R.id.offline)
         findViewById<View>(R.id.retry).setOnClickListener { retry() }
+        BreeqPush.attach(this)
 
         splash.setKeepOnScreenCondition { !contentShown }
         // A slow network must not hold the splash forever: give up on it after a few seconds.
@@ -85,42 +86,64 @@ class MainActivity : ComponentActivity() {
 
         applyInsets()
         setupWebView()
+        BreeqPush.markLive()
 
         onBackPressedDispatcher.addCallback(this) {
             if (offline.visibility != View.VISIBLE && web.canGoBack()) web.goBack() else moveTaskToBack(true)
         }
 
         val restored = savedInstanceState?.let { web.restoreState(it) } != null
+        val fromPush = BreeqPush.consumePending()?.takeIf { pushUrl ->
+            val uri = Uri.parse(pushUrl)
+            uri.scheme.equals("https", ignoreCase = true) && isAppHost(uri.host)
+        }
         if (!restored) {
             val linked = intent?.data?.takeIf { isAppHost(it.host) }
-            val url = linked?.toString() ?: BuildConfig.START_URL
-            // Cold start of the menu opens the campaign. A link to a specific page does not.
-            loadApp(url, linked == null || isMenu(url))
+            val url = fromPush ?: linked?.toString() ?: BuildConfig.START_URL
+            // No link and no notification: open the campaign (tutorial, else the current episode).
+            loadApp(url, fromPush == null && (linked == null || isCampaignStart(url)))
+        } else if (fromPush != null) {
+            loadApp(fromPush, false)
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
+        BreeqPush.consumePending()?.let { openFromPush(it) }
         // App Links while the app is already running: open that page, don't bounce to the campaign.
         intent.data?.takeIf { isAppHost(it.host) }?.let { loadApp(it.toString(), false) }
     }
 
     /**
      * Full loads only. The install id lets a signed-out cold start resume the same
-     * guest; the launch flag is what sends the menu to the campaign. In-app taps
-     * are ordinary navigations and do not carry either header.
+     * guest; the launch flag marks a cold start of the campaign. In-app taps are
+     * ordinary navigations and do not carry either header.
+     *
+     * The apex host 308s to www before that header can be read, and WebView does
+     * not resend extra headers on a redirect — so every full load uses www.
      */
     private fun loadApp(url: String, launch: Boolean) {
+        val target = canonical(url)
         val headers = mutableMapOf<String, String>()
         val id = installId()
         if (id.length >= 8) headers["X-Breeq-Install"] = id
         if (launch) headers["X-Breeq-Launch"] = "1"
-        if (headers.isEmpty()) web.loadUrl(url) else web.loadUrl(url, headers)
+        if (headers.isEmpty()) web.loadUrl(target) else web.loadUrl(target, headers)
     }
 
-    private fun isMenu(url: String): Boolean {
-        val path = Uri.parse(url).path ?: return false
-        return path == "/game/menu" || path == "/game/menu/"
+    /** breeq.space → www.breeq.space. Other hosts (localhost, previews) stay as given. */
+    private fun canonical(url: String): String {
+        val uri = Uri.parse(url)
+        if (!uri.scheme.equals("https", ignoreCase = true)) return url
+        if (!uri.host.equals("breeq.space", ignoreCase = true)) return url
+        return uri.buildUpon().authority("www.breeq.space").build().toString()
+    }
+
+    /** The menu and the cold-start route both mean "open the campaign". */
+    private fun isCampaignStart(url: String): Boolean {
+        val path = Uri.parse(url).path?.trimEnd('/') ?: return false
+        return path == "/game/menu" || path == "/game/continue" || path == "/auth/enter"
     }
 
     /** App-scoped Android id. Stable across reinstall on this phone; a factory reset changes it. */
@@ -182,7 +205,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun appUserAgent(default: String): String {
         val chrome = default.replace("; wv", "").replace(Regex("\\sVersion/\\d+(\\.\\d+)*"), "")
-        return "$chrome BreeqApp/${BuildConfig.VERSION_NAME}${deviceToken()}"
+        return "$chrome BreeqApp/${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}${deviceToken()}"
     }
 
     /** ` BreeqDevice/Google Pixel 8`. Empty when the build has no usable model. */
@@ -327,7 +350,7 @@ class MainActivity : ComponentActivity() {
     private fun retry() {
         loadFailed = false
         val url = web.url?.takeIf { isAppHost(Uri.parse(it).host) } ?: BuildConfig.START_URL
-        loadApp(url, isMenu(url))
+        loadApp(url, isCampaignStart(url))
     }
 
     // ---- System bars follow the page --------------------------------------------------------
@@ -353,6 +376,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** A notification tap. Only our own https pages; anything else stays out of the WebView. */
+    fun openFromPush(url: String) {
+        val uri = Uri.parse(url)
+        if (!uri.scheme.equals("https", ignoreCase = true) || !isAppHost(uri.host)) return
+        loadApp(url, false)
+    }
+
     /** `window.BreeqAndroid` — the site can tell it runs in the app and hand its colors over. */
     private inner class Bridge {
         @JavascriptInterface
@@ -363,6 +393,32 @@ class MainActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun version(): String = BuildConfig.VERSION_NAME
+
+        @JavascriptInterface
+        fun configure(appId: String): Boolean = BreeqPush.start(applicationContext, appId)
+
+        @JavascriptInterface
+        fun notificationsReady(): Boolean = BreeqPush.ready
+
+        @JavascriptInterface
+        fun enableNotifications(userId: String) {
+            BreeqPush.enable(userId) { accepted -> postPushResult(accepted) }
+        }
+
+        @JavascriptInterface
+        fun disableNotifications() {
+            runOnUiThread { BreeqPush.disable() }
+        }
+
+        @JavascriptInterface
+        fun linkUser(userId: String) {
+            runOnUiThread { BreeqPush.link(userId) }
+        }
+    }
+
+    private fun postPushResult(accepted: Boolean) {
+        val js = "window.__breeqPushResult && window.__breeqPushResult($accepted);"
+        web.post { web.evaluateJavascript(js, null) }
     }
 
     // ---- Lifecycle -------------------------------------------------------------------------
@@ -384,6 +440,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        BreeqPush.detach(this)
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = null
         (web.parent as? ViewGroup)?.removeView(web)

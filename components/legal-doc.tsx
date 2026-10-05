@@ -31,8 +31,8 @@ export function LegalSection({
   );
 }
 
-export function LegalUpdated() {
-  return <p>Last updated: {LEGAL_UPDATED}.</p>;
+export function LegalUpdated({ date = LEGAL_UPDATED }: { date?: string }) {
+  return <p>Last updated: {date}.</p>;
 }
 
 export function LegalCrossLinks({ current }: { current: "terms" | "privacy" }) {

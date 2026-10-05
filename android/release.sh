@@ -2,12 +2,13 @@
 #
 # One command, one signed release.
 #
-#   pnpm android:release            # bumps versionCode, builds, signs → android/dist/
-#   pnpm android:release 1.2.0      # same, and sets versionName
+#   pnpm android:release            # versionCode + 1, patch + 1 (1.0.0 → 1.0.1)
+#   pnpm android:release 1.2.0      # versionCode + 1, versionName set to 1.2.0
 #
 # First run: finds the Android SDK, mints the upload key (android/keystore/, never
-# committed) and writes android/keystore.properties. Every run: versionCode + 1 in
-# android/version.properties (commit it), then `bundleRelease assembleRelease`.
+# committed) and writes android/keystore.properties. Every run: versionCode + 1 and
+# the patch of versionName + 1 in android/version.properties (commit it), then
+# `bundleRelease assembleRelease`.
 # Outputs: android/dist/breeq-<versionName>-<versionCode>.aab (Play) and .apk (sideload).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -52,10 +53,26 @@ EOF
 fi
 
 # ---- 3. Version -------------------------------------------------------------------------
+# 1.0.4 → 1.0.5. Anything that is not major.minor.patch is left as written.
+bump_patch() {
+  local v="$1"
+  if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    printf '%s.%s.%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$((BASH_REMATCH[3] + 1))"
+  elif [[ "$v" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+    printf '%s.%s.1\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+  else
+    printf '%s\n' "$v"
+  fi
+}
+
 code="$(sed -n 's/^versionCode=//p' version.properties)"
 name="$(sed -n 's/^versionName=//p' version.properties)"
 code=$(( ${code:-0} + 1 ))
-name="${1:-${name:-1.0.0}}"
+if [ $# -ge 1 ]; then
+  name="$1"
+else
+  name="$(bump_patch "${name:-1.0.0}")"
+fi
 cat > version.properties <<EOF
 # Bumped by android/release.sh on every release build. Commit it with the release.
 versionCode=$code
@@ -63,8 +80,20 @@ versionName=$name
 EOF
 bold "Building Breeq $name ($code)"
 
+# ---- 3b. OneSignal App ID (public; baked so a cold start from a notification works) ----
+onesignal_id=""
+if [ -f ../.env ]; then
+  onesignal_id="$(grep -E '^NEXT_PUBLIC_ONESIGNAL_APP_ID=' ../.env | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]')"
+fi
+if printf '%s' "$onesignal_id" | grep -Eq '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'; then
+  bold "OneSignal App ID is baked into this build."
+else
+  onesignal_id=""
+  echo "OneSignal App ID is not set. The SDK is included; put NEXT_PUBLIC_ONESIGNAL_APP_ID in .env and build again before Play."
+fi
+
 # ---- 4. Build -----------------------------------------------------------------------------
-./gradlew --quiet --console=plain bundleRelease assembleRelease
+./gradlew --quiet --console=plain bundleRelease assembleRelease -Pbreeq.onesignalAppId="$onesignal_id"
 
 # ---- 5. Collect ---------------------------------------------------------------------------
 mkdir -p dist

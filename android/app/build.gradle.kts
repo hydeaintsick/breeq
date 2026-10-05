@@ -19,7 +19,7 @@ val keystoreProps = Properties().apply {
 }
 val hasReleaseKey = keystoreProps.getProperty("storeFile")?.let { rootProject.file(it).exists() } == true
 
-val startUrl = project.findProperty("breeq.startUrl") as String? ?: "https://breeq.space/game/menu"
+val startUrl = project.findProperty("breeq.startUrl") as String? ?: "https://www.breeq.space/auth/enter?launch=1"
 val appHosts = project.findProperty("breeq.appHosts") as String? ?: "breeq.space"
 
 android {
@@ -36,6 +36,14 @@ android {
 
         buildConfigField("String", "START_URL", "\"$startUrl\"")
         buildConfigField("String", "APP_HOSTS", "\"$appHosts\"")
+        val onesignalRaw = (project.findProperty("breeq.onesignalAppId") as String?)
+            .orEmpty()
+            .trim()
+            .removeSurrounding("\"")
+        val onesignalAppId = if (
+            onesignalRaw.matches(Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
+        ) onesignalRaw else ""
+        buildConfigField("String", "ONESIGNAL_APP_ID", "\"$onesignalAppId\"")
     }
 
     signingConfigs {
@@ -82,4 +90,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.activity:activity-ktx:1.13.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.onesignal:OneSignal:[5.6.1, 5.99.99]")
 }

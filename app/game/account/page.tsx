@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AccountForm } from "@/components/account-form";
 import { SignOutIcon } from "@/components/nav-icons";
 import { PlaySettings } from "@/components/play-settings";
+import { PushSettings } from "@/components/push-settings";
 import { SignOutButton } from "@/components/sign-out-button";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
@@ -26,6 +27,7 @@ export default async function AccountPage() {
       name: true,
       passwordHash: true,
       passwordSetAt: true,
+      pushOptIn: true,
       updatedAt: true,
       accounts: { select: { provider: true } },
     },
@@ -72,6 +74,7 @@ export default async function AccountPage() {
 
       <div className="mt-4 grid gap-4">
         <PlaySettings />
+        <PushSettings userId={sessionUser.id} optedIn={user?.pushOptIn === true} />
         <div className="glass grid gap-4 p-6 sm:p-8">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Session</p>
           <h2 className="text-xl font-semibold tracking-tight text-ink">Sign out</h2>

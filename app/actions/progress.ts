@@ -42,6 +42,11 @@ export type ChapterClearResult = {
   /** The gauge before and after the clear's refund (`ENERGY_CLEAR_REFUND`, never past the max). Omitted for a skip or the tutorial. */
   energy?: ClearEnergy;
   /**
+   * Ask about push on this victory. True on a first clear of a story chapter
+   * when the player has not been asked yet. Never set for the tutorial.
+   */
+  askPush?: boolean;
+  /**
    * Ask for a Play review on this victory. True when the interval has been
    * reached and they have not rated or opted out. Never set for the tutorial.
    */
@@ -110,6 +115,7 @@ async function paidResult(
   improved: boolean,
   xp?: { before: number; after: number; gained: number },
   energy?: ClearEnergy,
+  askPush = false,
   askReview = false,
 ): Promise<ChapterClearResult> {
   const row = xp
@@ -132,8 +138,20 @@ async function paidResult(
     bestStars,
     improved,
     ...(energy ? { energy } : {}),
+    askPush,
     askReview,
   };
+}
+
+/** A new story chapter, and they have not been asked about push yet. The tutorial never reaches this. */
+async function shouldAskPush(userId: string) {
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { pushPromptedAt: true },
+  });
+  if (row?.pushPromptedAt) return false;
+  const clears = await prisma.chapterClear.count({ where: { userId } });
+  return clears >= 1;
 }
 
 export async function awardChapterClear(
@@ -205,7 +223,7 @@ export async function awardChapterClear(
 
     const energy = await clearEnergy(user.id);
     revalidatePath(GAME_ROOT_PATH, "layout");
-    const askReview = await shouldAskReview(user.id);
+    const [askPush, askReview] = await Promise.all([shouldAskPush(user.id), shouldAskReview(user.id)]);
 
     return paidResult(
       user.id,
@@ -218,6 +236,7 @@ export async function awardChapterClear(
         gained: xpGained,
       },
       energy,
+      askPush,
       askReview,
     );
   } catch (error) {
@@ -228,7 +247,7 @@ export async function awardChapterClear(
       });
       const bestStars = clampStar(Math.max(row?.stars ?? 1, grade.stars));
       const askReview = await shouldAskReview(user.id);
-      return paidResult(user.id, grade.stars, bestStars, grade.stars > (row?.stars ?? 0), undefined, undefined, askReview);
+      return paidResult(user.id, grade.stars, bestStars, grade.stars > (row?.stars ?? 0), undefined, undefined, false, askReview);
     }
     throw error;
   }
@@ -308,6 +327,7 @@ export async function skipChapter(chapterId: string): Promise<ChapterSkipResult 
       true,
       { before: xpBefore, after: updated.xp, gained: xpGained },
       undefined,
+      false,
       askReview,
     );
     return { cost, before, balances: toBalances(updated), result };

@@ -6773,6 +6773,42 @@ html[data-theme="dark"] .btn-danger {
   background: rgba(5, 6, 12, 0.38);
 }
 
+/* Push opt-in: same night glass, a still ball instead of the energy core. */
+.energy-sheet.push-sheet {
+  z-index: 88;
+}
+
+.energy-sheet.push-sheet .energy-sheet-body {
+  background:
+    radial-gradient(70% 42% at 50% 0%, color-mix(in srgb, var(--neon-violet) 28%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 40%),
+    rgba(11, 13, 26, 0.92);
+}
+
+.push-mark {
+  width: 4.75rem;
+  height: 4.75rem;
+  margin: 1.25rem auto 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--neon-violet) 42%, transparent);
+}
+
+.push-ball {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow:
+    0 0 12px #fff,
+    0 0 22px var(--neon-cyan),
+    -14px 0 0 -2px color-mix(in srgb, var(--neon-violet) 75%, transparent),
+    -24px 0 0 -4px color-mix(in srgb, var(--neon-pink) 50%, transparent);
+}
+
 /* Play review: night glass with an amber bloom, the store's five stars. */
 .energy-sheet.review-sheet {
   z-index: 89;

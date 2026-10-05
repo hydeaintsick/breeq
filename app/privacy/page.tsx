@@ -23,7 +23,7 @@ export default function PrivacyPage() {
       lede="This policy explains what personal data Breeq collects, why we collect it, who we share it with, how long we keep it, and the rights you can exercise."
     >
       <LegalBody>
-        <LegalUpdated />
+        <LegalUpdated date="5 October 2026" />
         <LegalCrossLinks current="privacy" />
 
         <LegalSection n={1} title="Who we are">
@@ -91,6 +91,14 @@ export default function PrivacyPage() {
             </li>
             <li>ledger lines for every gem and ETH movement.</li>
           </ul>
+          <h3>Push notifications</h3>
+          <p>
+            If you choose to turn them on, we keep that choice and send your account id to
+            our notification provider (OneSignal) so a message can reach this browser or the
+            Android app. The message is a title, a short text, and a link back to Breeq. We
+            do not send your email address for this. You can turn notifications off in
+            Account and in your device settings.
+          </p>
           <h3>Photos and other User Content</h3>
           <p>
             If you choose a photo as a wall background, we receive the file you pick,
@@ -211,10 +219,11 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong className="font-medium text-ink">Consent</strong> (Art. 6(1)(a) and
-              ePrivacy) — optional cookies that are not strictly necessary, if we later add
-              them; sharing to a social network you click; certain photo uses beyond
-              operating the wall, if we ever ask. You can withdraw consent without affecting
-              processing that happened before withdrawal.
+              ePrivacy) — optional push notifications, if you turn them on; optional cookies
+              that are not strictly necessary, if we later add them; sharing to a social
+              network you click; certain photo uses beyond operating the wall, if we ever
+              ask. You can withdraw consent without affecting processing that happened
+              before withdrawal.
             </li>
             <li>
               <strong className="font-medium text-ink">Vital interests / public task</strong>{" "}
@@ -332,6 +341,11 @@ export default function PrivacyPage() {
               (EU cloud unless we configure another host), for page views, sign-up, device,
               country, Android app version, phone model, and play time. The person profile uses your
               account id, username, and email once you are signed in;
+            </li>
+            <li>
+              <strong className="font-medium text-ink">Notifications</strong> — OneSignal, if
+              you turn push on, to deliver the message to your browser or the Android app.
+              They receive your account id and the device&apos;s push token;
             </li>
             <li>
               <strong className="font-medium text-ink">Blockchains</strong> — a public ETH

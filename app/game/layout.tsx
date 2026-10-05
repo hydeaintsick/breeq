@@ -1,5 +1,6 @@
 import { PlayAdminProvider } from "@/components/admin-autopilot";
 import { ClaimProvider } from "@/components/claim-provider";
+import { PushPromptProvider } from "@/components/push-prompt";
 import { BalancesProvider } from "@/components/balances-provider";
 import { CosmeticsProvider } from "@/components/cosmetics-provider";
 import { EnergyProvider } from "@/components/energy-provider";
@@ -30,7 +31,7 @@ export default async function GameLayout({
 }) {
   const { user, progress, stars } = await requireProgress();
   const settings = await getSiteSettings();
-  const [balances, economy, energy, wardrobe, board, unclaimed, reviewRow, storyClears] = await Promise.all([
+  const [balances, economy, energy, wardrobe, board, unclaimed, pushRow, storyClears] = await Promise.all([
     getBalances(user.id),
     getEconomy(),
     settings.energyEnabled ? getEnergy(user.id) : Promise.resolve(toEnergyState(ENERGY_MAX)),
@@ -39,7 +40,7 @@ export default async function GameLayout({
     isUnclaimed(user.id),
     prisma.user.findUnique({
       where: { id: user.id },
-      select: { reviewStatus: true, reviewAnchor: true },
+      select: { pushPromptedAt: true, pushOptIn: true, reviewStatus: true, reviewAnchor: true },
     }),
     prisma.chapterClear.count({ where: { userId: user.id } }),
   ]);
@@ -47,13 +48,19 @@ export default async function GameLayout({
   const reviewIsDue = reviewDue({
     clears: storyClears,
     every: settings.reviewEvery,
-    status: reviewRow?.reviewStatus ?? null,
-    anchor: reviewRow?.reviewAnchor ?? 0,
+    status: pushRow?.reviewStatus ?? null,
+    anchor: pushRow?.reviewAnchor ?? 0,
   });
 
   return (
     <PlayAdminProvider admin={user.role === "ADMIN"}>
     <ClaimProvider needed={unclaimed} google={isGoogleEnabled()}>
+    <PushPromptProvider
+      userId={user.id}
+      prompted={pushRow?.pushPromptedAt != null}
+      optedIn={pushRow?.pushOptIn === true}
+      storyClears={storyClears}
+    >
     <StoryChromeProvider>
       <BalancesProvider initial={balances}>
         <ReviewPromptProvider due={reviewIsDue} gems={settings.reviewGems}>
@@ -73,6 +80,7 @@ export default async function GameLayout({
         </ReviewPromptProvider>
       </BalancesProvider>
     </StoryChromeProvider>
+    </PushPromptProvider>
     </ClaimProvider>
     </PlayAdminProvider>
   );

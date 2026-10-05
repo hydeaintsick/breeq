@@ -93,6 +93,10 @@ model User {
   playSeconds      Int            @default(0)
   /// Wall clock of the last accepted play-time beat. Stops a client from inflating `playSeconds`.
   lastPlayAt       DateTime?
+  /// When the player was asked about push. Yes and Not now both set it, so the sheet shows once.
+  pushPromptedAt   DateTime?
+  /// True after they accept. False after Not now or a later turn-off from Account.
+  pushOptIn        Boolean?
   /// Play review ask. Null until they answer. LATER comes back after `reviewEvery` more clears.
   /// OUT and RATED never see the sheet again.
   reviewStatus   ReviewStatus?
@@ -463,6 +467,26 @@ model LedgerEntry {
 
   @@index([userId, createdAt])
   @@index([kind, createdAt])
+}
+
+/// One admin send through OneSignal. Kept when the API refuses, so the attempt stays visible.
+model PushMessage {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  body        String
+  /// Absolute https://www.breeq.space URL opened when the notification is tapped.
+  url         String
+  /// Username of the admin who sent it, copied so the row still reads later.
+  author      String
+  /// OneSignal notification id when the API accepted the send.
+  onesignalId String?
+  /// Subscribers OneSignal counted. Null when it did not return one.
+  recipients  Int?
+  /// Set when the API refused the send.
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 enum WithdrawalStatus {

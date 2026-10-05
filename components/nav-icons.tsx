@@ -375,3 +375,18 @@ export function StarIcon() {
     </svg>
   );
 }
+
+export function BellIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+      <path
+        d="M8 2.2a3.6 3.6 0 0 1 3.6 3.6v1.7c0 .5.2 1 .5 1.4l.7.8H3.2l.7-.8c.3-.4.5-.9.5-1.4V5.8A3.6 3.6 0 0 1 8 2.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path d="M6.6 12.2a1.4 1.4 0 0 0 2.8 0" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}

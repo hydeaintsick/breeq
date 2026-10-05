@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- White only: Android tints the status-bar icon. Two bricks and the ball. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M2.2,3.2h8.2c0.7,0 1.2,0.5 1.2,1.2v5.2c0,0.7 -0.5,1.2 -1.2,1.2H2.2c-0.7,0 -1.2,-0.5 -1.2,-1.2V4.4c0,-0.7 0.5,-1.2 1.2,-1.2z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13.6,3.2h8.2c0.7,0 1.2,0.5 1.2,1.2v5.2c0,0.7 -0.5,1.2 -1.2,1.2h-8.2c-0.7,0 -1.2,-0.5 -1.2,-1.2V4.4c0,-0.7 0.5,-1.2 1.2,-1.2z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,16.4m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+</vector>

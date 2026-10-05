@@ -1,6 +1,7 @@
 # Breeq for Android
 
-A native shell around one WebView on `https://breeq.space/game/menu`. Portrait only,
+A native shell around one WebView on `https://www.breeq.space/auth/enter?launch=1`
+(guest door, then the tutorial or the current episode). Portrait only,
 Android 6.0 (API 23) and up, ~270 KB. The page is the product; the shell does what a
 browser tab cannot (see `app/src/main/java/com/breeq/breeq/MainActivity.kt`).
 
@@ -26,7 +27,7 @@ SDK by itself and Gradle downloads the missing platform. No Android Studio neede
 
 ```sh
 pnpm android:debug                                           # build + install the debug app on the connected device
-cd android && ./gradlew installDebug -Pbreeq.startUrl=http://10.0.2.2:3333/game/menu   # against `pnpm dev` from the emulator
+cd android && ./gradlew installDebug -Pbreeq.startUrl=http://10.0.2.2:3333/auth/enter?launch=1   # against `pnpm dev` from the emulator
 ```
 
 The debug build has the id `com.breeq.breeq.debug`, allows cleartext HTTP, and enables
@@ -47,7 +48,7 @@ The debug build has the id `com.breeq.breeq.debug`, allows cleartext HTTP, and e
   share row's networks (X, Facebook, WhatsApp, Telegram...) and `target=_blank` popups
   go to the matching app or the browser; `mailto:`, `tel:`, `intent://` too.
 - **User agent** is the WebView's minus the `; wv` / `Version/4.0` markers (Google refuses
-  those for OAuth), plus `BreeqApp/<version>` so the site can detect the app.
+  those for OAuth), plus `BreeqApp/<versionName>+<versionCode>` so the player page can show the build.
 - **Photo picker** for the wall editor (`<input type="file" accept="image/*">`).
 - **Offline view** with a retry when the first page cannot load; the splash (the board's
   night plate and the launcher mark) stays up until the page paints, five seconds at most.

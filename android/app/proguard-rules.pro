@@ -3,3 +3,7 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 -keepattributes JavascriptInterface
+
+# OneSignal registers receivers and services by reflection.
+-keep class com.onesignal.** { *; }
+-dontwarn com.onesignal.**
