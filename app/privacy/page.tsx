@@ -156,7 +156,15 @@ export default function PrivacyPage() {
             <li>
               play time: seconds a live board was running in Story, the tutorial, or
               Earn. Pause menus and end screens are not counted. We store the total on
-              your account.
+              your account;
+            </li>
+            <li>
+              when an OpenReplay project is configured, a session recording: a
+              reconstruction of the pages you open, your clicks and scrolls, and the
+              game canvas, so we can replay a visit. Once you are signed in, that
+              recording is labeled with your email, or your username if the account has
+              no email. Password fields are left out. Payment return parameters and the
+              guest door token are stripped from the address before it is stored.
             </li>
           </ul>
           <h3>Contact</h3>
@@ -168,9 +176,9 @@ export default function PrivacyPage() {
           <h3>Data we do not collect today</h3>
           <p>
             We do not run third-party advertising SDKs, do not sell lists of players, and
-            do not use your photos to train a public generative model. We do not record
-            sessions or autocapture every click. We do not ask for precise GPS. Haptics
-            use the device vibrator only when you have that preference on.
+            do not use your photos to train a public generative model. We do not ask for
+            precise GPS. Haptics use the device vibrator only when you have that
+            preference on.
           </p>
         </LegalSection>
 
@@ -208,7 +216,8 @@ export default function PrivacyPage() {
               6(1)(f)) — keeping the Service safe (fraud, cheats, chargebacks, multi-accounting);
               debugging; improving difficulty proofs and economy settings; establishing,
               exercising, or defending legal claims; product analytics (page views, sign-up,
-              device, country, app version, phone model, and play time) in PostHog. You may object
+              device, country, app version, phone model, and play time) in PostHog, and
+              session replay in OpenReplay when that project is configured. You may object
               (Section 10). We do not use legitimate interests
               to override a child or to send you marketing you did not ask for.
             </li>
@@ -284,6 +293,16 @@ export default function PrivacyPage() {
             create a person profile for a visitor who has not signed in, and we do not turn
             on session replay. You can block it with your browser; the game still runs.
           </p>
+          <h3>Session replay</h3>
+          <p>
+            When an OpenReplay project key is configured, the browser loads OpenReplay
+            and records the visit as a reconstruction of the pages, clicks, scrolls, and
+            the game canvas. It is not a video file. A signed-in recording is labeled
+            with your email, or your username when the account has no email. Password
+            fields stay out of the recording. OpenReplay may keep a first-party token in
+            localStorage so one visit stays one session. You can block it with your
+            browser; the game still runs.
+          </p>
           <h3>Referral attribution (30 days)</h3>
           <p>
             Visiting a share link <code className="text-ink">/r/…</code> sets an HttpOnly{" "}
@@ -341,6 +360,12 @@ export default function PrivacyPage() {
               (EU cloud unless we configure another host), for page views, sign-up, device,
               country, Android app version, phone model, and play time. The person profile uses your
               account id, username, and email once you are signed in;
+            </li>
+            <li>
+              <strong className="font-medium text-ink">Session replay</strong> — OpenReplay
+              (their cloud unless we configure another ingest host), to replay a visit.
+              Once you are signed in, the recording is labeled with your email, or your
+              username if you have no email;
             </li>
             <li>
               <strong className="font-medium text-ink">Notifications</strong> — OneSignal, if
