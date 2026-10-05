@@ -9,7 +9,7 @@
  */
 import { alpha, tint } from "../../shared/color";
 import { Game, RULES, serveDirection } from "../engine/game";
-import { LEVEL_DEFAULTS, paddleZoneTop } from "../engine/level";
+import { LEVEL_DEFAULTS, obstacleBox, paddleZoneTop } from "../engine/level";
 import type { Ball, Brick, Level, Obstacle, Zone } from "../engine/types";
 import { MOD_TINT, ZONE_LABEL, ZONE_TINT, tintOf, type NeonPalette, type Tint } from "./palette";
 import type { BreakoutScene, FxColor, Particle } from "./scene";
@@ -57,6 +57,11 @@ export interface Viewport {
   height: number;
   dpr: number;
   fit?: CssRect;
+  /**
+   * Pack the wall and the paddle into this canvas. The long empty lane
+   * between them shrinks, so a short wide frame still shows a whole level.
+   */
+  poster?: boolean;
 }
 
 export class BreakoutRenderer {
@@ -69,6 +74,14 @@ export class BreakoutRenderer {
   /** Where the world's origin sits on the canvas, device px. */
   private ox = 0;
   private oy = 0;
+  /**
+   * Poster framing: the visible canvas is the slot, and the level is drawn
+   * full-width into `world`, then the lane under the wall is squeezed so the
+   * paddle sits on the bottom edge.
+   */
+  private poster: { sky: number; head: number; foot: number; floor: number; ox: number } | null = null;
+  private world: HTMLCanvasElement | null = null;
+  private worldCtx: Ctx | null = null;
   private readonly brickCache = new Map<string, HTMLCanvasElement>();
   /** Glows, halos and auras at the current scale (see `glow` and `light`). */
   private readonly lightCache = new Map<string, LightSprite>();
@@ -114,6 +127,11 @@ export class BreakoutRenderer {
 
   /** Lay the world out inside a canvas of any size (see `Viewport`). */
   view(v: Viewport): void {
+    if (v.poster) {
+      this.viewPoster(v);
+      return;
+    }
+    this.poster = null;
     const { level } = this;
     const fit = v.fit ?? { x: 0, y: 0, width: v.width, height: v.height };
     const scale = Math.min((fit.width * v.dpr) / level.width, (fit.height * v.dpr) / level.height);
@@ -140,6 +158,87 @@ export class BreakoutRenderer {
     this.dpr = v.dpr;
     this.ox = ox;
     this.oy = oy;
+    this.canvas.width = cw;
+    this.canvas.height = ch;
+    this.staticLayer = this.paintStatic();
+  }
+
+  /**
+   * Where the poster cuts the level. `sky` drops the empty band above the
+   * wall, `head` is just under the lowest brick, `foot` is just above the
+   * paddle. Everything between head and foot is the lane that shrinks.
+   */
+  private laneOf(level: Level): { sky: number; head: number; foot: number; floor: number } {
+    let brickTop = level.field.top;
+    let brickBottom = level.field.top;
+    if (level.bricks.length > 0) {
+      brickTop = level.height;
+      brickBottom = 0;
+      for (const brick of level.bricks) {
+        brickTop = Math.min(brickTop, brick.y);
+        brickBottom = Math.max(brickBottom, brick.y + brick.h);
+      }
+    }
+    const sky = Math.max(0, brickTop - 24);
+    const head = Math.min(level.paddle.y - 40, brickBottom + 8);
+    const foot = Math.max(head + 24, level.paddle.y - 4);
+    // Drop the empty floor under the paddle so it sits on the bottom edge.
+    const floor = Math.min(level.height, level.paddle.y + level.paddle.height + 12);
+    return { sky, head, foot, floor };
+  }
+
+  /** Size the visible canvas to the slot and pack the level into it. */
+  private viewPoster(v: Viewport): void {
+    const { level } = this;
+    if (!(v.width > 0) || !(v.height > 0)) return;
+    const dpr = v.dpr;
+    const cw = Math.max(1, Math.round(v.width * dpr));
+    const ch = Math.max(1, Math.round(v.height * dpr));
+    const lane = this.laneOf(level);
+    const minGap = 16;
+    const packed = lane.head - lane.sky + minGap + (lane.floor - lane.foot);
+    let scale = (cw) / level.width;
+    let gap = ch / scale - (lane.head - lane.sky) - (lane.floor - lane.foot);
+    let ox = 0;
+    if (!(gap >= minGap) && packed > 0) {
+      scale = ch / packed;
+      gap = minGap;
+      ox = Math.round((cw - level.width * scale) / 2);
+    }
+    const worldW = Math.max(1, Math.round(level.width * scale));
+    const worldH = Math.max(1, Math.round(level.height * scale));
+    if (
+      this.poster &&
+      this.staticLayer &&
+      this.world &&
+      scale === this.scale &&
+      cw === this.canvas.width &&
+      ch === this.canvas.height &&
+      ox === this.poster.ox &&
+      lane.sky === this.poster.sky &&
+      lane.head === this.poster.head &&
+      lane.foot === this.poster.foot &&
+      lane.floor === this.poster.floor
+    ) {
+      return;
+    }
+    if (scale !== this.scale) {
+      this.brickCache.clear();
+      this.lightCache.clear();
+    }
+    this.scale = scale;
+    this.dpr = dpr;
+    // The world buffer is the full level, origin at its corner. The visible
+    // canvas gets the letterbox offset in `poster.ox`.
+    this.ox = 0;
+    this.oy = 0;
+    this.poster = { sky: lane.sky, head: lane.head, foot: lane.foot, floor: lane.floor, ox };
+    if (!this.world) {
+      this.world = document.createElement("canvas");
+      this.worldCtx = this.world.getContext("2d", { alpha: false });
+    }
+    this.world.width = worldW;
+    this.world.height = worldH;
     this.canvas.width = cw;
     this.canvas.height = ch;
     this.staticLayer = this.paintStatic();
@@ -200,8 +299,10 @@ export class BreakoutRenderer {
   private paintStatic(): HTMLCanvasElement {
     const { level, palette: p, scale, ox, oy } = this;
     const layer = document.createElement("canvas");
-    layer.width = this.canvas.width;
-    layer.height = this.canvas.height;
+    // A poster draws the full level into the world buffer, then crops it
+    // onto the short visible canvas.
+    layer.width = this.poster && this.world ? this.world.width : this.canvas.width;
+    layer.height = this.poster && this.world ? this.world.height : this.canvas.height;
     const ctx = layer.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D is not available");
 
@@ -264,7 +365,9 @@ export class BreakoutRenderer {
   // ---------------------------------------------------------------------------
 
   render(game: Game, scene: BreakoutScene): void {
-    const { ctx, staticLayer, scale, level, palette: p, ox, oy } = this;
+    const ctx = this.poster ? this.worldCtx : this.ctx;
+    if (!ctx) return;
+    const { staticLayer, scale, level, palette: p, ox, oy } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (!staticLayer) {
       ctx.fillStyle = "#0b0d1a";
@@ -349,6 +452,81 @@ export class BreakoutRenderer {
       ctx.lineWidth = 2;
       this.roundRect(ctx, f.left, f.top, f.right - f.left, f.bottom - f.top, 10);
       ctx.stroke();
+    }
+    if (this.poster) this.presentPoster(game, scene);
+  }
+
+  /**
+   * Copy the full-level frame into the short slot: the wall stays at the top,
+   * the paddle at the bottom, and the lane between them shrinks. Balls, zones
+   * and obstacles that live in that lane are drawn again, round, at the
+   * squeezed position — a stretched blit would flatten them.
+   */
+  private presentPoster(game: Game, scene: BreakoutScene): void {
+    const poster = this.poster;
+    const world = this.world;
+    const still = this.staticLayer;
+    if (!poster || !world || !still) return;
+    const { scale, level } = this;
+    const { sky, head, foot, floor, ox } = poster;
+    const ctx = this.ctx;
+    const viewH = this.canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#0b0d1a";
+    ctx.fillRect(0, 0, this.canvas.width, viewH);
+
+    const topSrc = Math.max(0, Math.min(world.height, Math.round(sky * scale)));
+    const topEnd = Math.max(topSrc, Math.min(world.height, Math.round(head * scale)));
+    const topH = topEnd - topSrc;
+    const tailSrc = Math.max(0, Math.min(world.height, Math.round(foot * scale)));
+    const tailEnd = Math.max(tailSrc, Math.min(world.height, Math.round(floor * scale)));
+    const tailH = tailEnd - tailSrc;
+    const gapH = Math.max(0, viewH - topH - tailH);
+    const destW = world.width;
+
+    if (gapH > 0) {
+      const midH = Math.max(1, Math.max(0, tailSrc - topEnd));
+      ctx.drawImage(still, 0, topEnd, still.width, midH, ox, topH, destW, gapH);
+    }
+    if (topH > 0) ctx.drawImage(world, 0, topSrc, destW, topH, ox, 0, destW, topH);
+    if (tailH > 0) ctx.drawImage(world, 0, tailSrc, destW, tailH, ox, topH + gapH, destW, tailH);
+
+    const span = Math.max(1, foot - head);
+    const mapY = (y: number) => {
+      if (y <= head) return (y - sky) * scale;
+      if (y >= foot) return topH + gapH + (y - foot) * scale;
+      return topH + ((y - head) / span) * gapH;
+    };
+    const place = (y: number) => {
+      ctx.setTransform(scale, 0, 0, scale, ox, mapY(y) - y * scale);
+    };
+
+    for (const zone of game.zones) {
+      if (zone.y + zone.r <= head || zone.y - zone.r >= foot) continue;
+      place(zone.y);
+      this.zone(ctx, zone, scene.zonePulse.get(zone.id) ?? 0, scene.time, game.state);
+    }
+    for (const obstacle of game.obstacles) {
+      const box = obstacleBox(obstacle, scene.time);
+      const cy = box.y + box.h / 2;
+      if (box.y + box.h <= head || box.y >= foot) continue;
+      place(cy);
+      this.obstacle(ctx, obstacle, game, scene.obstaclePulse.get(obstacle.id) ?? 0, scene.time);
+    }
+    const state = game.state;
+    if (state.phase === "play" || state.phase === "serve") {
+      const r = level.ball.r;
+      for (const ball of state.balls) {
+        if (game.inFog(ball.x, ball.y)) continue;
+        if (ball.y + r <= head || ball.y - r >= foot) continue;
+        place(ball.y);
+        this.ball(ctx, ball, game, scene);
+      }
+    }
+    for (const speck of scene.particles) {
+      if (speck.y <= head || speck.y >= foot) continue;
+      place(speck.y);
+      this.particles(ctx, [speck]);
     }
   }
 

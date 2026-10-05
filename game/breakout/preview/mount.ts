@@ -108,6 +108,11 @@ export interface MountOptions {
    */
   fit?: HTMLElement | null;
   /**
+   * The canvas is the whole slot. The wall stays up top and the paddle on the
+   * bottom edge; the empty lane between them shrinks to whatever height is left.
+   */
+  poster?: boolean;
+  /**
    * How much of the field the rail's full width covers. 1.25 means the whole
    * field fits in the central 80% of the rail: less thumb travel, and the
    * outer 10% on each side is slack so the paddle can be pinned to a wall
@@ -194,6 +199,7 @@ export function mountBreakout(
   const loop = options.loop ?? true;
   const rail = editMode ? null : (options.rail ?? null);
   const fit = options.fit ?? null;
+  const poster = options.poster ?? false;
   const railGain = Math.max(1, options.railGain ?? 1.25);
   const forceFrozen = Boolean(options.frozen);
   let skins = options.skins ?? DEFAULT_SKIN_SET;
@@ -736,6 +742,7 @@ export function mountBreakout(
 
   // --- browser plumbing -------------------------------------------------------
   const viewport = () => {
+    if (poster) return { width: cssWidth, height: cssHeight, dpr, poster: true };
     if (!fit) return { width: cssWidth, height: cssHeight, dpr };
     const c = canvas.getBoundingClientRect();
     const f = fit.getBoundingClientRect();
@@ -748,7 +755,7 @@ export function mountBreakout(
   };
   const applySize = () => {
     cssWidth = canvas.clientWidth || canvas.parentElement?.clientWidth || level.width;
-    cssHeight = fit
+    cssHeight = fit || poster
       ? canvas.clientHeight || canvas.parentElement?.clientHeight || level.height
       : (cssWidth * level.height) / level.width;
     dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
@@ -768,7 +775,7 @@ export function mountBreakout(
   const resize = () => {
     if (!sized) {
       applySize();
-      sized = canvas.clientWidth > 0;
+      sized = canvas.clientWidth > 0 && (!poster || canvas.clientHeight > 0);
       return;
     }
     window.clearTimeout(resizeTimer);

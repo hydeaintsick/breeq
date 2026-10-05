@@ -39,6 +39,7 @@ export function BreakoutPreview({
   compact = false,
   fill = false,
   contain = false,
+  poster = false,
   showCaption = true,
   showHud = true,
   paused = false,
@@ -62,6 +63,8 @@ export function BreakoutPreview({
   compact?: boolean;
   fill?: boolean;
   contain?: boolean;
+  /** Fill the slot with a short board: wall on top, paddle on the bottom edge. */
+  poster?: boolean;
   showCaption?: boolean;
   showHud?: boolean;
   paused?: boolean;
@@ -129,6 +132,7 @@ export function BreakoutPreview({
       haptics,
       rail: thumbRail ? railRef.current : null,
       fit: contain ? fitRef.current : null,
+      poster,
       skins: skinsRef.current,
     });
     handleRef.current = handle;
@@ -139,7 +143,7 @@ export function BreakoutPreview({
       handleRef.current = null;
       onHandle?.(null);
     };
-  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, onCleared, onOver, onEvent, onHandle]);
+  }, [levels, start, seed, controls, followQuery, frozen, loop, thumbRail, sound, haptics, contain, poster, onCleared, onOver, onEvent, onHandle]);
 
   useEffect(() => {
     if (paused) {
@@ -264,21 +268,21 @@ export function BreakoutPreview({
   return (
     <figure
       className={
-        fill
+        fill || poster
           ? "absolute inset-0 z-0 h-full w-full max-w-none overflow-hidden"
           : `relative mx-auto w-full ${compact ? "max-w-[18rem]" : "max-w-[22rem]"}`
       }
     >
-      {fill ? null : <div className="board-aura" aria-hidden="true" />}
+      {fill || poster ? null : <div className="board-aura" aria-hidden="true" />}
       <div
-        className={`board-stage relative mx-auto ${fill ? "board-stage-fill" : "z-10"}`}
+        className={`board-stage relative mx-auto ${fill || poster ? "board-stage-fill h-full" : "z-10"}`}
         role="img"
         aria-label={boardLabel}
       >
         <canvas
           ref={canvasRef}
           className="block h-full w-full"
-          style={{ aspectRatio: `${first.width} / ${first.height}` }}
+          style={poster ? undefined : { aspectRatio: `${first.width} / ${first.height}` }}
         />
         {hudView}
       </div>

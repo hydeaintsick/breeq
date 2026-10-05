@@ -4,7 +4,7 @@ import { BreakoutPreview } from "@/components/breakout-preview";
 /**
  * Gameplay clip for a Plypto bounty. Framed by their app, kept out of search.
  * Their card already has the title, the reward and the button, so this page
- * is only the live board: bricks, ball and paddle, fitted in the slot.
+ * is only the live board, packed into the slot: bricks on top, paddle below.
  */
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default function PlyptoEmbedPage() {
   return (
     <div className="plypto-embed">
       <div className="plypto-stage">
-        <BreakoutPreview controls="auto" followQuery={false} showCaption={false} showHud loop />
+          <BreakoutPreview controls="auto" followQuery={false} showCaption={false} showHud poster loop />
       </div>
     </div>
   );
