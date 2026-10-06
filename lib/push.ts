@@ -12,6 +12,12 @@ export const PUSH_DEFAULT_PATH = "/game/menu";
 
 const APP_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Public Safari web push id for this OneSignal app. Chrome, Edge, and Firefox
+ * subscribe without it; Safari on macOS does not. Not a secret.
+ */
+export const PUSH_SAFARI_WEB_ID = "web.onesignal.auto.43666e9c-a8ad-4b1e-8de4-10291bcbdb86";
+
 /** The public App ID, or "" when it is missing or not a UUID. */
 export function publicPushAppId() {
   const value = (process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ?? "").trim();

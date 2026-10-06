@@ -1,10 +1,11 @@
-import { isPushAppId, publicPushAppId, webPushLikely } from "@/lib/push";
+import { isPushAppId, publicPushAppId, PUSH_SAFARI_WEB_ID, webPushLikely } from "@/lib/push";
 
 const USER_ID = /^[a-f0-9]{24}$/i;
 
 type OneSignalSdk = {
   init: (options: {
     appId: string;
+    safari_web_id: string;
     serviceWorkerPath: string;
     serviceWorkerParam: { scope: string };
     notifyButton: { enable: boolean };
@@ -66,6 +67,7 @@ function loadSdk(appId: string): Promise<OneSignalSdk | null> {
       try {
         await OneSignal.init({
           appId,
+          safari_web_id: PUSH_SAFARI_WEB_ID,
           serviceWorkerPath: "OneSignalSDKWorker.js",
           serviceWorkerParam: { scope: "/" },
           notifyButton: { enable: false },
